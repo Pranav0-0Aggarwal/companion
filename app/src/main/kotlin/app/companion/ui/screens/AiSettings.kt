@@ -88,7 +88,7 @@ fun AiSettings() {
         Column(Modifier.padding(16.dp)) {
             if (missing || busy) {
                 val frac = if (total > 0) (got.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f
-                Box(Modifier.fillMaxWidth().height(4.dp).background(pal.rule)) { Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(pal.accent)) }
+                Box(Modifier.fillMaxWidth().height(4.dp).background(pal.line)) { Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(pal.accent)) }
                 val line = when {
                     run -> "${Show.mb(got)} of ${Show.mb(total)} MB · ${if (s.speed > 0) Show.speed(s.speed) else "starting"} · ${Show.eta(s.eta)}"
                     s.mode == Mode.Waiting -> "${Show.mb(got)} of ${Show.mb(total)} MB · waiting for unmetered Wi-Fi"

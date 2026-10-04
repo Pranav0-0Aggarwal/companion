@@ -32,7 +32,7 @@ sealed interface Query {
     }
 }
 
-class Plan(val queries: List<Query>, val explicit: Boolean)
+class Plan(val queries: List<Query>, val explicit: Boolean, val lost: Boolean = false)
 
 fun interface Planner {
     fun plan(text: String, now: Long): Plan

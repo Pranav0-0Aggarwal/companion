@@ -75,6 +75,12 @@ class CalibrationTest {
     }
 
     @Test
+    fun `a bar just above one means never sure`() {
+        val c = Calibration.fromJson("""{"version":1,"tasks":{"type":{"temperature":1,"labels":["a"],"sure":{"a":1.01}}}}""")
+        assertFalse(c.sure("type", "a", 1f))
+    }
+
+    @Test
     fun `bad files are rejected`() {
         val bad = listOf(
             """{"version":2,"tasks":{}}""",

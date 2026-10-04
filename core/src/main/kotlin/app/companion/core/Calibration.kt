@@ -34,6 +34,7 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
         const val SOFTMAX = "softmax"
         const val SIGMOID = "sigmoid"
         const val BAR = 0.97f
+        const val NEVER = 1.01f
         const val TAG = 0.5f
         val DEFAULT = Calibration()
 
@@ -47,7 +48,7 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
                 val labels = (t["labels"] as? List<*>)?.map { (it as String).lowercase() } ?: emptyList()
                 val sure = (t["sure"] as? Map<*, *>)?.entries?.associate { (l, b) ->
                     val bar = (b as Number).toFloat()
-                    require(bar > 0f && bar <= 1f)
+                    require(bar > 0f && bar <= NEVER)
                     (l as String).lowercase() to bar
                 } ?: emptyMap()
                 require(labels.isEmpty() || labels.containsAll(sure.keys))

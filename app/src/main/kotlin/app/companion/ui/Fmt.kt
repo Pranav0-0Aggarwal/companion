@@ -27,6 +27,7 @@ fun money(paise: Long, currency: String) = if (currency == "INR") inr(paise) els
 
 private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM")
 private val shortFmt = DateTimeFormatter.ofPattern("d MMM")
+private val fullFmt = DateTimeFormatter.ofPattern("d MMM yyyy")
 private val clockFmt = DateTimeFormatter.ofPattern("HH:mm")
 private val monthFmt = DateTimeFormatter.ofPattern("MMMM")
 
@@ -39,6 +40,13 @@ fun today(): LocalDate = LocalDate.now(zone())
 fun dayLabel(d: LocalDate): String = dayFmt.format(d)
 
 fun shortDay(d: LocalDate): String = shortFmt.format(d)
+
+fun span(a: LocalDate, b: LocalDate): String = when {
+    a == b -> fullFmt.format(a)
+    a.year == b.year && a.month == b.month -> "${a.dayOfMonth} to ${fullFmt.format(b)}"
+    a.year == b.year -> "${shortFmt.format(a)} to ${fullFmt.format(b)}"
+    else -> "${fullFmt.format(a)} to ${fullFmt.format(b)}"
+}
 
 fun clock(ms: Long): String = clockFmt.format(Instant.ofEpochMilli(ms).atZone(zone()))
 

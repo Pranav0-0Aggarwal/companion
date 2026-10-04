@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.ai.Manifest
 import app.companion.ai.Models
 import app.companion.core.Rules
 import app.companion.data.RuleRow
@@ -43,8 +45,10 @@ fun LearnSettings() {
     val n by remember(since) { repo.corrections(since) }.collectAsStateWithLifecycle(0)
     val rules by repo.rules.collectAsStateWithLifecycle(emptyList())
     val share = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { Export.discard(c) }
-    val decide = remember { Models.version(c, Models.decide) }
-    val cal = remember { Models.version(c, Models.calibration) }
+    val ver by produceState<Pair<String?, String?>>(null to null) {
+        value = withContext(Dispatchers.IO) { Models.version(c, Manifest.decide) to Models.version(c, Manifest.calibration) }
+    }
+    val (decide, cal) = ver
     Section("Corrections")
     Group {
         PassLine("Since last export", "$n ${if (n == 1) "correction" else "corrections"}")

@@ -3,6 +3,8 @@ package app.companion.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -20,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.companion.ai.Answer
 import app.companion.ai.Drill
+import app.companion.ai.Answers
 import app.companion.ai.DrillBox
+import app.companion.core.Edit
 import app.companion.core.Query
 import app.companion.core.Suggestion
 import app.companion.sl
@@ -32,6 +36,8 @@ import app.companion.ui.dateOf
 import app.companion.ui.dayLabel
 import app.companion.ui.inr
 import app.companion.ui.kit.Btn
+import app.companion.ui.kit.Chip
+import app.companion.ui.kit.Field
 import app.companion.ui.kit.Group
 import app.companion.ui.kit.Rule
 import app.companion.ui.pal
@@ -39,24 +45,51 @@ import app.companion.ui.shortDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.ZoneId
 
 @Composable
-fun AnswerCard(a: Answer, go: (String) -> Unit) {
+fun AnswerCard(first: Answer, go: (String) -> Unit) {
     val p = pal
+    val c = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var a by remember(first) { mutableStateOf(first) }
+    var editing by remember(first) { mutableStateOf(false) }
+    var bad by remember(first) { mutableStateOf(false) }
+    val edit = remember(first) { Edit(System.currentTimeMillis(), ZoneId.of("Asia/Kolkata")) }
+    var vals by remember(a) { mutableStateOf(edit.values(a.query)) }
     val drill = { d: Drill? ->
         DrillBox.pending.value = d
         go("ledger")
     }
     Group(Modifier.padding(bottom = 12.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text("${a.title.uppercase()} · ${a.guide}", style = Ty.mono(10, FontWeight.Bold).copy(color = p.ink2, letterSpacing = 0.8.sp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(a.says, Modifier.weight(1f), style = Ty.mono(11, FontWeight.Bold).copy(color = p.ink2, letterSpacing = 0.4.sp))
+                Chip(if (editing) "Close" else "Edit", editing, Modifier.padding(start = 8.dp)) { editing = !editing }
+            }
+            if (editing) {
+                edit.labels(a.query).forEachIndexed { i, l ->
+                    Field(l, vals[i], { v -> vals = vals.toMutableList().also { it[i] = v } }, Modifier.padding(top = 8.dp), mono = true)
+                }
+                if (bad) Text("Check the values", Modifier.padding(top = 8.dp), style = Ty.mono(11).copy(color = p.ink2))
+                Btn("Apply", Modifier.padding(top = 10.dp), go = true) {
+                    val q = edit.apply(a.query, vals)
+                    bad = q == null
+                    if (q != null) {
+                        scope.launch {
+                            a = withContext(Dispatchers.Default) { Answers.run(q, c.sl.repo) }
+                            editing = false
+                        }
+                    }
+                }
+            }
             a.total?.let {
                 Text(inr(it), Modifier.padding(top = 6.dp), style = Ty.mono(30, FontWeight.ExtraBold).copy(color = p.ink))
             }
             a.count?.let {
                 Text(if (it == 0) "Nothing found" else "$it ${if (it == 1) "payment" else "payments"}", Modifier.padding(top = 2.dp), style = Ty.mono(12).copy(color = p.ink2))
             }
-            a.proposal?.let { Proposal(it) }
+            a.proposal?.let { key(it) { Proposal(it) } }
         }
         a.lines.forEach { l ->
             Rule()

@@ -1,3 +1,4 @@
 -keep class net.zetetic.database.** { *; }
 -keep class com.google.ai.edge.litert.** { *; }
 -dontwarn com.google.ai.edge.litert.**
+-keep class app.companion.ai.NeedleJni { native <methods>; }

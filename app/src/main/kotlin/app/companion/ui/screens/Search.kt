@@ -54,12 +54,13 @@ fun SearchScreen(back: () -> Unit, go: (String) -> Unit) {
         live = q
     }
     val hits by remember(live) { repo.search(live) }.collectAsStateWithLifecycle(emptyList())
-    val answers by produceState(emptyList<Answer>(), live) {
+    val ask by produceState(Pair(emptyList<Answer>(), false), live) {
         value = withContext(Dispatchers.Default) {
             val plan = if (live.length < 3) null else sl.planner.plan(live, System.currentTimeMillis())
-            plan?.takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, repo) }
+            plan?.takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, repo) } to (plan?.lost == true)
         }
     }
+    val answers = ask.first
     Screen(
         "Search",
         if (live.isBlank()) "On this phone only" else "${hits.size} found",
@@ -68,7 +69,7 @@ fun SearchScreen(back: () -> Unit, go: (String) -> Unit) {
         item { Field("Search", q, { q = it }, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), hint = "Merchant, message text, or ask: food last month") }
         items(answers.size) { AnswerCard(answers[it], go) }
         if (hits.isEmpty() && answers.isEmpty()) {
-            item { Quiet(if (live.isBlank()) "Type a merchant, bank or words from a message" else "Nothing found") }
+            item { Quiet(if (live.isBlank()) "Type a merchant, bank or words from a message" else if (ask.second) "Couldn't understand, try 'food last month'" else "Nothing found") }
         }
         items(hits, key = { it.id }) { i ->
             Column {

@@ -36,9 +36,13 @@ On the held-out slice, take the raw logits per task and fit one temperature per 
 
 ## 6. Push
 
+Private models go in `files/models/custom/` with a `custom.json` of their SHA-256s and win over the downloaded base models. No rebuild is needed.
+
 ```
-adb push decide.tflite calibration.json /data/local/tmp/
-adb shell run-as app.companion sh -c 'mkdir -p files/models && cp /data/local/tmp/decide.tflite /data/local/tmp/calibration.json files/models/'
+shasum -a 256 decide.tflite calibration.json
+echo '{"decide.tflite": "<sha256>", "calibration.json": "<sha256>"}' > custom.json
+adb push decide.tflite calibration.json custom.json /data/local/tmp/
+adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/calibration.json /data/local/tmp/custom.json files/models/custom/'
 ```
 
-Both files must match the SHA-256 values pinned in `app/src/main/kotlin/app/companion/ai/Models.kt` (`decide` and `calibration`). Compute them with `shasum -a 256`, update the constants, and rebuild the app before pushing. Settings, On-device AI then shows both as installed, and Corrections shows the new Decide version.
+Settings, On-device AI then shows both as custom, and Corrections shows the new Decide version. A file that does not match its `custom.json` hash is ignored and the base file is used.

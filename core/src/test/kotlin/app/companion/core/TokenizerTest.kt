@@ -1,9 +1,9 @@
 package app.companion.core
 
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class TokenizerTest {
     private val vocab = listOf(
@@ -39,18 +39,38 @@ class TokenizerTest {
         assertContentEquals(intArrayOf(1, 2), t.encode("ab"))
     }
 
-    @Test
-    fun `parity with the exported vectors when present`() {
-        val dir = File("../models")
-        val vectors = File(dir, "tokenizer_vectors.json")
-        val asset = dir.listFiles { f -> f.name.startsWith("tokenizer") && f.name.endsWith(".json") && f.name != vectors.name }?.firstOrNull()
-        if (!vectors.exists() || asset == null) return
-        val t = SpTokenizer.fromJson(asset.readText())
-        val cases = Json.parse(vectors.readText()) as List<*>
-        for (c in cases) {
-            val m = c as Map<*, *>
-            val want = (m["ids"] as List<*>).map { (it as Number).toInt() }
-            assertEquals(want, t.encode(m["text"] as String).toList(), "text=${m["text"]}")
+    private fun dtk(unk: Int, vararg v: Pair<String, Double>): ByteArray {
+        val b = java.io.ByteArrayOutputStream()
+        val w = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        b.write("DTK1".toByteArray())
+        b.write(w.putInt(v.size).putInt(unk).array(), 0, 8)
+        for ((p, s) in v) {
+            val e = p.toByteArray()
+            b.write(java.nio.ByteBuffer.allocate(10).order(java.nio.ByteOrder.LITTLE_ENDIAN).putDouble(s).putShort(e.size.toShort()).array())
+            b.write(e)
         }
+        return b.toByteArray()
+    }
+
+    @Test
+    fun `word encoding is nfc and keeps compatibility forms`() {
+        val t = SpTokenizer(listOf("[UNK]", "▁café", "▁ｈ"), listOf(-100f, -1f, -1f), 0)
+        assertContentEquals(intArrayOf(1), t.word("cafe\u0301"))
+        assertContentEquals(intArrayOf(2), t.word("ｈ"))
+        assertContentEquals(intArrayOf(0), t.word("zz"))
+    }
+
+    @Test
+    fun `loads from dtk`() {
+        val t = SpTokenizer.fromDtk(dtk(0, "[UNK]" to -100.0, "▁a" to -1.0, "b" to -1.0))
+        assertContentEquals(intArrayOf(1, 2), t.encode("ab"))
+    }
+
+    @Test
+    fun `dtk rejects bad magic truncation and bad unk`() {
+        val good = dtk(0, "[UNK]" to -100.0, "▁a" to -1.0)
+        assertFailsWith<Exception> { SpTokenizer.fromDtk(good.copyOf(good.size - 3)) }
+        assertFailsWith<Exception> { SpTokenizer.fromDtk(good.also { it[0] = 'X'.code.toByte() }) }
+        assertFailsWith<Exception> { SpTokenizer.fromDtk(dtk(5, "[UNK]" to -1.0)) }
     }
 }

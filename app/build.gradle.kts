@@ -1,3 +1,5 @@
+import java.net.URI
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -5,6 +7,47 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+abstract class FetchNeedle : DefaultTask() {
+    @get:Input abstract val rev: Property<String>
+
+    @get:Input abstract val pins: MapProperty<String, String>
+
+    @get:OutputDirectory abstract val dir: DirectoryProperty
+
+    private fun sha(f: File) = MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString("") { "%02x".format(it) }
+
+    @TaskAction
+    fun fetch() {
+        val out = dir.get().asFile.also { it.mkdirs() }
+        pins.get().forEach { (name, want) ->
+            val f = File(out, name)
+            if (f.isFile && sha(f) == want) return@forEach
+            val tmp = File(out, "$name.part")
+            val c = URI("https://huggingface.co/Cactus-Compute/needle3/resolve/${rev.get()}/android-arm64/$name").toURL().openConnection()
+            c.connectTimeout = 30_000
+            c.readTimeout = 60_000
+            c.getInputStream().use { i -> tmp.outputStream().use { i.copyTo(it) } }
+            if (sha(tmp) != want) {
+                tmp.delete()
+                throw GradleException("$name does not match its pinned SHA-256")
+            }
+            f.delete()
+            tmp.renameTo(f)
+        }
+    }
+}
+
+val needleDir = layout.buildDirectory.dir("needle")
+val fetchNeedle = tasks.register<FetchNeedle>("fetchNeedle") {
+    rev = "27c0a9a5b3ca835e0b7dbeaccf555df03dac493d"
+    pins = mapOf(
+        "libneedle.a" to "b8e73952054686f68e4319dcf69ad72a3de57faab73b73d9a67898f2c9d66110",
+        "needle.h" to "3aa713942528d944598458cecb4a262f2cc49349bec63355f91df0b159964e55",
+    )
+    dir = needleDir
+}
+tasks.matching { t -> listOf("generateJsonModel", "configureCMake", "buildCMake", "externalNativeBuild").any(t.name::startsWith) }.configureEach { dependsOn(fetchNeedle) }
 
 val ver = System.getenv("COMPANION_VERSION") ?: "0.1.0"
 val local = Properties().apply {
@@ -14,6 +57,7 @@ val local = Properties().apply {
 android {
     namespace = "app.companion"
     compileSdk = 37
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "app.companion"
@@ -22,6 +66,9 @@ android {
         versionCode = ver.split(".").map(String::toInt).let { (a, b, c) -> a * 10000 + b * 100 + c }
         versionName = ver
         ndk { abiFilters += "arm64-v8a" }
+        externalNativeBuild {
+            cmake { arguments += listOf("-DNEEDLE_DIR=${needleDir.get().asFile}", "-DANDROID_STL=c++_static") }
+        }
         buildConfigField("String", "GMAIL_CLIENT_ID", "\"${local.getProperty("gmail.webClientId", "")}\"")
     }
 
@@ -31,6 +78,13 @@ android {
             storePassword = local.getProperty("release.password") ?: System.getenv("COMPANION_KEY_PASSWORD")
             keyAlias = "companion"
             keyPassword = local.getProperty("release.password") ?: System.getenv("COMPANION_KEY_PASSWORD")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 

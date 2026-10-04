@@ -1,25 +1,22 @@
 package app.companion.ui.screens
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.work.WorkInfo
+import app.companion.ai.Have
+import app.companion.ai.Manifest
+import app.companion.ai.ModelJobs
+import app.companion.ai.ModelWork
 import app.companion.ai.Models
-import app.companion.ai.Spec
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.kit.Btn
@@ -29,7 +26,6 @@ import app.companion.ui.kit.Rule
 import app.companion.ui.kit.Section
 import app.companion.ui.pal
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -37,47 +33,47 @@ fun AiSettings() {
     val c = LocalContext.current
     val gov = c.sl.gov
     val live by gov.live.collectAsStateWithLifecycle()
-    var tick by remember { mutableIntStateOf(0) }
-    var note by remember { mutableStateOf<String?>(null) }
-    var target by remember { mutableStateOf(Models.decide) }
-    val scope = rememberCoroutineScope()
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val ok = withContext(Dispatchers.IO) { c.contentResolver.openInputStream(uri)?.let { Models.install(c, target, it) } == true }
-                note = if (ok) "Installed ${target.file}" else "File rejected: checksum does not match"
-                tick++
-            }
-        }
+    val job by remember { ModelJobs.watch(c) }.collectAsStateWithLifecycle(null)
+    val state = job?.state
+    val have by produceState(emptyMap<String, Have>(), state) {
+        value = withContext(Dispatchers.IO) { Manifest.all.associate { it.file to Models.have(c, it) } }
     }
-    val row: @Composable (Spec) -> Unit = { s ->
-        val on = remember(tick) { Models.installed(c, s) }
-        val state = when {
-            s.sha.isEmpty() -> "waiting for the pinned checksum"
-            !on -> "not installed"
-            live?.name == s.name -> "loaded · ${live?.accel} · about ${live?.mb} MB"
-            else -> "installed · idle"
-        }
-        PassLine(s.name, state, actions = { if (s.sha.isNotEmpty()) Btn(if (on) "Replace" else "Pick file") { target = s; pick.launch(arrayOf("*/*")) } })
-    }
+    val busy = state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED || state == WorkInfo.State.BLOCKED
+    val missing = Manifest.all.any { Models.pinned(it) && (have[it.file] ?: Have.No) == Have.No }
     Section("On-device AI")
     Group {
-        row(Models.decide)
-        Rule()
-        row(Models.needle)
-        Rule()
-        row(Models.calibration)
-        Rule()
-        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle.")
+        Manifest.all.forEach { s ->
+            val h = have[s.file] ?: Have.No
+            val text = when {
+                !Models.pinned(s) -> "waiting for the pinned checksum"
+                h == Have.Custom -> "custom"
+                h == Have.Base -> "ready"
+                state == WorkInfo.State.RUNNING && job?.progress?.getString(ModelWork.FILE) == s.file -> "downloading ${job?.progress?.getInt(ModelWork.PCT, 0)}%"
+                state == WorkInfo.State.RUNNING -> "queued"
+                busy -> "waiting for Wi-Fi"
+                else -> "not installed"
+            }
+            val on = live?.name == s.name
+            PassLine(s.name, if (on) "$text · loaded · ${live?.accel} · about ${live?.mb} MB" else text)
+            Rule()
+        }
+        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle, Needle after 60 s.")
         Rule()
         Column(Modifier.padding(16.dp)) {
-            Text("Install with adb", style = Ty.ui(13).copy(color = pal.ink))
+            if (busy) {
+                Btn("Cancel download") { ModelJobs.stop(c) }
+            } else if (missing) {
+                Btn("Download models (≈520 MB, Wi-Fi)", go = true) { ModelJobs.start(c) }
+            }
+            if (state == WorkInfo.State.FAILED) {
+                Text("Download failed: size or checksum does not match", Modifier.padding(top = 8.dp), style = Ty.mono(11).copy(color = pal.ink2))
+            }
+            Text("Private models with adb", Modifier.padding(top = 12.dp), style = Ty.ui(13).copy(color = pal.ink))
             Text(
-                "adb push ${Models.decide.file} ${Models.calibration.file} /data/local/tmp/\nadb shell run-as app.companion sh -c 'mkdir -p files/models && cp /data/local/tmp/${Models.decide.file} /data/local/tmp/${Models.calibration.file} files/models/'",
+                "custom.json: {\"decide.tflite\": \"<sha256>\"}\nadb push decide.tflite custom.json /data/local/tmp/\nadb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/custom.json files/models/custom/'",
                 Modifier.padding(top = 6.dp),
                 style = Ty.mono(10).copy(color = pal.ink2),
             )
-            note?.let { Text(it, Modifier.padding(top = 8.dp), style = Ty.mono(11).copy(color = pal.settled)) }
         }
     }
 }

@@ -30,7 +30,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-disabled: true
-      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;35.0.0" >/dev/null
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.22.1" >/dev/null
       - name: build
         env:
           KEYSTORE_B64: ${{ secrets.COMPANION_KEYSTORE_B64 }}

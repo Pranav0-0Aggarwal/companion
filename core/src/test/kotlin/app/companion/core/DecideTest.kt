@@ -10,27 +10,41 @@ import kotlin.test.assertTrue
 
 class DecideTest {
     private val spec = DecideSpec.fromJson(
-        """{"pad_id": 0, "buckets": [8, 16], "tasks": {"kind": {"prefix": [101, 7], "suffix": [102], "labels": ["Promo", "Bill", "Other"]}}}""",
+        """{"pad_id": 0, "buckets": [8, 16], "template": "{body}", "tasks": {"kind": {"prefix": [101, 7], "labels": ["Promo", "Bill", "Other"]}}}""",
     )
     private val tok = SpTokenizer(listOf("[UNK]", "▁a", "▁b"), listOf(-100f, -1f, -1f), 0)
 
     @Test
-    fun `input is prefix then tokens then suffix padded to the smallest bucket`() {
-        val x = Decide.build(spec, "kind", "a b", tok)
+    fun `input is prefix then word ids padded to the smallest bucket`() {
+        val x = Decide.build(spec, "kind", "", "a b", tok)
         assertEquals(8, x.bucket)
-        assertContentEquals(intArrayOf(101, 7, 1, 2, 102, 0, 0, 0), x.ids)
+        assertContentEquals(intArrayOf(101, 7, 1, 2, 0, 0, 0, 0), x.ids)
         assertContentEquals(intArrayOf(1, 1, 1, 1, 1, 0, 0, 0), x.mask)
     }
 
     @Test
     fun `long text moves to the larger bucket and then truncates`() {
-        val long = List(10) { "a" }.joinToString(" ")
-        val mid = Decide.build(spec, "kind", long, tok)
+        val mid = Decide.build(spec, "kind", "", List(10) { "a" }.joinToString(" "), tok)
         assertEquals(16, mid.bucket)
-        val huge = Decide.build(spec, "kind", List(100) { "a" }.joinToString(" "), tok)
+        val huge = Decide.build(spec, "kind", "", List(100) { "a" }.joinToString(" "), tok)
         assertEquals(16, huge.bucket)
-        assertEquals(102, huge.ids[15])
+        assertEquals(1, huge.ids[15])
         assertTrue(huge.mask.all { it == 1 })
+    }
+
+    @Test
+    fun `a full stop is added only when the text lacks a closing mark`() {
+        assertEquals(listOf("a", "."), Decide.words(spec, "a"))
+        assertEquals(listOf("a", "!"), Decide.words(spec, "a!"))
+        assertEquals(listOf("a", "?"), Decide.words(spec, "A?"))
+        assertEquals(listOf("a", "."), Decide.words(spec, "A."))
+    }
+
+    @Test
+    fun `sender and body fill the template once`() {
+        val s = DecideSpec.fromJson("""{"pad_id": 0, "buckets": [8], "template": "{sender}|{body}", "tasks": {"kind": {"prefix": [], "labels": ["x"]}}}""")
+        assertEquals("{body}|x {sender}", Decide.message(s, "{body}", "x {sender}"))
+        assertEquals("Text message from VM-X:\nhi", Decide.message(spec.let { DecideSpec(0, listOf(8), emptyMap(), emptyMap()) }, "VM-X", "hi"))
     }
 
     @Test

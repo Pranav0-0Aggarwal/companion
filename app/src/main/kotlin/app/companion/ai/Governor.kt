@@ -17,6 +17,8 @@ import kotlinx.coroutines.sync.withLock
 
 interface Runner : AutoCloseable {
     val accel: String
+    val alive: Boolean get() = true
+    val mb: Long get() = -1
 }
 
 class LowMemory : Exception()
@@ -49,14 +51,14 @@ class Governor(private val app: Application) {
     @Suppress("UNCHECKED_CAST")
     suspend fun <R : Runner, T> run(s: Spec, make: () -> R, block: (R) -> T): T = lock.withLock {
         idle?.cancel()
-        if (spec != s) {
+        if (spec != s || runner?.alive == false) {
             drop()
             if (!roomy()) throw LowMemory()
             val before = pss()
             val r = make()
             runner = r
             spec = s
-            live.value = Live(s.name, r.accel, (pss() - before).coerceAtLeast(0))
+            live.value = Live(s.name, r.accel, r.mb.takeIf { it >= 0 } ?: (pss() - before).coerceAtLeast(0))
         }
         try {
             block(runner as R)

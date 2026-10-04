@@ -49,13 +49,14 @@ class CompanionApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (Process.isIsolated()) return
         Live.boot(this)
         Export.sweep(this)
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        sl.gov.trim(level)
+        if (!Process.isIsolated()) sl.gov.trim(level)
     }
 }
 

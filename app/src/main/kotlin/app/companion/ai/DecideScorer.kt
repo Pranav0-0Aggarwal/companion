@@ -13,28 +13,33 @@ import app.companion.core.SpTokenizer
 import kotlinx.coroutines.runBlocking
 
 class DecideScorer(private val app: Application, private val gov: Governor) : Scorer {
-    private val assets by lazy {
-        runCatching {
-            SpTokenizer.fromJson(Models.asset(app, Models.TOKENIZER).readText()) to DecideSpec.fromJson(Models.asset(app, Models.SCHEMA).readText())
-        }.getOrNull()
+    private var cache: Pair<String, Pair<SpTokenizer, DecideSpec>>? = null
+
+    @Synchronized
+    private fun assets(): Pair<SpTokenizer, DecideSpec>? {
+        val t = Models.file(app, Manifest.tokenizer) ?: return null
+        val s = Models.file(app, Manifest.schema) ?: return null
+        val key = "${t.path}:${t.lastModified()}:${s.path}:${s.lastModified()}"
+        cache?.takeIf { it.first == key }?.let { return it.second }
+        return runCatching { SpTokenizer.fromDtk(t.readBytes()) to DecideSpec.fromJson(s.readText()) }.getOrNull()?.also { cache = key to it }
     }
 
     fun calibration(): Calibration {
-        val spec = assets?.second ?: return Calibration.DEFAULT
+        val spec = assets()?.second ?: return Calibration.DEFAULT
         return runCatching { Models.loadCalibration(app).takeIf { it.fits(Calibration.TYPE, spec.labels(Calibration.TYPE)) } }.getOrNull() ?: Calibration.DEFAULT
     }
 
     override fun score(raw: Raw): Scored? {
-        if (!Models.installed(app, Models.decide)) return null
-        val (tok, spec) = assets ?: return null
-        val text = Redact.codes(raw.title + "\n" + raw.body)
+        val model = Models.file(app, Manifest.decide) ?: return null
+        val (tok, spec) = assets() ?: return null
+        val body = Redact.codes(listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n"))
         val cal = calibration()
-        val path = Models.file(app, Models.decide).path
+        val path = model.path
         return try {
             runBlocking {
-                gov.run(Models.decide, { DecideRunner.open(app, path) }) { r ->
+                gov.run(Manifest.decide, { DecideRunner.open(app, path) }) { r ->
                     fun probs(task: String): Map<String, Float>? = runCatching {
-                        val input = Decide.build(spec, task, text, tok)
+                        val input = Decide.build(spec, task, raw.sender.trim(), body, tok)
                         val p = cal.probs(task, r.logits(input, spec.signature(task, input.bucket)))
                         spec.labels(task).mapIndexed { i, l -> l to p[i] }.toMap()
                     }.getOrNull()

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val ver = System.getenv("COMPANION_VERSION") ?: "0.1.0"
 val local = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }
@@ -18,18 +19,18 @@ android {
         applicationId = "app.companion"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ver.split(".").map(String::toInt).let { (a, b, c) -> a * 10000 + b * 100 + c }
+        versionName = ver
         ndk { abiFilters += "arm64-v8a" }
         buildConfigField("String", "GMAIL_CLIENT_ID", "\"${local.getProperty("gmail.webClientId", "")}\"")
     }
 
     signingConfigs {
         create("release") {
-            storeFile = local.getProperty("release.store")?.let(::file)
-            storePassword = local.getProperty("release.password")
+            storeFile = (local.getProperty("release.store") ?: System.getenv("COMPANION_KEYSTORE"))?.let(::file)
+            storePassword = local.getProperty("release.password") ?: System.getenv("COMPANION_KEY_PASSWORD")
             keyAlias = "companion"
-            keyPassword = local.getProperty("release.password")
+            keyPassword = local.getProperty("release.password") ?: System.getenv("COMPANION_KEY_PASSWORD")
         }
     }
 

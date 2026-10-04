@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    name: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-disabled: true
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;35.0.0" >/dev/null
+      - name: build
+        env:
+          KEYSTORE_B64: ${{ secrets.COMPANION_KEYSTORE_B64 }}
+          COMPANION_KEY_PASSWORD: ${{ secrets.COMPANION_KEY_PASSWORD }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          export COMPANION_VERSION="${TAG#v}" COMPANION_KEYSTORE="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$COMPANION_KEYSTORE"
+          ./gradlew --no-daemon :core:test :app:assembleRelease
+          rm -f "$COMPANION_KEYSTORE"
+          cp app/build/outputs/apk/release/app-release.apk "companion-$COMPANION_VERSION.apk"
+          sha256sum "companion-$COMPANION_VERSION.apk" > "companion-$COMPANION_VERSION.apk.sha256"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "companion-$COMPANION_VERSION.apk" | grep SHA-256
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#v}"
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --verify-tag --generate-notes --prerelease --title "Companion $v"
+          gh release upload "$TAG" "companion-$v.apk" "companion-$v.apk.sha256" -R "$GITHUB_REPOSITORY" --clobber

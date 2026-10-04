@@ -9,12 +9,16 @@ import app.companion.core.Classifier
 import app.companion.core.RulesClassifier
 import app.companion.data.Repo
 import app.companion.data.Vault
+import app.companion.ingest.Gmail
+import app.companion.ingest.Ingest
 import app.companion.system.Live
 
 class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
     val repo by lazy { Repo(db) }
     val classifier: Classifier = RulesClassifier()
+    val ingest by lazy { Ingest(app, repo, classifier) }
+    val gmail by lazy { Gmail(repo, ingest) }
 
     fun wipe() {
         WorkManager.getInstance(app).cancelAllWork()

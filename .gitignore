@@ -8,6 +8,6 @@ local.properties
 .DS_Store
 models/
 *.onnx
-data/
+/data/
 .env
 .claude/

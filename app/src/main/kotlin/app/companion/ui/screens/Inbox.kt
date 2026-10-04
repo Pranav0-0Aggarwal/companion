@@ -88,7 +88,7 @@ private fun cats(i: Item) = listOfNotNull(i.category, "bills", "other").distinct
 
 private val Item.open get() = state == State.ASK || state == State.CHECK
 
-private class Acts(val file: (Item, String) -> Unit, val done: (Item) -> Unit, val spam: (Item) -> Unit, val notSpam: (Item) -> Unit)
+internal class Acts(val file: (Item, String) -> Unit, val done: (Item) -> Unit, val spam: (Item) -> Unit, val notSpam: (Item) -> Unit)
 
 @Composable
 fun InboxScreen(go: (String) -> Unit) {
@@ -142,7 +142,7 @@ private fun LazyListScope.group(title: String, list: List<Item>, acts: Acts) {
 }
 
 @Composable
-private fun Entry(i: Item, a: Acts) {
+internal fun Entry(i: Item, a: Acts) {
     val haptic = rememberHaptic()
     val scope = rememberCoroutineScope()
     val on = motion()

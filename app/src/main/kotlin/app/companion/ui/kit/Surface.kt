@@ -40,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -65,10 +67,11 @@ val CardShape = RoundedCornerShape(26.dp)
 fun Modifier.lift(p: Pal, shape: Shape = CardShape): Modifier =
     if (p.dark) this else shadow(10.dp, shape, ambientColor = Color.Black.copy(alpha = 0.05f), spotColor = Color.Black.copy(alpha = 0.10f))
 
-fun Modifier.part(p: Pal, first: Boolean, last: Boolean): Modifier {
+fun Modifier.part(p: Pal, first: Boolean, last: Boolean, inset: Dp = 72.dp): Modifier {
     val r = 26.dp
     val s = RoundedCornerShape(if (first) r else 0.dp, if (first) r else 0.dp, if (last) r else 0.dp, if (last) r else 0.dp)
-    return padding(horizontal = 16.dp).fillMaxWidth().clip(s).background(p.card)
+    val m = padding(horizontal = 16.dp).fillMaxWidth().clip(s).background(p.card)
+    return if (first) m else m.drawBehind { drawRect(p.line, Offset(inset.toPx(), 0f), Size(size.width - inset.toPx() - 18.dp.toPx(), 1.dp.toPx())) }
 }
 
 @Composable
@@ -97,7 +100,7 @@ fun Screen(
     val p = pal
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val head = (LocalConfiguration.current.screenHeightDp * if (tall) 0.30f else 0.22f).dp.coerceIn(150.dp, 300.dp)
+    val head = (LocalConfiguration.current.screenHeightDp * if (tall) 0.26f else 0.2f).dp.coerceIn(150.dp, 300.dp)
     val span = with(LocalDensity.current) { (head - 56.dp).toPx() }
     val t = remember(state, span) {
         derivedStateOf { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / span).coerceIn(0f, 1f) }
@@ -211,7 +214,7 @@ fun PassLine(
 
 @Composable
 private fun FlowActions(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Row(content = content) }
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }
 
 @Composable

@@ -99,7 +99,7 @@ private sealed interface Res {
     class Done(val answers: List<Answer>, val lost: Boolean) : Res
 }
 
-private fun tries(cards: List<Card>) = listOf(
+internal fun tries(cards: List<Card>) = listOf(
     "Food spend this month",
     "Bills due this week",
     "Top merchants last month",
@@ -251,7 +251,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hitsSection(hits: Lis
 }
 
 @Composable
-private fun Input(q: String, set: (String) -> Unit, go: () -> Unit, listen: (() -> Unit)?, listening: Boolean, modifier: Modifier) {
+internal fun Input(q: String, set: (String) -> Unit, go: () -> Unit, listen: (() -> Unit)?, listening: Boolean, modifier: Modifier) {
     val p = pal
     Row(
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(24.dp)).background(p.card)
@@ -308,7 +308,7 @@ private fun Mic(listening: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Thinking() {
+internal fun Thinking() {
     val p = pal
     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(p.card).rise()) {
         Row(Modifier.padding(start = 18.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {

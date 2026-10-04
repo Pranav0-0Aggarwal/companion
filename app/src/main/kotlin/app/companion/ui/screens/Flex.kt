@@ -129,7 +129,7 @@ private fun Glance(d: Day, modifier: Modifier) {
 }
 
 @Composable
-private fun Tile(label: String, modifier: Modifier, content: @Composable () -> Unit) {
+internal fun Tile(label: String, modifier: Modifier, content: @Composable () -> Unit) {
     val p = pal
     Column(modifier.lift(p).clip(CardShape).background(p.card).padding(horizontal = 18.dp, vertical = 16.dp)) {
         Text(label, Modifier.padding(bottom = 4.dp), style = Ty.ui(13, FontWeight.Medium).copy(color = p.ink2))
@@ -167,7 +167,7 @@ private fun Controls(d: Day, go: (String) -> Unit, modifier: Modifier) {
 }
 
 @Composable
-private fun Dest(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+internal fun Dest(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
     val p = pal
     Column(
         modifier.heightIn(min = 64.dp).clip(CardShape).clickable(role = Role.Button, onClick = onClick).padding(vertical = 10.dp),

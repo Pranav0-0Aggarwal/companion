@@ -89,7 +89,7 @@ private fun sums(items: List<Item>, ym: YearMonth): LongArray {
     return a
 }
 
-private class Pacing(val cur: List<Long>, val typ: List<Long>, val days: Int, val delta: Long, val day: Int)
+internal class Pacing(val cur: List<Long>, val typ: List<Long>, val days: Int, val delta: Long, val day: Int)
 
 private fun pacing(money: List<Item>, ym: YearMonth, now: LocalDate): Pacing? {
     val n = ym.lengthOfMonth()
@@ -199,7 +199,7 @@ fun LedgerScreen(go: (String) -> Unit) {
 }
 
 @Composable
-private fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, modifier: Modifier) {
+internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, modifier: Modifier) {
     val p = pal
     Column(modifier.padding(20.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {

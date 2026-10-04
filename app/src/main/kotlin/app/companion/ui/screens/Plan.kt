@@ -1,6 +1,11 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.clip
+import app.companion.ui.kit.empty
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,19 +55,26 @@ fun PlanScreen(back: () -> Unit) {
     val done = tasks.filter { it.done }.take(10)
     Screen(
         "Plan", if (open.isEmpty()) "Nothing open" else "${open.size} open",
+        back = back,
+        nav = false,
+        tall = false,
         tools = {
-            ToolButton(Ic.Back, "Back", back)
             if (gt.gtasks) ToolButton(Ic.Plan, "Sync Google Tasks", sync)
             ToolButton(Ic.Add, "New reminder") { capture("") }
         },
     ) {
+        if (open.isEmpty() && done.isEmpty()) {
+            empty(Ic.Plan, "Nothing planned", "Reminders and to-dos you add, or share into Companion, appear here.") {
+                app.companion.ui.kit.Btn("New reminder", go = true, icon = Ic.Add) { capture("") }
+            }
+        }
         if (open.isNotEmpty()) {
             item { Section("Open") }
-            item { Group { open.forEachIndexed { i, t -> if (i > 0) Rule(); TaskRow(t, { scope.launch { Plan.finish(c, t.id) } }) { scope.launch { Plan.remove(c, t.id) } } } } }
+            item { Group { open.forEachIndexed { i, t -> if (i > 0) Rule(54.dp); TaskRow(t, { scope.launch { Plan.finish(c, t.id) } }) { scope.launch { Plan.remove(c, t.id) } } } } }
         }
         if (done.isNotEmpty()) {
             item { Section("Done") }
-            item { Group { done.forEachIndexed { i, t -> if (i > 0) Rule(); TaskRow(t, { scope.launch { Plan.reopen(c, t.id) } }) { scope.launch { Plan.remove(c, t.id) } } } } }
+            item { Group { done.forEachIndexed { i, t -> if (i > 0) Rule(54.dp); TaskRow(t, { scope.launch { Plan.reopen(c, t.id) } }) { scope.launch { Plan.remove(c, t.id) } } } } }
         }
     }
 }
@@ -71,22 +82,24 @@ fun PlanScreen(back: () -> Unit) {
 @Composable
 private fun TaskRow(t: Task, toggle: () -> Unit, remove: () -> Unit) {
     val p = pal
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(24.dp).border(2.dp, if (t.done) p.settled else p.rule, CircleShape).clickable(onClick = toggle), contentAlignment = Alignment.Center) {
-            if (t.done) Icon(Ic.Check, "Reopen", Modifier.size(14.dp), tint = p.settled)
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(start = 6.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClickLabel = if (t.done) "Reopen" else "Mark done", onClick = toggle), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(24.dp).background(if (t.done) p.green else androidx.compose.ui.graphics.Color.Transparent, CircleShape).border(2.dp, if (t.done) p.green else p.ink3, CircleShape), contentAlignment = Alignment.Center) {
+                if (t.done) Icon(Ic.Check, null, Modifier.size(14.dp), tint = p.card)
+            }
         }
-        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+        Column(Modifier.weight(1f).padding(horizontal = 6.dp)) {
             Text(
                 t.title,
-                style = Ty.ui(14).copy(color = if (t.done) p.ink2 else p.ink, textDecoration = if (t.done) TextDecoration.LineThrough else null),
+                style = Ty.ui(16, FontWeight.Medium).copy(color = if (t.done) p.ink2 else p.ink, textDecoration = if (t.done) TextDecoration.LineThrough else null),
             )
             val sub = listOfNotNull(
                 t.remindAt?.let { "${dayLabel(dateOf(it))} ${clock(it)}" },
                 t.repeat,
                 if (t.gid != null) "Google" else null,
             ).joinToString(" · ")
-            if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(11, FontWeight.Medium).copy(color = p.ink2))
+            if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2))
         }
-        Icon(Ic.Close, "Delete", Modifier.size(20.dp).clickable(onClick = remove), tint = p.ink2)
+        ToolButton(Ic.Trash, "Delete", remove)
     }
 }

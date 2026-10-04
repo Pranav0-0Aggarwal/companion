@@ -18,14 +18,14 @@ private val keeps = listOf(90 to "90 days", 365 to "1 year", 0 to "Forever")
 @Composable
 fun KeepRow(days: Int, set: (Int) -> Unit) {
     val p = pal
-    Column(Modifier.padding(16.dp)) {
-        Text("Keep message text", style = Ty.ui(14).copy(color = p.ink))
+    Column(Modifier.padding(18.dp)) {
+        Text("Keep message text", style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink))
         Text(
             "Older text is erased from this phone. Amounts, merchants and dates stay. Codes are never kept.",
             Modifier.padding(top = 2.dp),
-            style = Ty.ui(12, FontWeight.Normal).copy(color = p.ink2),
+            style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2),
         )
-        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             keeps.forEach { (d, label) -> Chip(label, d == days) { set(d) } }
         }
     }

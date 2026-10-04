@@ -9,6 +9,7 @@ work = "2.12.0"
 navigation = "2.10.2"
 glance = "1.2.0"
 biometric = "1.1.0"
+fragment = "1.9.1"
 window = "1.5.1"
 activity = "1.13.0"
 core = "1.19.1"
@@ -37,6 +38,7 @@ sqlcipher = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher
 work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 glance = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
+fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
 biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 window = { module = "androidx.window:window", version.ref = "window" }
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }

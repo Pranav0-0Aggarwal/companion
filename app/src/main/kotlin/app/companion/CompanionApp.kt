@@ -17,6 +17,7 @@ import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Ingest
 import app.companion.system.Alarms
+import app.companion.system.Export
 import app.companion.system.GTasks
 import app.companion.system.Live
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,8 @@ class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
     val repo by lazy { Repo(db) }
     val gov by lazy { Governor(app) }
-    val classifier: Classifier by lazy { DecideClassifier(RulesClassifier(), scorer = DecideScorer(app, gov)) }
+    private val scorer by lazy { DecideScorer(app, gov) }
+    val classifier: Classifier by lazy { DecideClassifier(RulesClassifier(), scorer::calibration, scorer) }
     val planner: Planner by lazy { NeedlePlanner(app, gov) }
     val ingest by lazy { Ingest(app, repo, classifier) }
     val gmail by lazy { Gmail(repo, ingest) }
@@ -48,6 +50,7 @@ class CompanionApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Live.boot(this)
+        Export.sweep(this)
     }
 
     override fun onTrimMemory(level: Int) {

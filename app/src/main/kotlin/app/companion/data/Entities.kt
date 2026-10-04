@@ -66,6 +66,9 @@ data class Item(
     val ping: Int = 0,
     val start: Long? = null,
     val end: Long? = null,
+    val tpl: String? = null,
+    val model: String? = null,
+    val mprob: Float? = null,
 )
 
 @Fts4(contentEntity = Item::class)
@@ -108,6 +111,25 @@ data class Tally(val day: Long, @ColumnInfo(name = "key") val key: String, val n
 @Entity(tableName = "learned")
 data class Learned(@PrimaryKey val key: String, val category: String)
 
+@Entity(tableName = "corrections", indices = [Index("itemId"), Index("at")])
+data class Correction(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val itemId: Long,
+    val at: Long,
+    val task: String,
+    val model: String?,
+    val modelProb: Float?,
+    val chosen: String,
+    val src: String,
+)
+
+@Entity(tableName = "rules", primaryKeys = ["hash", "task"])
+data class TemplateRule(val hash: String, val task: String, val label: String, val count: Int)
+
+data class RuleRow(val hash: String, val task: String, val label: String, val count: Int, val title: String?)
+
+data class ExportRow(val sender: String?, val title: String, val note: String, val task: String, val model: String?, val prob: Float?, val chosen: String)
+
 @Entity(tableName = "tasks", indices = [Index("done"), Index("remindAt")])
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -122,6 +144,13 @@ data class Task(
     val upd: Long = 0,
     val gone: Boolean = false,
 )
+
+object Src {
+    const val ASK = "ask"
+    const val EDIT = "edit"
+    const val NOT_OTP = "not_otp"
+    const val NOT_SPAM = "not_spam"
+}
 
 object State {
     const val ASK = "ask"

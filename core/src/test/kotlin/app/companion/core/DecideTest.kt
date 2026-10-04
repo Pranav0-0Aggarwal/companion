@@ -59,27 +59,27 @@ class DecideTest {
 
     @Test
     fun `confident alert settles an unsure notice`() {
-        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.95f) }
+        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.98f) }
         val v = assertIs<Verdict.Sure>(c.classify(sms("VM-ACMEBK-S", "Your plan renewal summary")))
         assertEquals(Event.Alert, v.event)
     }
 
     @Test
     fun `confident nothing settles a weak alert fallback`() {
-        val c = DecideClassifier(rules) { mapOf(Kind.Unknown to 0.95f) }
+        val c = DecideClassifier(rules) { mapOf(Kind.Unknown to 0.98f) }
         val v = assertIs<Verdict.Sure>(c.classify(sms("VM-ACMEBK-S", "Your plan renewal summary")))
         assertEquals(Event.Unknown, v.event)
     }
 
     @Test
     fun `alert guess does not relabel a money event`() {
-        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.95f) }
+        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.98f) }
         assertIs<Verdict.Unsure>(c.classify(sms("VM-HDFCBK-S", "Rs 450 debited on 04-10-26")))
     }
 
     @Test
     fun `confident promo settles an unsure message`() {
-        val c = DecideClassifier(rules) { mapOf(Kind.Promo to 0.95f, Kind.Unknown to 0.05f) }
+        val c = DecideClassifier(rules) { mapOf(Kind.Promo to 0.98f, Kind.Unknown to 0.02f) }
         val v = assertIs<Verdict.Sure>(c.classify(sms("VM-POLICY", "Rs 4,500 premium for your policy needs attention")))
         assertEquals(Event.Promo, v.event)
     }

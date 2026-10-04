@@ -29,7 +29,7 @@ internal object Brands {
 
     private val sender = Regex("^[A-Za-z]{2}-|-[A-Za-z]$")
 
-    private fun clean(s: String) = s.replace(sender, "").replace(sender, "")
+    fun clean(s: String) = s.replace(sender, "").replace(sender, "")
 
     private fun word(key: String) = Regex("(?i)(?<![a-z])${Regex.escape(key)}(?![a-z])")
 

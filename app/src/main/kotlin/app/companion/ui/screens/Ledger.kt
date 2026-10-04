@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +55,7 @@ import app.companion.ui.shortDay
 import app.companion.ui.today
 import app.companion.ui.zone
 import java.time.YearMonth
+import kotlinx.coroutines.launch
 
 private fun Card.has(i: Item) = i.last4 == last4 && (i.bank == null || bank.contains(i.bank, true) || i.bank.contains(bank, true))
 
@@ -77,6 +79,7 @@ fun LedgerScreen(go: (String) -> Unit) {
     var cat by rememberSaveable { mutableStateOf<String?>(null) }
     var open by rememberSaveable { mutableLongStateOf(-1L) }
     var who by rememberSaveable { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val drill by DrillBox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(drill, cards) {
         drill?.let { d ->
@@ -141,7 +144,7 @@ fun LedgerScreen(go: (String) -> Unit) {
                         if (i.credit) "" else plain(i.paise), if (i.credit) plain(i.paise) else "",
                         onClick = { open = if (open == i.id) -1 else i.id },
                     )
-                    if (open == i.id) Detail(i, cards.firstOrNull { it.has(i) }, links)
+                    if (open == i.id) Detail(i, cards.firstOrNull { it.has(i) }, links) { cat -> scope.launch { repo.file(i.id, cat) } }
                 }
             }
             item { LedgerTotal("Total", plain(spent), plain(rows.tot(true))) }
@@ -150,7 +153,7 @@ fun LedgerScreen(go: (String) -> Unit) {
 }
 
 @Composable
-private fun Detail(i: Item, card: Card?, links: Links) {
+private fun Detail(i: Item, card: Card?, links: Links, onFile: (String) -> Unit) {
     val p = pal
     val d = dateOf(i.at)
     val lines = listOf(
@@ -161,6 +164,14 @@ private fun Detail(i: Item, card: Card?, links: Links) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Column(Modifier.fillMaxWidth().background(p.ruleSoft).padding(start = 67.dp, end = 12.dp, top = 6.dp, bottom = 8.dp)) {
             lines.forEach { Text(it, style = Ty.mono(11).copy(color = p.ink)) }
+        }
+        Row(
+            Modifier.fillMaxWidth().background(p.ruleSoft).horizontalScroll(rememberScrollState()).padding(start = 67.dp, end = 12.dp, bottom = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Category.entries.filter { it != Category.Income || i.credit }.forEach { c ->
+                Chip(c.label.cap(), i.category == c.label) { if (i.category != c.label) onFile(c.label) }
+            }
         }
     }
 }

@@ -102,10 +102,20 @@ fun InboxScreen(go: (String) -> Unit) {
                     i.title,
                     listOfNotNull(srcWord(i.src), stamped(i.at), i.takeIf { it.paise > 0 }?.let { money(it.paise, it.currency) }, i.note.take(80).ifBlank { null }).joinToString(" · "),
                     trailing = { InboxStamp(i.state) },
-                    actions = if (i.state == State.ASK || i.state == State.CHECK) {
-                        { Acts(i, { cat -> scope.launch { repo.file(i.id, cat) } }) { scope.launch { repo.dismiss(i.id) } } }
-                    } else {
-                        null
+                    actions = when {
+                        i.kind == "Promo" -> {
+                            { Btn("Not spam") { scope.launch { repo.notSpam(i.id) } } }
+                        }
+                        i.state == State.ASK || i.state == State.CHECK -> {
+                            {
+                                Acts(
+                                    i,
+                                    { cat -> scope.launch { repo.file(i.id, cat) } },
+                                    { scope.launch { if (i.state == State.ASK) repo.confirm(i.id) else repo.dismiss(i.id) } },
+                                ) { scope.launch { repo.spam(i.id) } }
+                            }
+                        }
+                        else -> null
                     },
                 )
             }
@@ -129,11 +139,14 @@ private fun InboxStamp(state: String) {
 }
 
 @Composable
-private fun RowScope.Acts(i: Item, onFile: (String) -> Unit, onDone: () -> Unit) {
+private fun RowScope.Acts(i: Item, onFile: (String) -> Unit, onDone: () -> Unit, onSpam: () -> Unit) {
     when {
         i.state == State.CHECK -> Btn("Done", onClick = onDone)
         i.money -> cats(i).forEachIndexed { n, cat -> Btn(cat.replaceFirstChar(Char::uppercase), go = n == 0) { onFile(cat) } }
-        else -> Btn("File", go = true, onClick = onDone)
+        else -> {
+            Btn("File", go = true, onClick = onDone)
+            Btn("Spam", onClick = onSpam)
+        }
     }
     i.cal()?.let { CalBtn(it) }
 }

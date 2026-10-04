@@ -1,10 +1,16 @@
 package app.companion.data
 
+import androidx.room.withTransaction
+import app.companion.core.Calibration
 import app.companion.core.Event
 import app.companion.core.Fingerprint
 import app.companion.core.Group
+import app.companion.core.Kind
 import app.companion.core.Repeat
+import app.companion.core.Rules
 import app.companion.core.Raw
+import app.companion.core.Template
+import app.companion.core.Types
 import app.companion.core.Verdict
 import app.companion.core.Worth
 import java.time.Instant
@@ -26,6 +32,7 @@ class Repo(private val db: Db) {
     val bills = d.bills()
     val asks = d.asks()
     val tasks = d.tasks()
+    val rules = d.ruleRows()
 
     suspend fun profileNow() = d.profileNow() ?: Profile()
 
@@ -60,11 +67,50 @@ class Repo(private val db: Db) {
 
     suspend fun sweep(now: Long = System.currentTimeMillis()) = d.sweep(now)
 
-    suspend fun file(id: Long, category: String) {
-        val key = d.item(id)?.merchant?.let { Fingerprint.norm(it) }
+    fun corrections(since: Long) = d.corrections(since)
+
+    suspend fun exportRows() = d.exportRows()
+
+    suspend fun deleteRule(hash: String, task: String) = d.deleteRule(hash, task)
+
+    suspend fun file(id: Long, category: String) = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction
+        if (!i.money) return@withTransaction settle(i)
+        correct(i, Calibration.CATEGORY, category, src(i))
         d.file(id, category)
-        if (key != null) d.learn(Learned(key, category))
+        i.merchant?.let { Fingerprint.norm(it) }?.let { d.learn(Learned(it, category)) }
     }
+
+    suspend fun confirm(id: Long) = db.withTransaction { d.item(id)?.let { settle(it) } }
+
+    suspend fun spam(id: Long) = mark(id, "spam", null)
+
+    suspend fun notSpam(id: Long) = mark(id, "alert", Src.NOT_SPAM)
+
+    suspend fun notOtp(id: Long) = mark(id, "alert", Src.NOT_OTP)
+
+    private suspend fun mark(id: Long, label: String, src: String?) = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction
+        correct(i, Calibration.TYPE, label, src ?: src(i))
+        d.retype(id, if (label == "alert") Kind.Alert.name else Kind.Promo.name)
+    }
+
+    private suspend fun settle(i: Item) {
+        correct(i, Calibration.TYPE, Types.of(Kind.valueOf(i.kind)), src(i))
+        d.setState(i.id, State.SETTLED)
+    }
+
+    private fun src(i: Item) = if (i.state == State.ASK) Src.ASK else Src.EDIT
+
+    private suspend fun correct(i: Item, task: String, chosen: String, src: String) {
+        val typed = task == Calibration.TYPE
+        d.correction(Correction(itemId = i.id, at = System.currentTimeMillis(), task = task, model = i.model.takeIf { typed }, modelProb = i.mprob.takeIf { typed }, chosen = chosen, src = src))
+        val h = i.tpl ?: return
+        val r = d.rule(h, task)
+        d.putRule(TemplateRule(h, task, chosen, Rules.bump(r?.label, r?.count ?: 0, chosen)))
+    }
+
+    private suspend fun ruled(tpl: String, v: Verdict) = Rules.apply(v, d.ruled(tpl).associate { it.task to it.label })
 
     suspend fun dismiss(id: Long) = d.setState(id, State.SETTLED)
 
@@ -101,7 +147,9 @@ class Repo(private val db: Db) {
 
     suspend fun purgeTask(id: Long) = d.purgeTask(id)
 
-    suspend fun add(raw: Raw, v: Verdict, p: Profile): Added? {
+    suspend fun add(raw: Raw, verdict: Verdict, p: Profile): Added? {
+        val tpl = Template.of(raw)
+        val (v, learnedCat) = ruled(tpl, verdict)
         val e = v.event
         val zone = ZoneId.systemDefault()
         val day = Instant.ofEpochMilli(raw.at).atZone(zone).toLocalDate().toEpochDay()
@@ -115,8 +163,8 @@ class Repo(private val db: Db) {
             d.count(day, folded)
             return null
         }
-        val learned = (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val item = Items.of(e, raw, v, learned)
+        val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
+        val item = Items.of(e, raw, v, learned).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob)
         val fp = item.fp()
         val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
         if (twin != null) {

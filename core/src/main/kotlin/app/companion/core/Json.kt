@@ -3,6 +3,29 @@ package app.companion.core
 object Json {
     fun parse(text: String): Any? = Reader(text).run { ws(); value().also { ws(); check(i == s.length) { "trailing" } } }
 
+    fun write(v: Any?): String = when (v) {
+        null -> "null"
+        is String -> quote(v)
+        is Float -> if (v.isFinite()) v.toString() else "null"
+        is Double -> if (v.isFinite()) v.toString() else "null"
+        is Number, is Boolean -> v.toString()
+        is Map<*, *> -> v.entries.joinToString(",", "{", "}") { quote(it.key as String) + ":" + write(it.value) }
+        is List<*> -> v.joinToString(",", "[", "]") { write(it) }
+        else -> error("type")
+    }
+
+    private fun quote(s: String) = buildString {
+        append('"')
+        for (c in s) when {
+            c == '"' -> append("\\\"")
+            c == '\\' -> append("\\\\")
+            c == '\n' -> append("\\n")
+            c < ' ' -> append("\\u%04x".format(c.code))
+            else -> append(c)
+        }
+        append('"')
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun obj(text: String): Map<String, Any?> = parse(text) as Map<String, Any?>
 

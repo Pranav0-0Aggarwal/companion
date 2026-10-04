@@ -66,12 +66,14 @@ fun AiSettings() {
         Rule()
         row(Models.needle)
         Rule()
+        row(Models.calibration)
+        Rule()
         PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle.")
         Rule()
         Column(Modifier.padding(16.dp)) {
             Text("Install with adb", style = Ty.ui(13).copy(color = pal.ink))
             Text(
-                "adb push ${Models.decide.file} /data/local/tmp/\nadb shell run-as app.companion sh -c 'mkdir -p files/models && cp /data/local/tmp/${Models.decide.file} files/models/'",
+                "adb push ${Models.decide.file} ${Models.calibration.file} /data/local/tmp/\nadb shell run-as app.companion sh -c 'mkdir -p files/models && cp /data/local/tmp/${Models.decide.file} /data/local/tmp/${Models.calibration.file} files/models/'",
                 Modifier.padding(top = 6.dp),
                 style = Ty.mono(10).copy(color = pal.ink2),
             )

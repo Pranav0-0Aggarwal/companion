@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
+import app.companion.core.Rules
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -81,6 +82,9 @@ interface Dao {
     @Query("UPDATE items SET category = :category, state = 'settled' WHERE id = :id")
     suspend fun file(id: Long, category: String)
 
+    @Query("UPDATE items SET kind = :kind, state = 'settled', code = NULL, expires = NULL WHERE id = :id")
+    suspend fun retype(id: Long, kind: String)
+
     @Query("UPDATE items SET ping = :ping WHERE id = :id")
     suspend fun setPing(id: Long, ping: Int)
 
@@ -104,6 +108,37 @@ interface Dao {
 
     @Upsert
     suspend fun learn(l: Learned)
+
+    @Insert
+    suspend fun correction(c: Correction)
+
+    @Query("SELECT COUNT(*) FROM corrections WHERE at > :since")
+    fun corrections(since: Long): Flow<Int>
+
+    @Query(
+        "SELECT (SELECT sender FROM links WHERE itemId = i.id ORDER BY at, id LIMIT 1) AS sender, i.title AS title, i.note AS note, " +
+            "c.task AS task, c.model AS model, c.modelProb AS prob, c.chosen AS chosen " +
+            "FROM corrections c JOIN items i ON i.id = c.itemId ORDER BY c.at, c.id",
+    )
+    suspend fun exportRows(): List<ExportRow>
+
+    @Query("SELECT * FROM rules WHERE hash = :hash AND count >= ${Rules.MIN}")
+    suspend fun ruled(hash: String): List<TemplateRule>
+
+    @Query("SELECT * FROM rules WHERE hash = :hash AND task = :task")
+    suspend fun rule(hash: String, task: String): TemplateRule?
+
+    @Upsert
+    suspend fun putRule(r: TemplateRule)
+
+    @Query(
+        "SELECT r.hash AS hash, r.task AS task, r.label AS label, r.count AS count, " +
+            "(SELECT title FROM items WHERE tpl = r.hash ORDER BY at DESC LIMIT 1) AS title FROM rules r ORDER BY r.count DESC, r.hash, r.task",
+    )
+    fun ruleRows(): Flow<List<RuleRow>>
+
+    @Query("DELETE FROM rules WHERE hash = :hash AND task = :task")
+    suspend fun deleteRule(hash: String, task: String)
 
     @Query("SELECT * FROM tasks WHERE gone = 0 ORDER BY done, remindAt IS NULL, remindAt, due IS NULL, due, id DESC")
     fun tasks(): Flow<List<Task>>

@@ -1,6 +1,7 @@
 package app.companion.ai
 
 import android.content.Context
+import app.companion.core.Calibration
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
@@ -10,6 +11,7 @@ class Spec(val name: String, val file: String, val sha: String, val bytes: Long,
 object Models {
     val decide = Spec("Decide", "decide.tflite", "", 0, 30_000)
     val needle = Spec("Needle 3", "needle3.bin", "", 0, 30_000)
+    val calibration = Spec("Calibration", "calibration.json", "", 0, 0)
     const val TOKENIZER = "tokenizer.json"
     const val SCHEMA = "schema_prefix.json"
 
@@ -42,6 +44,19 @@ object Models {
         if (ok) prefs.edit().putString(s.file, stamp).apply() else prefs.edit().remove(s.file).apply()
         return ok
     }
+
+    private var cal: Pair<String, Calibration>? = null
+
+    @Synchronized
+    fun loadCalibration(c: Context): Calibration {
+        val f = file(c, calibration)
+        if (!installed(c, calibration)) return Calibration.DEFAULT
+        val stamp = "${f.length()}:${f.lastModified()}"
+        cal?.takeIf { it.first == stamp }?.let { return it.second }
+        return runCatching { Calibration.fromJson(f.readText()) }.getOrDefault(Calibration.DEFAULT).also { cal = stamp to it }
+    }
+
+    fun version(c: Context, s: Spec) = if (installed(c, s)) s.sha.take(8) else null
 
     fun install(c: Context, s: Spec, src: InputStream): Boolean {
         val tmp = File(dir(c), "${s.file}.part")

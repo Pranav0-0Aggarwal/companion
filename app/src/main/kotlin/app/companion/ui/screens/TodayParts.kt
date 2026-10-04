@@ -1,5 +1,6 @@
 package app.companion.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +53,7 @@ import app.companion.ui.rememberNow
 import app.companion.ui.shortDay
 import java.time.LocalDate
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import app.companion.ui.money as amt
 
 private const val CRED = "com.dreamplug.androidapp"
@@ -81,7 +85,7 @@ fun Item.srcLine(links: Links) = (meta() + via(links)).joinToString(" · ")
 
 fun Item.head() = if (money) "${amt(paise, currency)} · $title" else title
 
-fun Item.picks() = listOfNotNull(category, "bills", "other").distinct().take(3)
+fun Item.picks() = if (money) listOfNotNull(category, "bills", "other").distinct().take(3) else listOf("file")
 
 fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit }.sumOf { it.paise }
 
@@ -121,6 +125,8 @@ fun Quiet(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun Otps(items: List<Item>) {
     val ctx = LocalContext.current
+    val repo = ctx.sl.repo
+    val scope = rememberCoroutineScope()
     val now by rememberNow()
     var copied by remember { mutableLongStateOf(-1L) }
     val scroll = rememberScrollState()
@@ -134,16 +140,23 @@ fun Otps(items: List<Item>) {
         ) {
             live.forEach { o ->
                 val end = o.expires ?: 0
-                Coupon(
-                    service = o.title,
-                    code = codeText(o.code.orEmpty()),
-                    meta = if (copied == o.id) "copied" else "${o.note.ifBlank { "code" }} · tap to copy",
-                    timeLeft = "${left(end - now)} LEFT",
-                    remaining = (end - now).toFloat() / (end - o.at).coerceAtLeast(1),
-                    modifier = Modifier.width(w),
-                ) {
-                    copy(ctx, o.code.orEmpty())
-                    copied = o.id
+                Column {
+                    Coupon(
+                        service = o.title,
+                        code = codeText(o.code.orEmpty()),
+                        meta = if (copied == o.id) "copied" else "${o.note.ifBlank { "code" }} · tap to copy",
+                        timeLeft = "${left(end - now)} LEFT",
+                        remaining = (end - now).toFloat() / (end - o.at).coerceAtLeast(1),
+                        modifier = Modifier.width(w),
+                    ) {
+                        copy(ctx, o.code.orEmpty())
+                        copied = o.id
+                    }
+                    Text(
+                        "Not an OTP",
+                        Modifier.padding(top = 6.dp, start = 4.dp).clickable(role = Role.Button) { scope.launch { repo.notOtp(o.id) } },
+                        style = Ty.mono(11).copy(color = pal.ink2),
+                    )
                 }
             }
         }

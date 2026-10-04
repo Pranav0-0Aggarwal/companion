@@ -18,7 +18,7 @@ object Manifest {
     val schema = Spec("Schema", "schema_prefix.json", 3396, "58d7211b245e5a45260190b4edb5d29df62c0d7897e6d0359f8a8a566c4140d5")
     val calibration = Spec("Calibration", "calibration.json", 938, "37e2bcaf993b8a44b0c87f6391ef1a45c9a4fff00991cb09ae4dd12380ca0ae1")
     val needle = Spec("Needle 3", "needle3.cact", 35335380, "c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38", 60_000)
-    val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 0, "PLACEHOLDER", 60_000, "models-v2")
+    val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", 60_000, "models-v2")
     val all = listOf(needle, tokenizer, schema, calibration, decide, nux)
 }
 

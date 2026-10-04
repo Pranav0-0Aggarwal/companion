@@ -17,6 +17,8 @@ lifecycle = "2.11.0"
 coroutines = "1.11.0"
 playAuth = "22.0.0"
 junit = "4.13.2"
+litert = "2.2.0"
+litertlm = "0.17.1"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -43,6 +45,8 @@ biometric = { module = "androidx.biometric:biometric", version.ref = "biometric"
 window = { module = "androidx.window:window", version.ref = "window" }
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 play-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playAuth" }
+litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+litertlm = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 

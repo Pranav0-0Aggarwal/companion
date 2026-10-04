@@ -59,4 +59,6 @@ dependencies {
     implementation(libs.window)
     implementation(libs.coroutines)
     implementation(libs.play.auth)
+    implementation(libs.litert)
+    implementation(libs.litertlm)
 }

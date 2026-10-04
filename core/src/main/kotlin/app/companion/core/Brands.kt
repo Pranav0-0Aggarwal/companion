@@ -1,5 +1,10 @@
 package app.companion.core
 
+val BankNames: List<String> = listOf(
+    "HDFC Bank", "ICICI Bank", "SBI", "Axis Bank", "Kotak Bank", "IDFC First Bank", "Yes Bank", "IndusInd Bank", "PNB",
+    "Bank of Baroda", "Canara Bank", "Federal Bank", "AU Bank", "RBL Bank", "Amex", "Citi", "HSBC", "IDBI Bank", "Standard Chartered",
+)
+
 internal object Brands {
     private class Entry(val key: String, val name: String)
 

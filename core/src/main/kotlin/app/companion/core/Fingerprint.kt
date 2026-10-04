@@ -25,7 +25,7 @@ data class Fingerprint(
             else -> null
         }
 
-        private fun norm(s: String?) = s?.lowercase()?.filter { it.isLetterOrDigit() }?.takeIf { it.isNotEmpty() }
+        fun norm(s: String?) = s?.lowercase()?.filter { it.isLetterOrDigit() }?.takeIf { it.isNotEmpty() }
 
         private fun alike(a: String?, b: String?) =
             a != null && b != null && (a == b || (minOf(a.length, b.length) >= 4 && (a.contains(b) || b.contains(a))))

@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companion One UI mockups</title>
+<style>
+:root{--page:#E7E8EC;--pink:#111317}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);font-family:system-ui,-apple-system,"SamsungOne","Roboto","Segoe UI",sans-serif;color:#111317;-webkit-font-smoothing:antialiased;padding:40px 24px 80px}
+.intro{max-width:1100px;margin:0 auto 40px}
+.intro h1{font-size:30px;letter-spacing:-.02em}
+.intro p{margin-top:8px;color:#4c5058;font-size:15px;line-height:1.5;max-width:70ch}
+.demo{display:inline-block;font:700 11px/1 system-ui;letter-spacing:.12em;color:#C0302A;border:1.5px solid #C0302A;border-radius:6px;padding:4px 7px;margin-left:8px;vertical-align:middle}
+h2.band{max-width:1100px;margin:56px auto 20px;font-size:20px;letter-spacing:-.01em}
+h2.band span{display:block;font-size:14px;font-weight:400;color:#4c5058;margin-top:4px}
+.grid{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;max-width:1240px;margin:0 auto}
+figure{display:flex;flex-direction:column;align-items:center;gap:12px}
+figcaption{font-size:13px;color:#30333a;text-align:center;max-width:360px;line-height:1.4}
+figcaption b{display:block;font-size:14px;color:#111317}
+.rec{color:#17784A;font-weight:700}
+
+.ph{--bg:#F4F5F7;--card:#fff;--raised:#F0F1F4;--ink:#111317;--ink2:#5D626B;--ink3:#8A8F98;--line:#E6E8EC;--acc:#2A62DB;--onacc:#fff;--accbox:#E4ECFD;--onaccbox:#1846B0;--red:#C0302A;--redbox:#FCE9E7;--green:#17784A;--greenbox:#E2F3EA;--bar:rgba(255,255,255,.9);--lift:0 1px 2px rgba(17,19,23,.04),0 6px 18px rgba(17,19,23,.05)}
+.ph.dark{--bg:#000;--card:#17171A;--raised:#232327;--ink:#F2F3F5;--ink2:#A3A8B0;--ink3:#6E737B;--line:#2A2B30;--acc:#7EA6FF;--onacc:#0B1A3A;--accbox:#1D2A47;--onaccbox:#C9D8FF;--red:#FF6B61;--redbox:#3A1614;--green:#4CC38A;--greenbox:#10301F;--bar:rgba(30,30,34,.9);--lift:none}
+.ph{width:360px;height:840px;border-radius:34px;background:var(--bg);color:var(--ink);position:relative;overflow:hidden;box-shadow:0 0 0 8px #1b1c1f,0 0 0 9px #3a3b40,0 24px 60px rgba(0,0,0,.28);font-variant-numeric:tabular-nums}
+.ph.crop{height:520px}
+.scroll{position:absolute;inset:0;overflow:hidden}
+.sb{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600;color:var(--ink)}
+.sb i{display:inline-block;width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+.sb i:after{content:"";position:absolute;inset:1.5px;right:5px;background:currentColor;border-radius:1px}
+.ico{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico.s{width:20px;height:20px}
+.ico.xs{width:18px;height:18px}
+.acts{display:flex;justify-content:flex-end;gap:4px;padding:6px 10px 0}
+.ib{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:var(--ink)}
+.hd{padding:56px 24px 22px}
+.hd h3{font-size:32px;line-height:1.12;font-weight:700;letter-spacing:-.02em}
+.hd p{margin-top:10px;font-size:14px;color:var(--ink2);line-height:1.4}
+.ask{margin:0 16px 4px;height:52px;border-radius:26px;background:var(--card);box-shadow:var(--lift);display:flex;align-items:center;gap:12px;padding:0 8px 0 18px;color:var(--ink2);font-size:16px}
+.ask .sp{color:var(--acc)}
+.ask .grow{flex:1}
+.ask .mic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink2)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;padding:22px 28px 8px;font-size:14px;font-weight:600;color:var(--ink2)}
+.sec a{color:var(--acc);font-weight:600;text-decoration:none}
+.card{margin:0 16px;background:var(--card);border-radius:26px;overflow:hidden;box-shadow:var(--lift)}
+.card+.card{margin-top:12px}
+.row{display:flex;align-items:center;gap:14px;padding:14px 18px;min-height:64px;position:relative}
+.row+.row:before,.row.div:before{content:"";position:absolute;top:0;left:72px;right:18px;height:1px;background:var(--line)}
+.row.noic+.row.noic:before{left:18px}
+.lead{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--accbox);color:var(--onaccbox)}
+.lead.r{background:var(--redbox);color:var(--red)}
+.lead.g{background:var(--greenbox);color:var(--green)}
+.lead.n{background:var(--raised);color:var(--ink2)}
+.tx{flex:1;min-width:0}
+.t{font-size:16px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s{font-size:13px;color:var(--ink2);margin-top:2px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font-size:16px;font-weight:600;white-space:nowrap}
+.amt.in{color:var(--green)}
+.tm{font-size:13px;color:var(--ink2);width:42px;flex:none}
+.stamp{font-size:10.5px;font-weight:800;letter-spacing:.12em;border:1.5px solid currentColor;border-radius:6px;padding:3px 6px 2px;color:var(--red);white-space:nowrap;flex:none}
+.stamp.ok{color:var(--green)}
+.stamp.q{color:var(--ink2)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 16px 72px;margin-top:-4px}
+.btn{height:40px;border-radius:20px;padding:0 16px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;background:var(--accbox);color:var(--onaccbox)}
+.btn.f{background:var(--acc);color:var(--onacc)}
+.btn.t{background:none;color:var(--acc);padding:0 10px}
+.chip{height:36px;border-radius:18px;padding:0 14px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);color:var(--ink);background:var(--card);white-space:nowrap}
+.chip.on{background:var(--accbox);border-color:transparent;color:var(--onaccbox);font-weight:600}
+.chips{display:flex;gap:8px;padding:12px 16px 4px;overflow:hidden}
+.tag{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:10px;background:var(--raised);color:var(--ink2)}
+.tags{display:flex;gap:6px;margin-top:7px}
+.code{background:var(--card);border-radius:26px;box-shadow:var(--lift);margin:12px 16px 0;padding:16px 18px 18px;position:relative;overflow:hidden}
+.code .top{display:flex;justify-content:space-between;align-items:center}
+.code .svc{font-size:15px;font-weight:600}
+.code .pur{font-size:13px;color:var(--ink2);margin-top:1px}
+.code .num{font-size:36px;font-weight:700;letter-spacing:.06em;margin-top:8px}
+.code .meta{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.code .left{font-size:14px;font-weight:600;color:var(--ink2)}
+.code .cp{display:flex;align-items:center;gap:6px;color:var(--acc);font-size:14px;font-weight:600}
+.drain{position:absolute;left:18px;right:18px;bottom:0;height:3px;background:var(--line);border-radius:2px}
+.drain b{display:block;height:100%;width:62%;background:var(--acc);border-radius:2px}
+.big{font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.cap{font-size:13px;color:var(--ink2)}
+.pad{padding:18px 20px}
+.nav{position:absolute;left:12px;right:12px;bottom:16px;display:flex;gap:8px;align-items:center}
+.pill{flex:1;height:64px;border-radius:32px;background:var(--bar);box-shadow:0 6px 24px rgba(0,0,0,.12),0 0 0 1px var(--line);display:flex;align-items:center;justify-content:space-around;padding:0 6px;backdrop-filter:blur(16px)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink2);width:50px}
+.tab .ind{width:44px;height:28px;border-radius:14px;display:grid;place-items:center}
+.tab.on{color:var(--acc)}
+.tab.on .ind{background:var(--accbox);color:var(--onaccbox)}
+.fab{width:64px;height:64px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-items:center;box-shadow:0 6px 20px rgba(42,98,219,.35)}
+.dark .fab{box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.bottomfade{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(transparent,var(--bg) 70%)}
+.toolbar{display:flex;align-items:center;padding:4px 8px 0 20px;height:56px}
+.toolbar .tt{flex:1;font-size:20px;font-weight:700}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:12px}
+.bar b{display:block;height:100%;background:var(--acc);border-radius:4px}
+.month{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 0 24px}
+.month .m{font-size:20px;font-weight:700}
+.dh{padding:20px 28px 8px;font-size:14px;font-weight:600;color:var(--ink2)}
+.face{width:300px;height:184px;border-radius:22px;background:#13284F;color:#E9EEF8;padding:18px 20px;position:relative;flex:none;box-shadow:0 10px 30px rgba(19,40,79,.25)}
+.face.icici{background:#5B2318}
+.face .bk{font-size:15px;font-weight:700}
+.face .nk{font-size:13px;opacity:.75;margin-top:2px}
+.face .l4{position:absolute;left:20px;bottom:18px;font-size:19px;font-weight:600;letter-spacing:.18em}
+.face .due{position:absolute;right:20px;bottom:16px;text-align:right;font-size:12px;opacity:.8}
+.face .due b{display:block;font-size:17px;opacity:1;color:#fff}
+.faces{display:flex;gap:12px;padding:12px 16px 0 30px;overflow:hidden}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.dots i{width:6px;height:6px;border-radius:3px;background:var(--line)}
+.dots i.on{width:18px;background:var(--acc)}
+.sheetbg{position:absolute;inset:0;background:rgba(0,0,0,.42)}
+.sheet{position:absolute;left:0;right:0;top:44px;bottom:0;background:var(--bg);border-radius:28px 28px 0 0;overflow:hidden}
+.handle{width:36px;height:4px;border-radius:2px;background:var(--ink3);margin:10px auto 6px;opacity:.6}
+.sheet h4{font-size:22px;font-weight:700;padding:8px 24px 14px;letter-spacing:-.01em}
+.input{margin:0 16px;min-height:64px;border-radius:24px;background:var(--card);display:flex;align-items:center;gap:12px;padding:0 8px 0 18px;font-size:20px}
+.input .ph2{color:var(--ink3);flex:1}
+.input .val{flex:1;font-weight:500}
+.send{width:44px;height:44px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-items:center}
+.wrap{display:flex;flex-wrap:wrap;gap:8px;padding:6px 16px 0}
+.ua{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ua .lbl{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink2)}
+.ua .q{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 6px 0 12px;border-radius:16px;background:var(--accbox);color:var(--onaccbox);font-size:13.5px;font-weight:600}
+.ua .q span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:12px;background:rgba(42,98,219,.14)}
+.sk{height:12px;border-radius:6px;background:var(--raised);margin-top:10px}
+.cover{width:316px;height:349px;border-radius:40px;background:#000;color:#F2F3F5;box-shadow:0 0 0 8px #1b1c1f,0 0 0 9px #3a3b40,0 24px 60px rgba(0,0,0,.28);position:relative;overflow:hidden;font-variant-numeric:tabular-nums;padding:28px 26px}
+.cam{position:absolute;top:22px;left:36px;width:22px;height:22px;border-radius:50%;background:#111;box-shadow:inset 0 0 0 4px #222}
+.cam+.cam{left:66px}
+.flex{width:360px;perspective:1100px;display:flex;flex-direction:column;align-items:center}
+.flex .upper{width:360px;height:420px;border-radius:34px 34px 6px 6px;transform:rotateX(38deg);transform-origin:bottom center;box-shadow:0 0 0 8px #1b1c1f,0 0 0 9px #3a3b40}
+.flex .lower{width:360px;height:420px;border-radius:6px 6px 34px 34px;box-shadow:0 0 0 8px #1b1c1f,0 0 0 9px #3a3b40,0 30px 60px rgba(0,0,0,.25)}
+.flex .ph{height:420px}
+.hinge{width:376px;height:10px;background:linear-gradient(#2a2b30,#111216,#2a2b30);border-radius:5px;z-index:2;margin:-3px 0}
+.tiles{display:flex;gap:10px;margin:10px 16px 0}
+.tile{flex:1;background:var(--card);border-radius:22px;box-shadow:var(--lift);padding:14px 16px}
+.tile .k{font-size:13px;color:var(--ink2)}
+.tile .v{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+.tile .w{font-size:13px;color:var(--ink2);margin-top:2px}
+.dest{display:flex;justify-content:space-around;margin:12px 16px 0;background:var(--card);border-radius:26px;padding:8px 4px}
+.dest div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink2);width:64px;padding:6px 0}
+.prog{display:flex;gap:6px;padding:14px 24px 0}
+.prog i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.prog i.on{background:var(--acc)}
+.field{padding:10px 18px}
+.field+.field{padding-top:4px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.field .in{height:52px;border-radius:16px;background:var(--raised);display:flex;align-items:center;padding:0 16px;font-size:16px}
+.field .in.hint{color:var(--ink3)}
+.field .in.focus{box-shadow:inset 0 0 0 2px var(--acc);background:var(--card)}
+.foot{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 26px;display:flex;gap:10px;align-items:center;background:linear-gradient(transparent,var(--bg) 30%)}
+.foot .btn.f{flex:1;height:52px;border-radius:26px;justify-content:center;font-size:16px}
+.alt{display:flex;flex-direction:column;align-items:center;gap:10px}
+.alt .lab{font:700 13px/1 system-ui;letter-spacing:.08em;background:#111317;color:#fff;border-radius:6px;padding:5px 8px}
+.glance{margin:0 16px;background:var(--card);border-radius:28px;box-shadow:var(--lift);padding:18px 20px}
+.glance .k{font-size:13px;color:var(--ink2)}
+.glance .num{font-size:40px;font-weight:700;letter-spacing:.06em;margin-top:4px}
+.glance .split{display:flex;border-top:1px solid var(--line);margin-top:14px;padding-top:12px;gap:12px}
+.glance .split div{flex:1}
+.glance .split b{display:block;font-size:18px;margin-top:2px}
+.dock{position:absolute;left:12px;right:12px;bottom:92px;height:52px;border-radius:26px;background:var(--bar);box-shadow:0 6px 24px rgba(0,0,0,.12),0 0 0 1px var(--line);display:flex;align-items:center;gap:12px;padding:0 8px 0 18px;color:var(--ink2);font-size:16px}
+.mid{width:56px;height:56px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-items:center;margin-top:-10px;box-shadow:0 6px 18px rgba(42,98,219,.35)}
+.note{max-width:1100px;margin:40px auto 0;font-size:13px;color:#4c5058;line-height:1.5}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+<defs>
+<symbol id="i-today" viewBox="0 0 24 24"><path d="M7 3v3M17 3v3"/><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M3 10h18"/><path d="M8 14h3v3H8z"/></symbol>
+<symbol id="i-ledger" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+<symbol id="i-cards" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M3 10h18M7 15h3"/></symbol>
+<symbol id="i-bills" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/></symbol>
+<symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3c.5 4 2.5 6 7 7-4.5 1-6.5 3-7 7-.5-4-2.5-6-7-7 4.5-1 6.5-3 7-7z"/><path d="M19 15.5c.2 1.2.8 1.8 2 2-1.2.2-1.8.8-2 2-.2-1.2-.8-1.8-2-2 1.2-.2 1.8-.8 2-2z"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><path d="M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0"/><path d="M20 20l-3.5-3.5"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 8h10a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h3"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><path d="M9 20h.01M17 20h.01"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v18M5 3v5a2 2 0 0 0 4 0V3"/><path d="M17 21V3c-2 1-3 4-3 8h3"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17h14v-5l-2-5H7l-2 5z"/><path d="M5 12h14M7 17v2M17 17v2"/></symbol>
+<symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 7h12l1 14H5z"/><path d="M9 7a3 3 0 0 1 6 0"/></symbol>
+<symbol id="i-in" viewBox="0 0 24 24"><path d="M17 7L7 17M7 9v8h8"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15l-4-4M20 16H5l4 4"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M3 7l9 6 9-6"/></symbol>
+<symbol id="i-sms" viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4z"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-cl" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="i-cr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3L5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/></symbol>
+</defs>
+</svg>
+
+<div class="intro">
+<h1>Companion, One UI native, refined <span class="demo">DEMO DATA</span></h1>
+<p>Checkpoint mockups before the Compose build. Every name, merchant, amount and code below is synthetic. Frames are the Galaxy Z Flip 7 inner screen (1080 x 2520 at 1/3 scale) and cover screen (948 x 1048 at 1/3 scale). Passbook survives only as stamps for state and tabular figures for money and codes.</p>
+</div>
+
+<h2 class="band">Key screens</h2>
+<div class="grid">
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:42</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-search"/></svg></div><div class="ib"><svg class="ico"><use href="#i-set"/></svg></div></div>
+  <div class="hd" style="padding-top:34px"><h3>Good evening,<br>Pranav</h3><p>Sun 5 Oct · 2 things need you</p></div>
+  <div class="ask"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="code"><div class="top"><div><div class="svc">Demo Bank</div><div class="pur">Login code</div></div></div><div class="num">482 913</div><div class="meta"><span class="left">0:42 left</span><span class="cp"><svg class="ico xs"><use href="#i-copy"/></svg>Copy</span></div><div class="drain"><b></b></div></div>
+  <div class="sec">Needs you<a>See all</a></div>
+  <div class="card">
+    <div class="row"><div class="lead r"><svg class="ico s"><use href="#i-bolt"/></svg></div><div class="tx"><div class="t">Airwave bill</div><div class="s">₹799 · due tomorrow</div></div><span class="stamp">DUE 6 OCT</span></div>
+    <div class="btns"><span class="btn f">Mark paid</span><span class="btn">Remind me</span></div>
+    <div class="row div"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">₹1,240 · QuickMart</div><div class="s">Demo Bank ··4821 · SMS + app</div></div><span class="stamp">ASK</span></div>
+    <div class="btns"><span class="btn f">Groceries</span><span class="btn">Food</span><span class="btn">Other</span></div>
+  </div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption><b>1 · Today, light <span class="demo">DEMO</span></b>Greeting by name in the viewing area, Ask pill, live code with a draining hairline, one-tap needs-you rows.</figcaption>
+</figure>
+
+<figure>
+<div class="ph dark"><div class="scroll">
+  <div class="sb"><span>18:42</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-search"/></svg></div><div class="ib"><svg class="ico"><use href="#i-set"/></svg></div></div>
+  <div class="hd" style="padding-top:34px"><h3>Good evening,<br>Pranav</h3><p>Sun 5 Oct · 2 things need you</p></div>
+  <div class="ask"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="code"><div class="top"><div><div class="svc">Demo Bank</div><div class="pur">Login code</div></div></div><div class="num">482 913</div><div class="meta"><span class="left">0:42 left</span><span class="cp"><svg class="ico xs"><use href="#i-copy"/></svg>Copy</span></div><div class="drain"><b></b></div></div>
+  <div class="sec">Needs you<a>See all</a></div>
+  <div class="card">
+    <div class="row"><div class="lead r"><svg class="ico s"><use href="#i-bolt"/></svg></div><div class="tx"><div class="t">Airwave bill</div><div class="s">₹799 · due tomorrow</div></div><span class="stamp">DUE 6 OCT</span></div>
+    <div class="btns"><span class="btn f">Mark paid</span><span class="btn">Remind me</span></div>
+  </div>
+  <div class="sec">Spent today<a>Ledger</a></div>
+  <div class="card"><div class="pad"><div class="big">₹2,186</div><div class="cap" style="margin-top:4px">3 payments · nothing in</div></div>
+    <div class="row noic div"><span class="tm">08:12</span><div class="tx"><div class="t">Bean Street Cafe</div></div><span class="amt">₹240</span></div>
+  </div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption><b>2 · Today, dark <span class="demo">DEMO</span></b>True black ground, raised cards, same hierarchy. Today's spend card with tabular figures.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:43</span><i></i></div>
+  <div class="hd" style="padding-top:60px"><h3>Good evening,<br>Pranav</h3></div>
+  <div class="sheetbg"></div>
+  <div class="sheet">
+    <div class="handle"></div>
+    <h4>Ask Companion</h4>
+    <div class="input"><span class="ph2">Ask about your money</span><span class="mic"><svg class="ico"><use href="#i-mic"/></svg></span></div>
+    <div class="sec" style="padding-top:20px">Try</div>
+    <div class="wrap"><span class="chip">Food spend this month</span><span class="chip">Bills due this week</span><span class="chip">Top merchants last month</span><span class="chip">Demo card this cycle</span><span class="chip">Remind me to pay rent on the 5th</span></div>
+    <div class="sec" style="padding-top:22px">Recent</div>
+    <div class="card">
+      <div class="row"><div class="lead n"><svg class="ico s"><use href="#i-clock"/></svg></div><div class="tx"><div class="t">How much on cabs in September</div></div></div>
+      <div class="row"><div class="lead n"><svg class="ico s"><use href="#i-clock"/></svg></div><div class="tx"><div class="t">QuickMart last 30 days</div></div></div>
+    </div>
+  </div>
+</div></div>
+<figcaption><b>3a · Ask sheet, opened <span class="demo">DEMO</span></b>Full-height sheet, large input, on-device voice, five suggestions from the owner's data shape, recent questions.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:43</span><i></i></div>
+  <div class="sheetbg"></div>
+  <div class="sheet">
+    <div class="handle"></div>
+    <h4>Ask Companion</h4>
+    <div class="input"><span class="val">Food spend this month</span><span class="send"><svg class="ico s"><use href="#i-up"/></svg></span></div>
+    <div class="card" style="margin-top:14px"><div class="pad">
+      <div class="ua"><span class="lbl">UNDERSTOOD AS</span><span class="q">Food · 1 to 5 Oct 2026<span><svg class="ico xs" style="width:14px;height:14px"><use href="#i-edit"/></svg></span></span></div>
+      <div class="big" style="margin-top:14px">₹6,420</div>
+      <div class="cap" style="margin-top:2px">23 payments</div>
+    </div>
+      <div class="row noic div"><span class="tm">4 Oct</span><div class="tx"><div class="t">Spice Route</div><div class="s">food · Demo Bank ··4821</div></div><span class="amt">₹1,180</span></div>
+      <div class="row noic"><span class="tm">3 Oct</span><div class="tx"><div class="t">Bean Street Cafe</div><div class="s">food · UPI</div></div><span class="amt">₹420</span></div>
+      <div class="row noic"><span class="tm">2 Oct</span><div class="tx"><div class="t">Tandoor Lane</div><div class="s">food · Demo Bank ··4821</div></div><span class="amt">₹960</span></div>
+      <div style="padding:6px 12px 14px"><span class="btn t">Open in Ledger</span></div>
+    </div>
+    <div class="card"><div class="pad">
+      <div class="ua"><span class="lbl">UNDERSTOOD AS</span><span class="q">Reminder · Pay rent · Wed 5 Nov 09:00<span><svg class="ico xs" style="width:14px;height:14px"><use href="#i-edit"/></svg></span></span></div>
+      <div style="margin-top:14px;display:flex;gap:8px"><span class="btn f">Confirm</span></div>
+    </div></div>
+  </div>
+</div></div>
+<figcaption><b>3b · Ask answer <span class="demo">DEMO</span></b>The answer says how it understood you; tap the chip to edit. Create actions keep the one-tap Confirm.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:44</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-search"/></svg></div></div>
+  <div class="hd" style="padding-top:44px"><h3>Ledger</h3><p>1 to 5 Oct · ₹38,214 spent</p></div>
+  <div class="ask"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask about your spending</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="month"><span class="m">October 2026</span><span style="display:flex"><span class="ib"><svg class="ico"><use href="#i-cl"/></svg></span><span class="ib" style="opacity:.35"><svg class="ico"><use href="#i-cr"/></svg></span></span></div>
+  <div class="card"><div class="pad"><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="cap">Spent</div><div class="big">₹38,214</div></div><div style="text-align:right"><div class="cap">In</div><div class="amt in" style="font-size:20px">₹1,20,000</div></div></div><svg viewBox="0 0 280 64" style="width:100%;height:64px;margin-top:12px;display:block"><path d="M0 62 L280 6" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/><path d="M0 62 C12 58 22 50 32 47 S42 43 45 42" stroke="var(--acc)" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="45" cy="42" r="4" fill="var(--acc)"/><text x="276" y="60" text-anchor="end" font-size="11" fill="var(--ink2)">typical month</text></svg><div class="cap" style="margin-top:6px;display:flex;justify-content:space-between"><span>₹6,100 above a typical 5 days</span><span>76% of budget</span></div></div></div>
+  <div class="chips"><span class="chip on">All accounts</span><span class="chip">Demo ··4821</span><span class="chip">Food</span><span class="chip">Shopping</span></div>
+  <div class="dh">Today · Sun 5 Oct</div>
+  <div class="card">
+    <div class="row"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">QuickMart</div><div class="s">groceries · UPI · SMS + app</div></div><span class="amt">₹1,240</span></div>
+    <div class="row"><div class="lead"><svg class="ico s"><use href="#i-car"/></svg></div><div class="tx"><div class="t">CityCab</div><div class="s">transport · Demo ··4821</div></div><span class="amt">₹318</span></div>
+    <div class="row"><div class="lead g"><svg class="ico s"><use href="#i-in"/></svg></div><div class="tx"><div class="t">Refund · ShopKart</div><div class="s">income · mail</div></div><span class="amt in">+₹649</span></div>
+  </div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption><b>4 · Ledger <span class="demo">DEMO</span></b>Month switcher, a pacing line (this month against a typical month) instead of a donut, filter chips, days as grouped One UI cards with category glyphs.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:44</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-add"/></svg></div></div>
+  <div class="hd" style="padding-top:44px"><h3>Cards</h3><p>₹24,610 this cycle · 2 cards</p></div>
+  <div class="faces"><div class="face"><div class="bk">Demo Bank</div><div class="nk">Platinum</div><div class="l4">•••• 4821</div><div class="due">Due<b>3 Nov</b></div></div><div class="face icici"><div class="bk">Sample Bank</div><div class="nk">Coral</div></div></div>
+  <div class="dots"><i class="on"></i><i></i></div>
+  <div class="card" style="margin-top:14px"><div class="pad"><div style="display:flex;justify-content:space-between;align-items:center"><div class="big" style="font-size:32px">₹18,240</div><span class="stamp">DUE 3 NOV</span></div><div class="cap" style="margin-top:4px">Statement 16 Sep to 15 Oct</div><div class="bar"><b style="width:36%"></b></div><div class="cap" style="margin-top:8px">36% of ₹50,000 limit used</div></div></div>
+  <div class="dh">This cycle</div>
+  <div class="card">
+    <div class="row"><div class="lead"><svg class="ico s"><use href="#i-bag"/></svg></div><div class="tx"><div class="t">ShopKart</div><div class="s">4 Oct · shopping</div></div><span class="amt">₹4,299</span></div>
+    <div class="row"><div class="lead"><svg class="ico s"><use href="#i-food"/></svg></div><div class="tx"><div class="t">Spice Route</div><div class="s">4 Oct · food</div></div><span class="amt">₹1,180</span></div>
+  </div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption><b>5 · Cards <span class="demo">DEMO</span></b>Solid card faces (no gradients), swipe between cards, the cycle card with limit and the DUE stamp, then this cycle's spends.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:45</span><i></i></div>
+  <div class="hd" style="padding-top:92px"><h3>Inbox</h3><p>2 to file · 1 to check</p></div>
+  <div class="chips" style="padding-top:0"><span class="chip on">All</span><span class="chip">Mail</span><span class="chip">WhatsApp</span><span class="chip">Instagram</span><span class="chip">Alerts</span></div>
+  <div class="dh">Needs you</div>
+  <div class="card">
+    <div class="row"><div class="lead"><svg class="ico s"><use href="#i-chat"/></svg></div><div class="tx"><div class="t">Rohan (demo)</div><div class="s">Still on for dinner Saturday?</div><div class="tags"><span class="tag">plan</span><span class="tag">question</span></div></div><span class="stamp">ASK</span></div>
+    <div class="btns"><span class="btn f">File</span><span class="btn">Add to calendar</span><span class="btn t">Spam</span></div>
+    <div class="row div"><div class="lead"><svg class="ico s"><use href="#i-mail"/></svg></div><div class="tx"><div class="t">Your ShopKart order shipped</div><div class="s">mail · 17:20</div><div class="tags"><span class="tag">delivery</span></div></div><span class="stamp q">CHECK</span></div>
+    <div class="btns"><span class="btn f">Done</span></div>
+  </div>
+  <div class="dh">Filed</div>
+  <div class="card">
+    <div class="row"><div class="lead n"><svg class="ico s"><use href="#i-sms"/></svg></div><div class="tx"><div class="t">₹318 · CityCab</div><div class="s">SMS · 13:05</div></div><span class="stamp ok">SETTLED</span></div>
+  </div>
+  <div class="cap" style="padding:14px 28px">14 WhatsApp, 6 promos folded today</div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption><b>6 · Inbox <span class="demo">DEMO</span></b>Segments as chips, stamps for state (ASK, CHECK, SETTLED), tag chips, one-tap filing, or swipe right to accept the suggestion. The ASK stamp morphs into SETTLED.</figcaption>
+</figure>
+
+<figure>
+<div class="flex">
+  <div class="ph upper"><div class="scroll">
+    <div class="sb"><span>18:46</span><i></i></div>
+    <div class="glance" style="margin-top:22px;padding:24px 22px"><div class="k" style="font-size:15px">Demo Bank · login code · 0:42 left</div><div class="num" style="font-size:60px;margin-top:8px">482 913</div>
+      <div class="split" style="margin-top:22px;padding-top:18px"><div><span class="cap">Next bill</span><b style="font-size:26px">₹799</b><span class="cap">Airwave · tomorrow</span></div><div><span class="cap">Spent today</span><b style="font-size:26px">₹2,186</b><span class="cap">3 payments</span></div></div>
+    </div>
+  </div></div>
+  <div class="hinge"></div>
+  <div class="ph lower"><div class="scroll">
+    <div class="ask" style="margin-top:16px"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+    <div class="sec" style="padding-top:14px">Needs you · 2</div>
+    <div class="card">
+      <div class="row"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">₹1,240 · QuickMart</div><div class="s">Demo Bank ··4821</div></div><span class="stamp">ASK</span></div>
+      <div class="btns"><span class="btn f">Groceries</span><span class="btn">Food</span><span class="btn">Other</span></div>
+    </div>
+    <div class="dest"><div><svg class="ico"><use href="#i-ledger"/></svg>Ledger</div><div><svg class="ico"><use href="#i-cards"/></svg>Cards</div><div><svg class="ico"><use href="#i-bills"/></svg>Bills</div><div><svg class="ico"><use href="#i-inbox"/></svg>Inbox</div></div>
+  </div></div>
+</div>
+<figcaption><b>7 · Flex mode, half folded <span class="demo">DEMO</span></b>Top half is a glance at reading distance; bottom half is where thumbs are: Ask, the next item to file, and destinations. No decorative hinge label.</figcaption>
+</figure>
+
+<figure>
+<div class="cover">
+  <div class="cam"></div><div class="cam"></div>
+  <div style="margin-top:46px;font-size:14px;color:#A3A8B0">Demo Bank · login</div>
+  <div style="font-size:46px;font-weight:700;letter-spacing:.06em;margin-top:2px">482 913</div>
+  <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:14px"><span style="color:#FF6B61;font-weight:600">0:42 left</span><span style="color:#7EA6FF;font-weight:600">Tap to copy</span></div>
+  <div style="height:1px;background:#2A2B30;margin:18px 0 14px"></div>
+  <div style="font-size:14px;color:#A3A8B0">Next bill · tomorrow</div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px"><span style="font-size:18px;font-weight:600">Airwave</span><span style="font-size:20px;font-weight:700">₹799</span></div>
+</div>
+<figcaption><b>8 · Cover screen widget <span class="demo">DEMO</span></b>Only the next decision: the live code at monumental size, then the next bill.</figcaption>
+</figure>
+
+<figure>
+<div class="ph"><div class="scroll">
+  <div class="sb"><span>18:40</span><i></i></div>
+  <div class="prog"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+  <div class="hd" style="padding-top:40px"><h3>About you</h3><p>Just enough to talk to you properly. Only your first name is needed.</p></div>
+  <div class="card">
+    <div class="field" style="padding-top:16px"><label>First name</label><div class="in focus">Pranav</div></div>
+    <div class="field"><label>What should I call you?</label><div class="in">Pranav</div></div>
+    <div class="field"><label>City</label><div class="in hint">Optional</div></div>
+    <div class="field" style="display:flex;gap:10px;padding-bottom:18px"><div style="flex:1"><label>Pay day</label><div class="in hint">1 to 31</div></div><div style="flex:1.3"><label>Monthly budget</label><div class="in hint">₹ optional</div></div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding:16px 28px;color:var(--green);font-size:13px;font-weight:600"><svg class="ico xs"><use href="#i-shield"/></svg>Stays on this phone, encrypted</div>
+  <div class="foot"><span class="btn t">Back</span><span class="btn f">Continue</span></div>
+</div></div>
+<figcaption><b>9 · Onboarding, about you <span class="demo">DEMO</span></b>One grouped card instead of loose stacked fields; progress at the top, a thumb-reach Continue.</figcaption>
+</figure>
+</div>
+
+<h2 class="band">Alternative · Today's top area<span>Pick one. A is recommended.</span></h2>
+<div class="grid">
+<div class="alt"><span class="lab">A · RECOMMENDED</span>
+<div class="ph crop"><div class="scroll">
+  <div class="sb"><span>18:42</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-search"/></svg></div><div class="ib"><svg class="ico"><use href="#i-set"/></svg></div></div>
+  <div class="hd" style="padding-top:34px"><h3>Good evening,<br>Pranav</h3><p>Sun 5 Oct · 2 things need you</p></div>
+  <div class="ask"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="code"><div class="top"><div><div class="svc">Demo Bank</div><div class="pur">Login code</div></div></div><div class="num">482 913</div><div class="meta"><span class="left">0:42 left</span><span class="cp"><svg class="ico xs"><use href="#i-copy"/></svg>Copy</span></div><div class="drain"><b></b></div></div>
+</div></div>
+<figcaption style="max-width:330px"><b>One UI viewing area</b>Classic first-party header: a calm, personal greeting that collapses on scroll; codes follow directly. Most native.</figcaption>
+</div>
+<div class="alt"><span class="lab">B</span>
+<div class="ph crop"><div class="scroll">
+  <div class="sb"><span>18:42</span><i></i></div>
+  <div class="toolbar"><span class="tt">Hi Pranav</span><span class="ib"><svg class="ico"><use href="#i-search"/></svg></span><span class="ib"><svg class="ico"><use href="#i-set"/></svg></span></div>
+  <div class="glance" style="margin-top:10px"><div class="k">Demo Bank · login code · 0:42 left</div><div class="num">482 913</div>
+    <div class="split"><div><span class="cap">Next bill</span><b>₹799</b><span class="cap">tomorrow</span></div><div><span class="cap">Spent today</span><b>₹2,186</b><span class="cap">3 payments</span></div></div>
+  </div>
+  <div class="ask" style="margin-top:12px"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+</div></div>
+<figcaption style="max-width:330px"><b>Glance card</b>Compact title; one summary card holds the code, next bill and today's spend. Densest, same layout as Flex top.</figcaption>
+</div>
+<div class="alt"><span class="lab">C</span>
+<div class="ph crop"><div class="scroll">
+  <div class="sb"><span>18:42</span><i></i></div>
+  <div class="acts"><div class="ib"><svg class="ico"><use href="#i-search"/></svg></div><div class="ib"><svg class="ico"><use href="#i-set"/></svg></div></div>
+  <div class="hd" style="padding-top:20px"><p style="margin:0 0 6px">Demo Bank login code · 0:42 left</p><h3 style="font-size:52px;letter-spacing:.05em">482 913</h3><p>Tap to copy · Good evening, Pranav</p></div>
+  <div class="ask"><svg class="ico sp"><use href="#i-sparkle"/></svg><span class="grow">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="sec">Needs you<a>See all</a></div>
+</div></div>
+<figcaption style="max-width:330px"><b>Code takes the header</b>While a code is live, it becomes the big title; the greeting returns when none is live. Fastest copy, less calm.</figcaption>
+</div>
+</div>
+
+<h2 class="band">Alternative · Ask entry point<span>Pick one. A is recommended. All three keep the Ask pill on Today and Ledger and the header action.</span></h2>
+<div class="grid">
+<div class="alt"><span class="lab">A · RECOMMENDED</span>
+<div class="ph" style="height:300px"><div class="scroll" style="top:auto;bottom:0;height:300px">
+  <div class="card" style="margin-top:20px"><div class="row"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">QuickMart</div><div class="s">groceries · UPI</div></div><span class="amt">₹1,240</span></div><div class="row"><div class="lead"><svg class="ico s"><use href="#i-car"/></svg></div><div class="tx"><div class="t">CityCab</div><div class="s">transport</div></div><span class="amt">₹318</span></div></div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div><div class="fab"><svg class="ico"><use href="#i-sparkle"/></svg></div></div>
+</div></div>
+<figcaption style="max-width:330px"><b>Detached Ask button</b>The One UI 8.5 pattern: a round action beside the floating tab pill. Always one thumb away, keeps all five tabs.</figcaption>
+</div>
+<div class="alt"><span class="lab">B</span>
+<div class="ph" style="height:300px"><div class="scroll" style="top:auto;bottom:0;height:300px">
+  <div class="card" style="margin-top:20px"><div class="row"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">QuickMart</div><div class="s">groceries · UPI</div></div><span class="amt">₹1,240</span></div></div>
+  <div class="bottomfade" style="height:180px"></div>
+  <div class="dock"><svg class="ico" style="color:var(--acc)"><use href="#i-sparkle"/></svg><span style="flex:1">Ask Companion</span><span class="mic"><svg class="ico s"><use href="#i-mic"/></svg></span></div>
+  <div class="nav"><div class="pill"><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-cards"/></svg></span>Cards</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div></div>
+</div></div>
+<figcaption style="max-width:330px"><b>Docked Ask field</b>A labelled field floats above the tab pill on every screen. Most obvious, costs about 60dp of every list.</figcaption>
+</div>
+<div class="alt"><span class="lab">C</span>
+<div class="ph" style="height:300px"><div class="scroll" style="top:auto;bottom:0;height:300px">
+  <div class="card" style="margin-top:20px"><div class="row"><div class="lead"><svg class="ico s"><use href="#i-cart"/></svg></div><div class="tx"><div class="t">QuickMart</div><div class="s">groceries · UPI</div></div><span class="amt">₹1,240</span></div><div class="row"><div class="lead"><svg class="ico s"><use href="#i-car"/></svg></div><div class="tx"><div class="t">CityCab</div><div class="s">transport</div></div><span class="amt">₹318</span></div></div>
+  <div class="bottomfade"></div>
+  <div class="nav"><div class="pill"><div class="tab on"><span class="ind"><svg class="ico s"><use href="#i-today"/></svg></span>Today</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-ledger"/></svg></span>Ledger</div><div class="tab" style="width:64px"><span class="mid"><svg class="ico"><use href="#i-sparkle"/></svg></span></div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-bills"/></svg></span>Bills</div><div class="tab"><span class="ind"><svg class="ico s"><use href="#i-inbox"/></svg></span>Inbox</div></div></div>
+</div></div>
+<figcaption style="max-width:330px"><b>Ask as the centre slot</b>Ask replaces Cards in the bar; Cards moves to a filter in Ledger and a row in Today. Strongest emphasis, changes navigation.</figcaption>
+</div>
+</div>
+
+<p class="note">Synthetic demo content throughout: "Demo Bank", "Sample Bank", QuickMart, CityCab, ShopKart, Airwave and all codes and amounts are invented. Colours: ground #F4F5F7 / #000000, cards #FFFFFF / #17171A, accent #2A62DB / #7EA6FF, stamp red #C0302A / #FF6B61, settled green #17784A / #4CC38A. Type is the system face (SamsungOne on Galaxy) with tabular figures.</p>
+</body>
+</html>

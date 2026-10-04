@@ -8,7 +8,6 @@ import app.companion.core.Bpe
 import app.companion.core.Calibration
 import app.companion.core.DecideInput
 import app.companion.core.Raw
-import app.companion.core.Redact
 import app.companion.core.Scored
 import app.companion.core.Scorer
 import java.io.File
@@ -75,7 +74,7 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
     override fun score(raw: Raw): Scored? {
         val l = loaded() ?: return null
         val cal = Active.calibration(app, l.plan.spec).first
-        val text = Redact.codes(listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n"))
+        val text = listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n")
         return try {
             low { Bert.score(l.plan.spec, cal, l.bpe, raw.sender.trim(), text) { task, x -> logits(l, task, x) } }
         } catch (_: Exception) {

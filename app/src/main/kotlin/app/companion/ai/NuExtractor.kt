@@ -71,7 +71,6 @@ class NuxService : Service() {
     override fun onBind(intent: Intent): IBinder = messenger.binder
 
     override fun onDestroy() {
-        if (handle != 0L) NuxJni.free(handle)
         Process.killProcess(Process.myPid())
     }
 
@@ -88,9 +87,9 @@ class NuxClient private constructor(private val c: Context, private val link: Li
         val r = try {
             ask(to, NuxWire.RUN, Bundle().apply { putString(NuxWire.PROMPT, prompt) }, RUN_SECS)
         } catch (_: RemoteException) {
-            link.dead = true
             null
         }
+        if (r == null) link.dead = true
         return r?.getString(NuxWire.JSON)
     }
 

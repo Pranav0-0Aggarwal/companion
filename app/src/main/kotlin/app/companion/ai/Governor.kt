@@ -88,6 +88,11 @@ class Governor(private val app: Application) {
         }
     }
 
+    fun release() {
+        idle?.cancel()
+        scope.launch { lock.withLock { drop() } }
+    }
+
     fun trim(level: Int) {
         if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && (holds.get() == 0 || level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)) {
             idle?.cancel()

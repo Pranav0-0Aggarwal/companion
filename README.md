@@ -73,17 +73,30 @@ The download is an Android 14 user-initiated data transfer job (`ModelJob`, `Job
 
 Transport rules are unchanged: HTTPS only, from `https://github.com/Pranav0-0Aggarwal/companion/releases/download/<tag>/<file>` where each manifest entry names its release tag (`models-v1` for every file except NuExtract, `models-v2`), redirects only to `release-assets.githubusercontent.com` (at most 4), no credentials or ports. Files over 32 MB use 4 parallel `Range` connections that write 8 MB pieces at their offsets into a preallocated `<file>.part` under `noBackupFilesDir`; `<file>.part.ranges` records the completed byte ranges (with the pinned size and SHA-256 in its header, so a mismatching sidecar is ignored), so a resume fetches only the missing ranges. The signed redirect URL is resolved once per file with a one-byte `Range` probe (which also checks the total size), reused for every piece and resolved again on 403 or 410. Smaller files use one stream. Whatever the path, the whole file's size and SHA-256 are checked before the atomic move into `files/models/`; a mismatch deletes the part and sidecar, and an entry that is not pinned never downloads. Nothing else in the app uses the network apart from Gmail.
 
-### Private models with adb
+### Private models
 
-Files in `files/models/custom/` win over the downloaded base files. List each file's SHA-256 in `custom.json` next to them; a file whose hash does not match is ignored and the base file is used. Only the six manifest names and the private ModernBERT files below are accepted, and Settings shows them as custom.
+Files in `files/models/custom/` win over the downloaded base files. List each file's SHA-256 in `custom.json` next to them; a file whose hash does not match is ignored and the base file is used. Only the six manifest names, `model_spec.json` and the private ModernBERT files below are accepted, and Settings shows them as custom.
+
+**Release build (no adb needed).** Copy `custom.json` and the model files to the phone's Downloads folder (USB file transfer, Quick Share or `adb push`), then open Settings, On-device AI, Import private model files and select them all at once. The app copies them into private staging storage, checks every SHA-256 against the picked `custom.json`, and only if all of them match replaces the files in `files/models/custom/`. Any rejected name, mismatch or unlisted file aborts the whole import and nothing changes; the result list shows which file failed and why. No storage permission is used. Afterwards the classifier is re-detected and the reprocess banner appears if the model changed. Remove private models in the same place wipes `files/models/custom/` and returns to the base models.
+
+Rules for the import: names must be plain file names (no separators or `..`) from the list above; `custom.json` must be picked and must list every other picked file except `model_spec.json`; a file is at most 2 GB; the picked `custom.json` replaces the old one, so it must list every private file that should stay active.
+
+```
+cd ~/models/modernbert   # holds model_spec.json type.tflite category.tflite tokenizer.json calibration.json
+{ echo '{'; for f in type.tflite category.tflite tokenizer.json calibration.json; do printf '  "%s": "%s",\n' "$f" "$(shasum -a 256 "$f" | cut -d' ' -f1)"; done | sed '$ s/,$//'; echo '}'; } > custom.json
+adb shell mkdir -p /sdcard/Download/companion-models
+adb push model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /sdcard/Download/companion-models/
+```
+
+On the phone, tap Import private model files, open Downloads, then companion-models, select all six files and confirm. Add `"decide.tflite": "<sha256>"` or `"needle3.cact": "<sha256>"` to `custom.json` (and push those files too) to install them in the same import.
+
+**Debug build (adb).** `run-as` only works on a debuggable build (`assembleDebug`):
 
 ```
 echo '{"decide.tflite": "<sha256>", "needle3.cact": "<sha256>"}' > custom.json
 adb push decide.tflite needle3.cact custom.json /data/local/tmp/
 adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/needle3.cact /data/local/tmp/custom.json files/models/custom/'
 ```
-
-`run-as` only works on a debuggable build (`assembleDebug`).
 
 ### Private ModernBERT classifier
 
@@ -110,14 +123,9 @@ An optional backend replaces Decide for message type and category. Its weights a
 
 Only `arch`, `buckets` and `tasks.type` are required. `template` defaults to `{sender}: {text}`, `max_len` to the largest bucket, `tokenizer` to `tokenizer.json`, `inputs` to `["input_ids", "attention_mask"]` (a list that starts with the mask swaps the two buffers), and `pad_id`, `cls_id` and `sep_id` to the ids of `[PAD]`, `[CLS]` and `[SEP]` in the tokenizer. `signatures` is optional per task and maps a bucket to a LiteRT signature key. A spec without a `category` task never runs one.
 
-```
-echo '{"type.tflite": "<sha256>", "category.tflite": "<sha256>", "tokenizer.json": "<sha256>", "calibration.json": "<sha256>"}' > custom.json
-adb push model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /data/local/tmp/
-adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cd /data/local/tmp && cp model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /data/data/app.companion/files/models/custom/'
-adb shell rm /data/local/tmp/model_spec.json /data/local/tmp/type.tflite /data/local/tmp/category.tflite /data/local/tmp/tokenizer.json /data/local/tmp/calibration.json /data/local/tmp/custom.json
-```
+Install them with the release flow above (the example there pushes exactly these files). On a debuggable build the same files can be copied with `adb shell run-as app.companion` into `files/models/custom/`.
 
-If `custom.json` already lists `decide.tflite` or `needle3.cact`, keep those entries in the same file. `run-as` only works on a debuggable build.
+If an earlier `custom.json` listed `decide.tflite` or `needle3.cact`, keep those entries in the new one.
 
 ModernBERT is used for classification (live refine, import, reprocess) only when `model_spec.json` has the right `arch` and every file it names (the tokenizer and each task file) is listed in `custom.json` with a matching SHA-256. Otherwise the app keeps the GLiNER Decide path, and removing `model_spec.json` switches back. Settings, On-device AI shows "Message classifier: ModernBERT (custom)" or "GLiNER (base)". The processing key is a hash of the model file hashes and the active custom calibration hash, so swapping a model or its calibration shows the reprocess banner, as does switching backend.
 

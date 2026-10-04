@@ -2,6 +2,8 @@ package app.companion.ui.screens
 
 import android.Manifest
 import androidx.compose.foundation.background
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,6 +32,7 @@ import app.companion.ai.Manifest as Pins
 import app.companion.ai.Mode
 import app.companion.ai.ModelJobs
 import app.companion.ai.Models
+import app.companion.ai.PrivateImport
 import app.companion.core.Show
 import app.companion.sl
 import app.companion.ui.Ty
@@ -37,6 +42,7 @@ import app.companion.ui.kit.Group
 import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Rule
 import app.companion.ui.kit.Section
+import app.companion.ui.kit.Stamp
 import app.companion.ui.pal
 import app.companion.ui.rememberPerms
 import kotlinx.coroutines.Dispatchers
@@ -50,14 +56,18 @@ fun AiSettings() {
     val scope = rememberCoroutineScope()
     val live by gov.live.collectAsStateWithLifecycle()
     val s by Dl.state.collectAsStateWithLifecycle()
+    val imp by PrivateImport.state.collectAsStateWithLifecycle()
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { PrivateImport.start(c, it) }
+    var ask by remember { mutableStateOf(false) }
+    val custom by produceState(false, imp.rev) { value = withContext(Dispatchers.IO) { Models.custom(c).list().orEmpty().isNotEmpty() } }
     val askNotif = rememberPerms(Manifest.permission.POST_NOTIFICATIONS) {}
     LaunchedEffect(Unit) { Dl.sync(c) }
-    val disk by produceState(emptyMap<String, Pair<Have, Long>>(), s.mode, s.cur) {
+    val disk by produceState(emptyMap<String, Pair<Have, Long>>(), s.mode, s.cur, imp.rev) {
         value = withContext(Dispatchers.IO) {
             Pins.all.associate { f -> f.file to Models.have(c, f).let { h -> h to if (h == Have.No) Dl.partial(c, f) else f.bytes } }
         }
     }
-    val kind by produceState("", s.mode, s.cur) { value = withContext(Dispatchers.IO) { Active.label(c) } }
+    val kind by produceState("", s.mode, s.cur, imp.rev) { value = withContext(Dispatchers.IO) { Active.label(c) } }
     val run = s.mode == Mode.Running
     val busy = run || s.mode == Mode.Waiting
     val total = remember { Dl.total }
@@ -118,12 +128,26 @@ fun AiSettings() {
             if (s.mode == Mode.Full) {
                 Text("Not enough storage: need ${Show.mbUp(s.need)} MB free", Modifier.padding(top = 8.dp), style = Ty.mono(11).copy(color = pal.ink2))
             }
-            Text("Private models with adb", Modifier.padding(top = 12.dp), style = Ty.ui(13).copy(color = pal.ink))
-            Text(
-                "custom.json: {\"decide.tflite\": \"<sha256>\"}\nadb push decide.tflite custom.json /data/local/tmp/\nadb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/custom.json files/models/custom/'",
-                Modifier.padding(top = 6.dp),
-                style = Ty.mono(10).copy(color = pal.ink2),
-            )
         }
+        Rule()
+        PassLine(
+            "Private models",
+            if (imp.busy) imp.note + if (imp.total > 0) " · ${Show.mb(imp.done)} of ${Show.mb(imp.total)} MB" else "" else "Copy custom.json and the model files to Downloads, then pick them all.",
+            actions = {
+                Btn("Import private model files", enabled = !imp.busy) { pick.launch(arrayOf("*/*")) }
+                if (custom) Btn("Remove private models", enabled = !imp.busy) { ask = true }
+            },
+        )
+        if (imp.busy && imp.total > 0) {
+            val frac = (imp.done.toDouble() / imp.total).toFloat().coerceIn(0f, 1f)
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().height(4.dp).background(pal.line)) { Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(pal.accent)) }
+        }
+        imp.lines.forEach { l ->
+            Rule()
+            PassLine(l.name, l.note, trailing = { Stamp(if (l.ok) "OK" else "FAILED", ok = l.ok) })
+        }
+    }
+    if (ask) {
+        PassConfirm("Remove private models?", "Deletes the private files from this phone and goes back to the base models. Messages are marked for reprocessing when the classifier changes.", "Remove", { ask = false; PrivateImport.remove(c) }, { ask = false })
     }
 }

@@ -37,5 +37,5 @@ ws ::= [ \t\n]*
         is Verdict.Unsure -> v.guess?.let { it.label in labels && cal.sure(Calibration.TYPE, it.label, it.prob) } == true
     }
 
-    fun clip(text: String) = text.take(MAX_TEXT).let { if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it }
+    fun clip(text: String) = text.take(MAX_TEXT).let { if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it }.replace("<|", "< |").replace("|>", "| >")
 }

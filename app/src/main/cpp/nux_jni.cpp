@@ -128,7 +128,7 @@ bool enc(const llama_vocab *v, const std::string &s, bool add, bool special, std
 bool gen(H *h, const std::string &pre, const std::string &txt, const std::string &suf, const std::string &g, int max, std::string &out) {
     const llama_vocab *v = llama_model_get_vocab(h->m);
     std::vector<llama_token> t;
-    if (!enc(v, pre, true, true, t) || !enc(v, txt, false, false, t) || !enc(v, suf, false, true, t)) return false;
+    if (!enc(v, pre + txt + suf, true, true, t)) return false;
     const int n = (int)t.size();
     if (n <= 0) return false;
     max = std::max(1, std::min({max, STEPS, CTX - n}));

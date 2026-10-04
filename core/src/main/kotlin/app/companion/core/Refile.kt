@@ -18,7 +18,9 @@ object Refile {
 
     fun usable(v: Verdict) = v is Verdict.Sure || v.guess != null
 
-    fun moved(old: Filed, new: Filed) = new != old && (old.kind == Kind.Otp.name) == (new.kind == Kind.Otp.name)
+    private fun otp(f: Filed) = f.kind == Kind.Otp.name || f.tags?.split(',')?.contains("otp") == true
+
+    fun moved(old: Filed, new: Filed) = new != old && otp(old) == otp(new)
 
     fun asks(old: Filed, new: Filed) = moved(old, new) && new.state == ASK && old.state != ASK
 

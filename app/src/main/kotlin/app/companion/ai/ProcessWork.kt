@@ -106,6 +106,9 @@ private class Engine(private val c: Context, private val job: Job, private val t
         } catch (e: CancellationException) {
             Processing.publish(Run(job, cur.done, cur.total, null, true, if (battery) null else Guard.CHARGER), token)
             throw e
+        } catch (_: Exception) {
+            Processing.publish(null, token)
+            return Result.failure()
         } finally {
             watch.close()
         }
@@ -221,8 +224,9 @@ private class Engine(private val c: Context, private val job: Job, private val t
 
     private suspend fun finish() {
         val text = if (job == Job.Reprocess) Refile.summary(cur.moved, cur.ask, cur.skip) else Refile.imported(cur.done, cur.moved, cur.ask)
+        val sha = cur.sha ?: Models.sha(c, Manifest.decide)
         repo.atomic {
-            repo.edit { if (job == Job.Reprocess || it.model == null) it.copy(model = cur.sha) else it }
+            repo.edit { if (job == Job.Reprocess || it.model == null) it.copy(model = sha) else it }
             repo.dropMark(job.name)
         }
         Live.refresh(c)

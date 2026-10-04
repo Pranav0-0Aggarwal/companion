@@ -87,7 +87,8 @@ private fun <T : Any> Reveal(v: T?, content: @Composable (T) -> Unit) {
 @Composable
 private fun rememberCount(job: Job, idle: Boolean, imported: Boolean, sms: Boolean): State<Int?> {
     val c = LocalContext.current
-    return produceState<Int?>(null, job, idle, imported, sms) { if (idle) value = Processing.count(c, job) }
+    val changed by Processing.modelChanged.collectAsStateWithLifecycle()
+    return produceState<Int?>(null, job, idle, imported, sms, changed) { if (idle) value = Processing.count(c, job) }
 }
 
 @Composable

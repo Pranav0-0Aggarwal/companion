@@ -65,6 +65,8 @@ class RefileTest {
         val otp = Filed("Otp", null, null, Refile.SETTLED)
         assertFalse(Refile.moved(otp, otp.copy(kind = "Alert")))
         assertFalse(Refile.moved(sure, sure.copy(kind = "Otp")))
+        assertFalse(Refile.moved(sure, sure.copy(tags = "spam,otp")))
+        assertFalse(Refile.moved(sure.copy(tags = "otp"), sure))
     }
 
     @Test

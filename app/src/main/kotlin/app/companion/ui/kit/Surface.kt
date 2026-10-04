@@ -133,7 +133,13 @@ private fun Head(title: String, sub: String, top: Dp, head: Dp, t: State<Float>)
     val p = pal
     Column(
         Modifier.fillMaxWidth().heightIn(min = top + head).padding(start = 24.dp, end = 24.dp, top = top + 56.dp, bottom = 22.dp)
-            .graphicsLayer { alpha = 1f - t.value },
+            .graphicsLayer {
+                val s = 1f - 0.12f * t.value
+                alpha = 1f - t.value
+                scaleX = s
+                scaleY = s
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
+            },
         verticalArrangement = Arrangement.Bottom,
     ) {
         Text(title, Modifier.semantics { heading() }, style = Ty.ui(32, FontWeight.Bold).copy(color = p.ink, lineHeight = 38.sp, letterSpacing = (-0.4).sp))

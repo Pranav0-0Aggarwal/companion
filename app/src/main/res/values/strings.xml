@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Companion</string>
+    <string name="tile_label">Latest OTP</string>
+    <string name="widget_desc">Newest code and next bill</string>
 </resources>

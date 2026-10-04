@@ -1,0 +1,130 @@
+{
+  "title": "Choose Companion's visual world",
+  "question": "The roll assigned the Dak Sorting Rack. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Dak Sorting Rack",
+      "kicker": "THE ROLL",
+      "lineage": "India Post sorting office: steel pigeonholes, franking postmarks, registered-post slips",
+      "thesis": "Every message is dak: franked, filed into its pigeonhole, and only the Unsorted tray ever asks you.",
+      "palette": ["#2B2F33", "#D52B1E", "#5B3A8E", "#F2C230", "#F4F4F0"],
+      "materials": ["steel pigeonhole frame", "violet franking ink", "registered-post slips"],
+      "viewport": "Today: franked OTP slips with burning postmark rings, then the Unsorted tray, then a rack of nine pigeonholes with live counts.",
+      "risk": "The postal metaphor becomes costume if the pigeonholes stop doing real sorting work.",
+      "raised": [
+        {"from": "challenger-star-atlas", "raise": "Urgency sits on one fixed four-step ramp that sets every slip's weight, never chosen ad hoc."},
+        {"from": "challenger-lexicon", "raise": "The ledger head carries guide words naming the date span in view, recomputed as you scroll."},
+        {"from": "challenger-exposure", "raise": "Amounts use tabular figures on a single tonal ramp, so columns of money align and read at a glance."},
+        {"from": "challenger-zoo-map", "raise": "When something needs you, the Unsorted tray owns the screen; otherwise the rack does."},
+        {"from": "challenger-warm-app", "raise": "Postbox red appears only where you can act: file, pay, copy, open."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Bank Passbook",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Indian bank passbooks printed at the branch kiosk",
+      "thesis": "Your money as a passbook: printed entries, a running balance, and the bank's stamp on what is settled.",
+      "palette": ["#1F3A68", "#FAFAF7", "#9CC7D6", "#2A2A2A", "#B3261E"],
+      "materials": ["dot-matrix print", "ruled ledger columns", "rubber stamp"],
+      "viewport": "A passbook page: date, particulars, withdrawal, deposit, balance, with OTPs as a perforated strip above it.",
+      "risk": "The most familiar finance metaphor; strong for the ledger, weaker for OTPs, bills and messages."
+    },
+    {
+      "id": "challenger-vertical-feed",
+      "label": "One Thing at a Time",
+      "verdict": "competitive",
+      "lineage": "full-screen vertical feeds",
+      "thesis": "Each item that needs you owns the whole screen, with actions on a right rail and the next one a flick away.",
+      "palette": ["#0E0E10", "#FFFFFF", "#D52B1E"],
+      "materials": ["full-bleed cards", "bottom scrim", "glyph rail"],
+      "viewport": "The first unsorted item fills the screen with file, pay, snooze and open stacked on the right.",
+      "case": "Fuses well for the needs-you queue; too thin to carry the ledger and live OTPs.",
+      "risk": "Feels like a feed rather than a calm tool if used beyond triage.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-vertical-video-feed-surface-hero.webp"
+    },
+    {
+      "id": "challenger-star-atlas",
+      "label": "Star Atlas",
+      "verdict": "declined",
+      "lineage": "celestial charts",
+      "thesis": "Spend as a sky: magnitude dots on a coordinate chart.",
+      "palette": ["#0D1B2A", "#F5F5F0", "#E08A3C"],
+      "materials": ["chart grid", "magnitude dots"],
+      "viewport": "A month plotted as dots sized by amount.",
+      "case": "Pretty but slow to read; nobody checks a bill on a star chart.",
+      "kept": "One fixed ramp for importance.",
+      "risk": "Decorative where the owner needs exact numbers.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp"
+    },
+    {
+      "id": "challenger-lexicon",
+      "label": "Lexicon Page",
+      "verdict": "declined",
+      "lineage": "nineteenth-century lexicons",
+      "thesis": "The ledger as a dictionary column with guide words.",
+      "palette": ["#141414", "#F2EEE3", "#C0392B"],
+      "materials": ["black text column", "bordered plates"],
+      "viewport": "Dense entry columns with guide words at the head.",
+      "case": "Readable but bookish; loses the at-a-glance OTP job.",
+      "kept": "Guide words naming the span in view.",
+      "risk": "Too dense for the cover screen.",
+      "hero": "https://impeccable.style/worlds/cards/rw-lexicon-shoulder-and-plate-hero.webp"
+    },
+    {
+      "id": "challenger-exposure",
+      "label": "Exposure Record",
+      "verdict": "declined",
+      "lineage": "darkroom printing records",
+      "thesis": "Load as hatch density over a tonal zone ramp.",
+      "palette": ["#1A1A1A", "#8C8C8C", "#E5E5E5", "#C2185B"],
+      "materials": ["zone ramp", "hatching"],
+      "viewport": "Translucent sheets per source, overlapping.",
+      "case": "Clever but foreign to a money and messages audience.",
+      "kept": "A single tonal ramp with tabular figures.",
+      "risk": "Hatching hurts legibility on small screens.",
+      "hero": "https://impeccable.style/worlds/cards/operate-b-exposure-record-zone-sheets-hero.webp"
+    },
+    {
+      "id": "challenger-zoo-map",
+      "label": "Guide Map",
+      "verdict": "declined",
+      "lineage": "zoo and garden guide maps",
+      "thesis": "Each area of life as a flat colour lobe.",
+      "palette": ["#8ED462", "#F5F1E4", "#FF705D", "#2BA0FF"],
+      "materials": ["flat colour lobes", "capsule labels"],
+      "viewport": "One lobe per screen with capsule controls.",
+      "case": "Playful, wrong tone for bills and security alerts.",
+      "kept": "One dominant region per screen.",
+      "risk": "Undermines trust for money.",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "challenger-warm-app",
+      "label": "Warm Consumer App",
+      "verdict": "declined",
+      "lineage": "friendly consumer apps",
+      "thesis": "Soft cards on a warm ground with one action colour.",
+      "palette": ["#F7F1EA", "#FFFFFF", "#FF6B35"],
+      "materials": ["soft cards", "bottom bar"],
+      "viewport": "A stack of friendly cards.",
+      "case": "Generic; any finance app looks like this.",
+      "kept": "Colour only where you can act.",
+      "risk": "Indistinguishable from every expense tracker.",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-warm-consumer-app-surface-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": false},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A Material 3 money app with dynamic colour, cards and a bottom navigation bar, executed impeccably.",
+    "palette": ["#FFFBFE", "#1C1B1F", "#6750A4"],
+    "materials": ["tonal surfaces", "Material cards"],
+    "viewport": "Today summary card, OTP chips, recent transactions list.",
+    "risk": "Indistinguishable from other expense trackers by design."
+  },
+  "steer": true
+}

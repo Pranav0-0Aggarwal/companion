@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companion mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700;8..144,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cover:#1F3A68; --cover-2:#2A4A80; --cover-ink:#E8EEF8; --cover-mute:#A9B8D2;
+  --page:#FAFAF7; --rule:#9CC7D6; --rule-soft:#D7E9EF; --ink:#2A2A2A; --ink-2:#5E6470;
+  --stamp:#B3261E; --settled:#2E6B4F; --due:#B3261E;
+  --mono:"JetBrains Mono",ui-monospace,monospace; --ui:"Roboto Flex",system-ui,sans-serif;
+  --stage:#E3E6EB;
+}
+*{box-sizing:border-box;margin:0}
+::selection{background:#F2D6D3;color:var(--ink)}
+body{background:var(--stage);font-family:var(--ui);color:var(--ink);padding:40px 32px 64px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#141B27}
+.lede{margin-top:6px;color:#4A5262;font-size:15px;max-width:72ch}
+.row{display:flex;flex-wrap:wrap;gap:40px;margin-top:32px;align-items:flex-start}
+figure{display:flex;flex-direction:column;gap:12px}
+figcaption{font-size:13px;color:#3D4554;max-width:412px;line-height:1.45}
+figcaption b{color:#141B27}
+.phone{width:412px;height:916px;border-radius:44px;background:#0B0E14;padding:10px;box-shadow:0 30px 60px -20px rgba(16,24,40,.45),0 8px 18px rgba(16,24,40,.18)}
+.screen{width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--page);display:flex;flex-direction:column;position:relative}
+.status{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font:600 13px var(--ui);color:var(--cover-ink);background:var(--cover)}
+.bar{background:var(--cover);color:var(--cover-ink);padding:6px 20px 16px}
+.bar .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.bar h2{font:800 30px/1.1 var(--ui);letter-spacing:-.02em}
+.guide{font:500 12px var(--mono);color:var(--cover-mute);white-space:nowrap}
+.search{margin-top:12px;height:44px;border-radius:22px;background:var(--cover-2);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--cover-mute);font-size:14px}
+.search svg{width:18px;height:18px}
+.coupons{display:flex;gap:10px;padding:14px 16px 4px;background:linear-gradient(var(--cover) 0 34px,var(--page) 34px)}
+.coupon{flex:1 1 0;min-width:0;background:#fff;border-radius:6px;position:relative;padding:12px 14px 12px 30px;box-shadow:0 1px 2px rgba(31,58,104,.18),0 6px 14px -8px rgba(31,58,104,.35)}
+.coupon:before{content:"";position:absolute;left:18px;top:8px;bottom:8px;border-left:1.5px dashed var(--rule)}
+.coupon .left{position:absolute;left:0;top:0;bottom:0;width:18px;display:flex;align-items:center;justify-content:center}
+.coupon .left span{writing-mode:vertical-rl;transform:rotate(180deg);font:700 10px var(--mono);color:var(--stamp);letter-spacing:.06em}
+.coupon .svc{font:600 12px var(--ui);color:var(--ink-2)}
+.coupon .code{font:800 26px/1.1 var(--mono);letter-spacing:.02em;white-space:nowrap;color:var(--ink);margin-top:2px;font-variant-numeric:tabular-nums}
+.coupon .meta{font:500 11px var(--mono);color:var(--ink-2);margin-top:4px}
+.sect{display:flex;justify-content:space-between;align-items:baseline;padding:18px 20px 8px}
+.sect h3{font:700 15px var(--ui);color:#141B27}
+.sect a{font:600 13px var(--ui);color:var(--cover);text-decoration:none}
+.lines{margin:0 12px;background:#fff;border-radius:6px;border:1px solid var(--rule-soft)}
+.line{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);align-items:center;position:relative}
+.line:last-child{border-bottom:0}
+.line .p{font:600 14px var(--ui)}
+.line .s{font:500 12px var(--mono);color:var(--ink-2)}
+.amt{font:700 15px var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.stamp{display:inline-block;font:800 11px var(--mono);letter-spacing:.12em;color:var(--stamp);border:2px solid var(--stamp);outline:1px solid var(--stamp);outline-offset:2px;padding:2px 6px;transform:rotate(-6deg);border-radius:3px;opacity:1}
+.stamp.ok{color:var(--settled);border-color:var(--settled);outline-color:var(--settled)}
+.act{display:flex;gap:8px;grid-column:1/-1;margin-top:8px}
+.btn{height:36px;padding:0 14px;border-radius:18px;font:600 13px var(--ui);border:1px solid var(--rule);background:#fff;color:var(--cover);display:inline-flex;align-items:center}
+.btn.go{background:var(--stamp);color:#fff;border-color:var(--stamp)}
+table{width:calc(100% - 24px);margin:0 12px;border-collapse:collapse;font:500 12.5px var(--mono);font-variant-numeric:tabular-nums}
+th{font:700 10.5px var(--mono);letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 6px;border-bottom:1.5px solid var(--rule)}
+td{padding:9px 6px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+td.n,th.n{text-align:right}
+td .src{display:block;font:500 10.5px var(--mono);color:var(--ink-2);margin-top:2px}
+.dr{color:var(--ink)}
+.cr{color:var(--settled)}
+.tot td{border-bottom:0;font-weight:800;padding-top:10px}
+.nav{margin-top:auto;height:76px;background:#fff;border-top:1px solid var(--rule-soft);display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 14px}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 11.5px var(--ui);color:var(--ink-2)}
+.nav i{width:56px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center}
+.nav .on{color:var(--cover)} .nav .on i{background:#DCE5F3}
+.nav svg{width:20px;height:20px}
+.demo{position:absolute;right:14px;bottom:86px;font:600 10px var(--mono);color:var(--ink-2);background:#EEF2F5;padding:3px 8px;border-radius:10px}
+/* dark ledger */
+.dark .screen{background:#10192B}
+.dark .status{background:#0C1424}
+.dark .bar{background:#0C1424}
+.dark .bar .search{background:#18233A}
+.dark table{color:#DCE3EE}
+.dark th{color:#8FA0BC;border-bottom-color:#36557A}
+.dark td{border-bottom-color:#1D2B44}
+.dark td .src{color:#7F8FAB}
+.dark .cr{color:#7FD1A8}
+.dark .monthhead{color:#DCE3EE;border-color:#36557A}
+.dark .nav{background:#0C1424;border-top-color:#1D2B44}
+.dark .nav .on{color:#B7C9EA} .dark .nav .on i{background:#22355A}
+.dark .nav div{color:#7F8FAB}
+.monthhead{margin:14px 12px 4px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid var(--rule);padding-bottom:8px}
+.monthhead b{font:800 20px var(--ui);letter-spacing:-.01em}
+.monthhead span{font:500 12px var(--mono);color:#8FA0BC}
+.chips{display:flex;gap:8px;padding:12px 12px 0;flex-wrap:wrap}
+.chip{height:32px;padding:0 12px;border-radius:8px;border:1px solid #36557A;color:#C6D2E6;font:600 12.5px var(--ui);display:inline-flex;align-items:center}
+.chip.on{background:#22355A;border-color:#22355A}
+/* flex mode */
+.flex{width:412px;height:916px;border-radius:44px;background:#0B0E14;padding:10px;display:flex;flex-direction:column;gap:0;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.flex .upper{height:440px;border-radius:36px 36px 8px 8px;overflow:hidden;background:var(--page);transform:perspective(900px) rotateX(10deg);transform-origin:bottom;display:flex;flex-direction:column}
+.hinge{height:16px;background:linear-gradient(#1a1f2a,#05070b)}
+.flex .lower{flex:1;border-radius:8px 8px 36px 36px;background:#14223C;padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px;color:var(--cover-ink)}
+.scrub{display:flex;gap:6px;overflow:hidden}
+.scrub div{flex:1;height:52px;border-radius:10px;background:#1E2F50;display:flex;flex-direction:column;align-items:center;justify-content:center;font:600 12px var(--ui);color:#A9B8D2}
+.scrub div b{font:700 13px var(--mono);color:#E8EEF8}
+.scrub .on{background:#E8EEF8;color:var(--cover)} .scrub .on b{color:var(--cover)}
+.ask{background:#fff;color:var(--ink);border-radius:10px;padding:14px}
+.ask .q{font:600 14px var(--ui)}
+.ask .s{font:500 12px var(--mono);color:var(--ink-2);margin-top:2px}
+.pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.pick span{height:44px;border-radius:8px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:center;font:600 13px var(--ui);color:var(--cover)}
+.pick .best{background:var(--cover);color:#fff;border-color:var(--cover)}
+/* cover screen */
+.cover{width:360px;height:380px;border-radius:46px;background:#05070B;padding:12px;position:relative;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.cover .cam{position:absolute;left:44px;top:24px;width:56px;height:56px;border-radius:50%;background:#000;box-shadow:inset 0 0 0 3px #1a1f2a,0 0 0 74px transparent}
+.cover .cam + .cam{left:110px}
+.cscreen{width:100%;height:100%;border-radius:36px;background:var(--cover);padding:84px 18px 18px;display:flex;flex-direction:column;gap:12px;color:var(--cover-ink)}
+.ccoupon{background:#fff;color:var(--ink);border-radius:8px;padding:14px 16px 12px 34px;position:relative}
+.ccoupon:before{content:"";position:absolute;left:22px;top:10px;bottom:10px;border-left:1.5px dashed var(--rule)}
+.ccoupon .left{position:absolute;left:0;top:0;bottom:0;width:22px;display:flex;align-items:center;justify-content:center}
+.ccoupon .left span{writing-mode:vertical-rl;transform:rotate(180deg);font:800 11px var(--mono);color:var(--stamp);letter-spacing:.06em}
+.ccoupon .svc{font:600 12.5px var(--ui);color:var(--ink-2)}
+.ccoupon .code{font:800 40px/1.05 var(--mono);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.ccoupon .tap{font:600 11px var(--ui);color:var(--cover);margin-top:4px}
+.cnext{display:flex;justify-content:space-between;align-items:center;background:var(--cover-2);border-radius:8px;padding:10px 14px}
+.cnext b{font:700 14px var(--ui)} .cnext span{font:500 12px var(--mono);color:var(--cover-mute)}
+.cnext .amt{color:#fff}
+/* now bar */
+.lock{width:360px;border-radius:24px;background:radial-gradient(120% 90% at 30% 0%,#3E5C8F,#0E1626);padding:26px 18px 18px;color:#fff;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.lock .time{font:700 64px/1 var(--ui);letter-spacing:-.03em}
+.lock .date{font:500 15px var(--ui);color:#C9D4E8;margin-top:6px}
+.nowbar{margin-top:120px;height:56px;border-radius:28px;background:rgba(10,16,30,.72);display:flex;align-items:center;gap:12px;padding:0 8px 0 10px}
+.nowbar .ring{width:40px;height:40px;border-radius:50%;background:conic-gradient(var(--stamp) 0 280deg,rgba(255,255,255,.14) 280deg);display:flex;align-items:center;justify-content:center}
+.nowbar .ring i{width:32px;height:32px;border-radius:50%;background:#0E1626;display:flex;align-items:center;justify-content:center;font:700 11px var(--mono)}
+.nowbar .t{flex:1} .nowbar .t b{display:block;font:800 18px var(--mono);letter-spacing:.05em} .nowbar .t span{font:500 11.5px var(--ui);color:#B9C6DD}
+.nowbar .copy{height:40px;padding:0 16px;border-radius:20px;background:#E8EEF8;color:var(--cover);font:700 13px var(--ui);display:flex;align-items:center}
+.note{font:500 11px var(--mono);color:#5E6470;margin-top:22px}
+
+/* v2: amplified passbook world */
+:root{--foil:#C9A54A;--foil-2:#E9D28A;--cloth:#1F3A68}
+.cloth{background-color:var(--cover);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 1px,transparent 1px 3px)}
+.status,.bar{background:transparent}
+.head{position:relative}
+.head:after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(rgba(0,0,0,.18),transparent);transform:translateY(100%);pointer-events:none}
+.bar h2.foil{font:800 34px/1.05 var(--ui);letter-spacing:-.02em;color:#D9B95F;text-shadow:0 -1px 0 rgba(0,0,0,.45),0 1px 0 rgba(255,236,170,.25)}
+.guide{color:var(--foil-2);opacity:.9}
+.crest{width:30px;height:30px;border:1.5px solid var(--foil);border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 13px var(--mono);color:var(--foil-2);margin-right:10px;flex:none}
+.bar .top{align-items:center}
+.bar .top .t{display:flex;align-items:center}
+.coupons{background:linear-gradient(var(--cover) 0 34px,var(--page) 34px);background-image:none}
+.coupon{border-radius:4px;-webkit-mask:radial-gradient(circle 7px at 18px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at 18px 100%,transparent 98%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 7px at 18px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 7px at 18px 100%,transparent 98%,#000) bottom/100% 51% no-repeat}
+.coupon:before{border-left:2px dashed var(--rule);top:10px;bottom:10px}
+.coupon .drain{position:absolute;left:17px;top:10px;width:2px;background:var(--stamp);border-radius:1px}
+.coupon .code{font-weight:800;color:#1A1A1A}
+.paper{background-color:var(--page);background-image:repeating-linear-gradient(transparent 0 33px,var(--rule-soft) 33px 34px)}
+.stamp{position:relative;filter:url(#ink);mix-blend-mode:multiply}
+.stamp.thump{animation:thump .5s cubic-bezier(.2,.9,.3,1.4) both;animation-delay:1.2s}
+@keyframes thump{0%{transform:rotate(-14deg) scale(1.9);opacity:0}60%{opacity:.9}100%{transform:rotate(-6deg) scale(1);opacity:.88}}
+table.ledger{border-left:0}
+table.ledger td:first-child,table.ledger th:first-child{border-right:1.5px solid #E7B9B4}
+.printing td{animation:print 1.6s steps(28,end) both;animation-delay:.4s;overflow:hidden;white-space:nowrap}
+@keyframes print{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.lines{border-radius:4px;box-shadow:0 1px 0 var(--rule-soft),0 10px 24px -18px rgba(31,58,104,.45)}
+/* open passbook flex mode */
+.flex{background:#0B0E14}
+.flex .upper{transform:perspective(1200px) rotateX(14deg);box-shadow:inset 0 -26px 26px -18px rgba(31,58,104,.35)}
+.hinge{height:22px;background:linear-gradient(#0d1524,#2a3b5c 45%,#0d1524);position:relative}
+.hinge:after{content:"41  ·  42";position:absolute;left:0;right:0;top:4px;text-align:center;font:600 10px var(--mono);color:#7F8FAB;letter-spacing:.2em}
+.flex .lower{background-color:#14223C;background-image:repeating-linear-gradient(transparent 0 33px,rgba(255,255,255,.04) 33px 34px)}
+/* cover screen as passbook cover */
+.cscreen{background-color:var(--cover);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 1px,transparent 1px 3px);position:relative}
+.cscreen .brand{position:absolute;right:22px;top:30px;text-align:right}
+.cscreen .brand b{display:block;font:800 20px var(--ui);letter-spacing:.02em;color:#D9B95F;text-shadow:0 -1px 0 rgba(0,0,0,.45),0 1px 0 rgba(255,236,170,.25)}
+.cscreen .brand span{font:600 10px var(--mono);color:var(--foil-2);letter-spacing:.18em}
+.ccoupon{transform:rotate(-1.5deg);box-shadow:0 14px 26px -12px rgba(0,0,0,.6);-webkit-mask:radial-gradient(circle 8px at 22px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 8px at 22px 100%,transparent 98%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 8px at 22px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 8px at 22px 100%,transparent 98%,#000) bottom/100% 51% no-repeat}
+.ccoupon .drain{position:absolute;left:21px;top:12px;width:2px;background:var(--stamp)}
+@media (prefers-reduced-motion:reduce){.stamp.thump,.printing td{animation:none}}
+
+/* v3: One UI native */
+:root{--ui:"SamsungOne","One UI Sans",system-ui,"Roboto Flex",sans-serif}
+.oneui-head{height:236px;display:flex;flex-direction:column;justify-content:flex-end;padding:0 22px 18px}
+.oneui-head .big{font:800 40px/1.02 var(--ui);letter-spacing:-.02em;color:#D9B95F;text-shadow:0 -1px 0 rgba(0,0,0,.45),0 1px 0 rgba(255,236,170,.25)}
+.oneui-head .sub{font:500 14px var(--ui);color:var(--cover-mute);margin-top:6px}
+.oneui-head .sub b{color:var(--cover-ink);font-weight:700}
+.tools{display:flex;justify-content:flex-end;gap:6px;padding:6px 10px 0}
+.tools i{width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:var(--cover-ink)}
+.tools svg{width:22px;height:22px}
+.group{margin:0 12px;background:#fff;border-radius:22px;overflow:hidden}
+.lines{border-radius:22px}
+.nav{border-radius:0;background:#fff}
+.nav i{border-radius:15px}
+/* integrations row */
+.edge{width:150px;border-radius:26px;background:rgba(18,28,48,.94);padding:14px 10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 30px 60px -20px rgba(16,24,40,.5)}
+.edge h4{font:700 13px var(--ui);color:#D9B95F;padding:2px 4px}
+.ecoupon{background:#fff;border-radius:12px;padding:10px 10px 8px}
+.ecoupon .svc{font:600 11px var(--ui);color:var(--ink-2)}
+.ecoupon .code{font:800 20px var(--mono);letter-spacing:.02em}
+.ecoupon .bar2{height:3px;border-radius:2px;background:#E4E8EE;margin-top:6px;overflow:hidden}
+.ecoupon .bar2 i{display:block;height:100%;background:var(--stamp)}
+.erow{background:rgba(255,255,255,.08);border-radius:12px;padding:10px;color:#E8EEF8;font:600 12px var(--ui)}
+.erow span{display:block;font:500 11px var(--mono);color:#A9B8D2;margin-top:2px}
+.kb{width:360px;border-radius:24px;background:#F2F3F7;overflow:hidden;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.kb .app{background:#fff;padding:18px 16px}
+.kb .app b{font:700 16px var(--ui)} .kb .field{margin-top:12px;height:48px;border-radius:12px;border:2px solid #3E6BD6;display:flex;align-items:center;padding:0 14px;font:600 15px var(--mono);color:#9AA3B2;letter-spacing:.3em}
+.kb .sugg{display:flex;gap:8px;padding:10px 10px 6px;align-items:center}
+.kb .chip2{height:38px;border-radius:19px;background:#fff;border:1px solid #D7DCE4;display:flex;align-items:center;gap:8px;padding:0 14px 0 6px;font:700 15px var(--mono)}
+.kb .chip2 i{width:28px;height:28px;border-radius:14px;background:var(--cover);display:flex;align-items:center;justify-content:center;color:#D9B95F;font:800 12px var(--mono);font-style:normal}
+.kb .chip2 span{font:500 11px var(--ui);color:var(--ink-2)}
+.kb .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 14px}
+.kb .keys div{height:44px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font:600 20px var(--ui);color:#222}
+.qs{width:360px;border-radius:28px;background:rgba(26,32,44,.92);padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.tile{border-radius:20px;background:rgba(255,255,255,.1);padding:12px 14px;color:#E8EEF8;font:600 13px var(--ui);display:flex;flex-direction:column;gap:2px;min-height:64px}
+.tile.on{background:#E8EEF8;color:var(--cover)}
+.tile span{font:700 16px var(--mono)}
+.tile small{font:500 11px var(--ui);opacity:.75}
+.lockapp{width:360px;border-radius:24px;padding:28px;color:var(--cover-ink);display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 30px 60px -20px rgba(16,24,40,.45)}
+.lockapp b{font:700 18px var(--ui)} .lockapp span{font:500 13px var(--ui);color:var(--cover-mute);text-align:center}
+.fp{width:64px;height:64px;border-radius:32px;border:2px solid #D9B95F;display:flex;align-items:center;justify-content:center}
+.fp svg{width:34px;height:34px;color:#D9B95F}
+
+/* v4: One UI 8.5 / 9 floating components */
+.screen{position:relative}
+.nav{grid-template-columns:repeat(5,1fr);position:absolute;left:22px;right:22px;bottom:16px;height:64px;margin:0;padding:6px;border-radius:32px;border:0;background:rgba(255,255,255,.72);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:0 10px 30px -10px rgba(16,24,40,.35),inset 0 0 0 1px rgba(255,255,255,.6);align-items:center}
+.nav div{gap:2px;font-size:10.5px}
+.nav i{height:28px;width:48px}
+.dark .nav{background:rgba(22,34,58,.72);box-shadow:0 10px 30px -10px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.08)}
+.tools i{background:rgba(255,255,255,.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 12px -6px rgba(0,0,0,.4)}
+.screen > table:last-of-type{margin-bottom:96px}
+.demo{top:44px;bottom:auto;right:70px;background:rgba(255,255,255,.14);color:#E8EEF8}
+.coverhome{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.coverhome div{border-radius:16px;background:rgba(255,255,255,.12);padding:8px 10px;font:600 11px var(--ui);color:#E8EEF8}
+.coverhome div span{display:block;font:500 10px var(--mono);color:#A9B8D2}
+
+/* v5: cards */
+.cards{display:flex;gap:12px;padding:14px 16px 6px;overflow:hidden}
+.cc{flex:none;width:300px;height:180px;border-radius:18px;padding:18px;color:#fff;position:relative;box-shadow:0 14px 28px -14px rgba(16,24,40,.6)}
+.cc.hdfc{background:linear-gradient(135deg,#0E2A5A,#1D4C9A)}
+.cc.icici{background:linear-gradient(135deg,#5A1A12,#9B3A1E)}
+.cc .bank{font:800 15px var(--ui);letter-spacing:.02em}
+.cc .name{font:500 12px var(--ui);opacity:.8;margin-top:2px}
+.cc .chipm{position:absolute;left:18px;top:70px;width:38px;height:28px;border-radius:6px;background:#D9B95F;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.cc .num{position:absolute;left:18px;bottom:18px;font:700 18px var(--mono);letter-spacing:.16em}
+.cc .due{position:absolute;right:18px;bottom:18px;text-align:right;font:600 11px var(--ui);opacity:.9}
+.cc .due b{display:block;font:800 16px var(--mono)}
+.cycle{margin:12px 16px 4px;background:#fff;border-radius:22px;padding:14px 16px}
+.cycle .r{display:flex;justify-content:space-between;align-items:baseline}
+.cycle .r b{font:800 22px var(--mono)} .cycle .r span{font:500 12px var(--mono);color:var(--ink-2)}
+.util{height:8px;border-radius:4px;background:#E6EBF1;margin:10px 0 6px;overflow:hidden}
+.util i{display:block;height:100%;background:var(--cover)}
+.cycle .m{font:500 12px var(--ui);color:var(--ink-2)}
+.sheet{width:412px;border-radius:28px 28px 0 0;background:#fff;padding:12px 20px 24px;box-shadow:0 -20px 50px -20px rgba(16,24,40,.45)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:#C9D0DA;margin:0 auto 14px}
+.sheet h3{font:800 20px var(--ui)} .sheet p{font:500 13px var(--ui);color:var(--ink-2);margin-top:4px}
+.fld{margin-top:12px} .fld label{display:block;font:600 12px var(--ui);color:var(--ink-2);margin-bottom:4px}
+.fld div{height:48px;border-radius:12px;border:1px solid #D7DCE4;display:flex;align-items:center;padding:0 14px;font:600 15px var(--ui)}
+.fld .mono{font-family:var(--mono);letter-spacing:.2em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.save{margin-top:18px;height:52px;border-radius:26px;background:var(--cover);color:#fff;display:flex;align-items:center;justify-content:center;font:700 15px var(--ui)}
+.safe{display:flex;gap:8px;align-items:center;margin-top:12px;font:500 12px var(--ui);color:var(--settled)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><filter id="ink"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.9 1.55"/><feComposite in="SourceGraphic" operator="in"/></filter></svg>
+<h1>Companion, Bank Passbook direction (v5, One UI 9)</h1>
+<p class="lede">Design mockup for the Galaxy Z Flip 7. Every name, code and amount below is synthetic demo data. The passbook world (cloth cover with gold foil, die-cut OTP coupons that drain as the code expires, inked stamps, a printing ledger) inside Samsung One UI 9 (the One UI 8.5 floating design): the floating tab bar and floating header buttons over blurred surfaces, the large collapsing title, the device font, and Galaxy features (FlexWindow, Flex Mode, Now Bar, Edge Panel, Samsung Keyboard OTP suggestions, Quick Settings tiles, biometric lock). Inner screen at 412 dp wide, cover screen and Now Bar at their own sizes.</p>
+
+<div class="row">
+<figure>
+<div class="phone"><div class="screen">
+  <div class="head cloth"><div class="status"><span>9:41</span><span>5G · 82%</span></div>
+  <div class="tools"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></i><i><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></i></div>
+  <div class="oneui-head"><div class="big">Today</div><div class="sub"><b>2 codes</b> live · <b>1 bill</b> due Monday · page 41</div></div></div>
+  <div class="coupons">
+    <div class="coupon" style="flex-grow:1.35"><div class="left"><span>0:47 LEFT</span></div><i class="drain" style="height:22%"></i><div class="svc">SBI NetBanking</div><div class="code">482 913</div><div class="meta">login · tap to copy</div></div>
+    <div class="coupon"><div class="left"><span>4:12 LEFT</span></div><i class="drain" style="height:58%"></i><div class="svc">Amazon</div><div class="code">7741</div><div class="meta">delivery · tap to copy</div></div>
+  </div>
+  <div class="sect"><h3>Needs you</h3><a href="#">All 3</a></div>
+  <div class="lines">
+    <div class="line"><div><div class="p">HDFC Credit Card bill</div><div class="s">₹18,420 · min ₹920</div></div><span class="stamp">DUE 6 OCT</span>
+      <div class="act"><span class="btn go">Pay with CRED</span><span class="btn">Remind tomorrow</span></div></div>
+    <div class="line"><div><div class="p">₹2,999 to "SPOTIFY IN"</div><div class="s">ICICI card ··4417 · new merchant</div></div><span class="stamp thump">ASK</span></div>
+  </div>
+  <div class="sect"><h3>Printed today</h3><a href="#">Ledger</a></div>
+  <table class="ledger">
+    <tr><th>TIME</th><th>PARTICULARS</th><th class="n">DR</th><th class="n">CR</th></tr>
+    <tr><td>08:12</td><td>Blue Tokai<span class="src">UPI · SMS + GPay</span></td><td class="n dr">240.00</td><td class="n"></td></tr>
+    <tr><td>09:40</td><td>Uber<span class="src">ICICI ··4417 · SMS</span></td><td class="n dr">386.50</td><td class="n"></td></tr>
+    <tr><td>11:05</td><td>Refund, Myntra<span class="src">HDFC · SMS + mail</span></td><td class="n"></td><td class="n cr">1,299.00</td></tr>
+    <tr class="printing"><td>13:30</td><td>Swiggy<span class="src">Amazon Pay · notif</span></td><td class="n dr">512.00</td><td class="n"></td></tr>
+    <tr class="tot"><td></td><td>Today</td><td class="n dr">1,138.50</td><td class="n cr">1,299.00</td></tr>
+  </table>
+  <span class="demo">DEMO DATA</span>
+  <div class="nav">
+    <div class="on"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></i>Today</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 10h16M9 5v14"/></svg></i>Ledger</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></i>Cards</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></i>Bills</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></i>Inbox</div>
+  </div>
+</div></div>
+<figcaption><b>Today, inner screen.</b> One UI 9 layout: a floating pill tab bar and floating search and menu buttons over the content; the big title sits in the top third and collapses as you scroll, with everything you tap within thumb reach below. Perforated OTP coupons print the time left along the perforation; the bill and the unknown charge carry rubber stamps; everything else is printed straight into the ledger with its sources underneath, so one payment seen in an SMS and in GPay prints once.</figcaption>
+</figure>
+
+<figure>
+<div class="phone dark"><div class="screen">
+  <div class="status"><span>21:10</span><span>5G · 64%</span></div>
+  <div class="bar"><div class="top"><h2>Ledger</h2><span class="guide">1 Oct to 4 Oct</span></div>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search this month</div></div>
+  <div class="chips"><span class="chip on">All accounts</span><span class="chip">ICICI ··4417</span><span class="chip">HDFC ··9032</span><span class="chip">Food</span></div>
+  <div class="monthhead"><b>October</b><span>spent ₹14,206 · in ₹82,450</span></div>
+  <table>
+    <tr><th>DATE</th><th>PARTICULARS</th><th class="n">DR</th><th class="n">CR</th></tr>
+    <tr><td>04</td><td>Swiggy<span class="src">food · Amazon Pay</span></td><td class="n">512.00</td><td class="n"></td></tr>
+    <tr><td>04</td><td>Refund, Myntra<span class="src">shopping · HDFC</span></td><td class="n"></td><td class="n cr">1,299.00</td></tr>
+    <tr><td>04</td><td>Uber<span class="src">transport · ICICI ··4417</span></td><td class="n">386.50</td><td class="n"></td></tr>
+    <tr><td>03</td><td>Airtel Xstream<span class="src">bills · autopay</span></td><td class="n">799.00</td><td class="n"></td></tr>
+    <tr><td>03</td><td>Sent to Rohan M.<span class="src">transfer · UPI</span></td><td class="n">1,500.00</td><td class="n"></td></tr>
+    <tr><td>02</td><td>BigBasket<span class="src">groceries · HDFC ··9032</span></td><td class="n">2,146.30</td><td class="n"></td></tr>
+    <tr><td>01</td><td>Salary, Acme Labs<span class="src">income · HDFC</span></td><td class="n"></td><td class="n cr">81,151.00</td></tr>
+    <tr><td>01</td><td>Rent, NoBroker<span class="src">bills · UPI</span></td><td class="n">8,862.20</td><td class="n"></td></tr>
+  </table>
+  <div class="nav">
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></i>Today</div>
+    <div class="on"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 10h16M9 5v14"/></svg></i>Ledger</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></i>Cards</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></i>Bills</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></i>Inbox</div>
+  </div>
+</div></div>
+<figcaption><b>Ledger, dark theme.</b> The passbook cover becomes the night ground. The guide words in the header name the span on screen and change as you scroll; every line shows its category and source; credits print in green, never red.</figcaption>
+</figure>
+
+<figure>
+<div class="flex">
+  <div class="upper">
+    <div class="head cloth"><div class="status"><span>21:12</span><span>5G · 63%</span></div>
+    <div class="bar" style="padding-bottom:10px"><div class="top"><h2 class="foil" style="font-size:24px">September</h2><span class="guide">spent ₹41,870</span></div></div></div>
+    <table>
+      <tr><th>DATE</th><th>PARTICULARS</th><th class="n">DR</th><th class="n">CR</th></tr>
+      <tr><td>30</td><td>Zomato<span class="src">food · ICICI ··4417</span></td><td class="n">624.00</td><td class="n"></td></tr>
+      <tr><td>29</td><td>Shell<span class="src">transport · HDFC</span></td><td class="n">1,800.00</td><td class="n"></td></tr>
+      <tr><td>29</td><td>Cashback, CRED<span class="src">income · CRED</span></td><td class="n"></td><td class="n cr">150.00</td></tr>
+      <tr><td>28</td><td>Apollo Pharmacy<span class="src">health · UPI</span></td><td class="n">436.80</td><td class="n"></td></tr>
+    </table>
+  </div>
+  <div class="hinge"></div>
+  <div class="lower">
+    <div class="scrub"><div>Jul<b>38.2k</b></div><div>Aug<b>45.0k</b></div><div class="on">Sep<b>41.9k</b></div><div>Oct<b>14.2k</b></div></div>
+    <div class="ask"><div class="q">₹2,999 at "SPOTIFY IN"</div><div class="s">ICICI ··4417 · 85% entertainment</div>
+      <div class="pick"><span class="best">Entertainment</span><span>Bills</span><span>Other</span></div></div>
+    <div class="cnext"><div><b>HDFC card due</b><br><span>Mon 6 Oct · 2 days</span></div><span class="amt" style="font:700 15px var(--mono)">₹18,420</span></div>
+    <div class="cnext"><div><b>Airtel postpaid</b><br><span>Thu 9 Oct · autopay on</span></div><span class="amt" style="font:700 15px var(--mono)">₹799</span></div>
+  </div>
+</div>
+<figcaption><b>Flex Mode, half folded on a table.</b> The upper half is the passbook page; the lower half turns into a control deck: a month scrubber with each month's spend, the next ASK item with the model's best guess first (one tap files it), and the bills coming up.</figcaption>
+</figure>
+
+<figure>
+<div class="cover"><div class="cam"></div><div class="cam"></div>
+  <div class="cscreen"><div class="brand"><b>Companion</b><span>PASSBOOK</span></div>
+    <div class="ccoupon"><div class="left"><span>0:47</span></div><i class="drain" style="height:22%"></i><div class="svc">SBI NetBanking · login</div><div class="code">482 913</div><div class="tap">Tap to copy · unfold to open</div></div>
+    <div class="cnext"><div><b>HDFC card due</b><br><span>Mon 6 Oct</span></div><span class="amt" style="font:700 15px var(--mono)">₹18,420</span></div>
+  </div>
+</div>
+<figcaption><b>Cover screen (One UI 9 cover home).</b> Companion's widget on the new cover home screen next to Now Brief. Without opening the phone: the live OTP coupon, big enough to read at arm's length, and the next bill due. Unfold and the app opens on the same OTP.</figcaption>
+
+<div class="lock">
+  <div class="time">9:41</div><div class="date">Saturday, 4 October</div>
+  <div class="nowbar"><div class="ring"><i>47</i></div><div class="t"><b>482 913</b><span>SBI NetBanking OTP</span></div><span class="copy">Copy</span></div>
+</div>
+<figcaption><b>Now Bar on the lock screen.</b> A fresh OTP appears as a live countdown chip with a Copy button, and disappears when it expires.</figcaption>
+</figure>
+</div>
+
+
+<div class="row">
+<figure>
+<div class="phone"><div class="screen" style="background:#EEF1F5">
+  <div class="head cloth"><div class="status"><span>9:42</span><span>5G · 82%</span></div>
+  <div class="tools"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></i><i><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></i></div>
+  <div class="oneui-head" style="height:150px"><div class="big">Cards</div><div class="sub"><b>₹31,560</b> spent this cycle · <b>2 cards</b></div></div></div>
+  <div class="cards">
+    <div class="cc hdfc"><div class="bank">HDFC Bank</div><div class="name">Regalia Gold</div><i class="chipm"></i><div class="num">•••• 9032</div><div class="due">due<b>6 Oct</b></div></div>
+    <div class="cc icici"><div class="bank">ICICI</div><div class="name">Amazon Pay</div><i class="chipm"></i><div class="num">•••• 4417</div><div class="due">due<b>31 Oct</b></div></div>
+  </div>
+  <div class="cycle"><div class="r"><b>₹18,420</b><span class="stamp">DUE 6 OCT</span></div><div class="m" style="margin-top:2px">statement 12 Sep to 11 Oct</div>
+    <div class="util"><i style="width:37%"></i></div>
+    <div class="m">37% of ₹50,000 limit used</div></div>
+  <table class="ledger" style="margin-top:6px">
+    <tr><th>DATE</th><th>PARTICULARS</th><th class="n">DR</th><th class="n">CR</th></tr>
+    <tr><td>03 Oct</td><td>Airtel Xstream<span class="src">bills · SMS + CRED</span></td><td class="n">799.00</td><td class="n"></td></tr>
+    <tr><td>02 Oct</td><td>BigBasket<span class="src">groceries · SMS</span></td><td class="n">2,146.30</td><td class="n"></td></tr>
+    <tr><td>29 Sep</td><td>Shell<span class="src">transport · SMS</span></td><td class="n">1,800.00</td><td class="n"></td></tr>
+    <tr><td>29 Sep</td><td>Cashback<span class="src">CRED · notif</span></td><td class="n"></td><td class="n cr">150.00</td></tr>
+  </table>
+  <div class="nav" style="grid-template-columns:repeat(5,1fr)">
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></i>Today</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 10h16M9 5v14"/></svg></i>Ledger</div>
+    <div class="on"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></i>Cards</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></i>Bills</div>
+    <div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></i>Inbox</div>
+  </div>
+</div></div>
+<figcaption><b>Cards.</b> Swipe between your cards; each shows the current statement cycle, how much of the limit is used, the due date stamp, and every transaction on that card from SMS, CRED, Amazon Pay and statement emails, merged into one line each.</figcaption>
+</figure>
+<figure>
+<div class="sheet">
+  <div class="grab"></div>
+  <h3>Add a card</h3><p>Only what's needed to recognise its messages. No card number, no CVV.</p>
+  <div class="fld"><label>Bank</label><div>HDFC Bank</div></div>
+  <div class="fld"><label>Card name (optional)</label><div>Regalia Gold</div></div>
+  <div class="fld"><label>Last 4 digits</label><div class="mono">9032</div></div>
+  <div class="two"><div class="fld"><label>Statement day</label><div>12th</div></div><div class="fld"><label>Due day</label><div>6th of next month</div></div></div>
+  <div class="fld"><label>Credit limit (optional)</label><div>₹50,000</div></div>
+  <div class="safe"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/></svg>Stays on this phone, encrypted</div>
+  <div class="save">Add card · 14 past transactions found</div>
+</div>
+<figcaption><b>Add a card.</b> Bank, name and last 4 digits are enough: Companion immediately finds the card's past transactions in your messages and fills in the statement and due days from the latest statement email when it can.</figcaption>
+</figure>
+</div>
+<div class="row">
+<figure>
+<div class="edge cloth">
+  <h4>Companion</h4>
+  <div class="ecoupon"><div class="svc">SBI NetBanking</div><div class="code">482 913</div><div class="bar2"><i style="width:22%"></i></div></div>
+  <div class="ecoupon"><div class="svc">Amazon</div><div class="code">7741</div><div class="bar2"><i style="width:58%"></i></div></div>
+  <div class="erow">HDFC card due<span>Mon · ₹18,420</span></div>
+  <div class="erow">2 lines to file<span>tap to open</span></div>
+</div>
+<figcaption><b>Edge Panel.</b> Swipe the edge handle from any app: live OTPs with their time left, the next bill, and how many lines are waiting.</figcaption>
+</figure>
+<figure>
+<div class="kb">
+  <div class="app"><b>Enter the OTP sent to ··4417</b><div class="field">______</div></div>
+  <div class="sugg"><div class="chip2"><i>C</i>482913 <span>SBI · 0:47</span></div></div>
+  <div class="keys"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div></div>
+</div>
+<figcaption><b>Samsung Keyboard.</b> When any app asks for a code, the matching OTP appears as a suggestion above the keyboard (through Android's inline autofill), so you never leave the app.</figcaption>
+</figure>
+<figure>
+<div class="qs">
+  <div class="tile on">Latest OTP<span>482 913</span><small>SBI · tap to copy</small></div>
+  <div class="tile">Wi-Fi<small>Home</small></div>
+  <div class="tile">Bluetooth<small>Buds3</small></div>
+  <div class="tile">Spent today<span>₹1,138</span><small>Companion</small></div>
+</div>
+<figcaption><b>Quick Settings tiles.</b> Swipe down twice: the latest OTP (tap to copy) and today's spend, without opening the app.</figcaption>
+<div class="lockapp cloth"><div class="fp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 11v4M8.5 8.8A5 5 0 0 1 17 12v1.5M7 12.5V12a5 5 0 0 1 .4-2M9.5 16.5c.3-1 .5-2.1.5-3.3V12a2 2 0 0 1 4 0v1.5c0 1.6-.3 3.1-.8 4.5M12 21c1.2-1.8 2-4 2.2-6.3"/></svg></div><b>Companion is locked</b><span>Touch the fingerprint sensor. Your ledger never leaves this phone.</span></div>
+<figcaption><b>Biometric lock.</b> The app opens with your fingerprint or face, like Samsung Pass; it can also live inside Secure Folder.</figcaption>
+</figure>
+</div>
+<p class="note">Synthetic demo content. Fonts: the device font (Samsung One UI Sans on the Flip; Roboto Flex stands in on this page) for interface text, JetBrains Mono for printed entries and amounts.</p>
+</body>
+</html>

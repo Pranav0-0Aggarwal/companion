@@ -3,8 +3,7 @@ package app.companion.ui.screens
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,10 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import app.companion.ui.Secure
 import app.companion.ui.Ty
+import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Ic
-import app.companion.ui.kit.cloth
 import app.companion.ui.pal
 
 private fun prompt(a: FragmentActivity, onOk: () -> Unit) {
@@ -42,23 +40,20 @@ private fun prompt(a: FragmentActivity, onOk: () -> Unit) {
 @Composable
 fun LockScreen(a: FragmentActivity, onUnlock: () -> Unit) {
     val p = pal
-    Secure()
     LaunchedEffect(Unit) { prompt(a, onUnlock) }
-    Box(Modifier.fillMaxSize().cloth(p), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.padding(32.dp).clickable { prompt(a, onUnlock) },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(Modifier.size(64.dp).border(2.dp, p.foil, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Ic.Fingerprint, "Unlock", Modifier.size(34.dp), tint = p.foil)
+    Box(Modifier.fillMaxSize().background(p.bg), contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(80.dp).background(p.accentBox, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Ic.Fingerprint, null, Modifier.size(38.dp), tint = p.onAccentBox)
             }
-            Text("Companion is locked", Modifier.padding(top = 14.dp), style = Ty.ui(18, FontWeight.Bold).copy(color = p.coverInk))
+            Text("Companion is locked", Modifier.padding(top = 20.dp), style = Ty.ui(22, FontWeight.Bold).copy(color = p.ink))
             Text(
-                "Touch the fingerprint sensor. Your ledger never leaves this phone.",
-                Modifier.padding(top = 6.dp),
-                style = Ty.ui(13, FontWeight.Medium).copy(color = p.coverMute),
+                "Use your fingerprint or screen lock. Nothing leaves this phone.",
+                Modifier.padding(top = 8.dp),
+                style = Ty.ui(15, FontWeight.Normal).copy(color = p.ink2),
                 textAlign = TextAlign.Center,
             )
+            Btn("Unlock", Modifier.padding(top = 24.dp), go = true, icon = Ic.Fingerprint) { prompt(a, onUnlock) }
         }
     }
 }

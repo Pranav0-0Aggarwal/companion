@@ -1,16 +1,21 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,21 +31,25 @@ import app.companion.ui.inDays
 import app.companion.ui.inr
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Ic
-import app.companion.ui.kit.ToolButton
-import app.companion.ui.kit.Group
+import app.companion.ui.kit.Ink
 import app.companion.ui.kit.PassLine
-import app.companion.ui.kit.Rule
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Section
-import app.companion.ui.kit.Stamp
+import app.companion.ui.kit.StateStamp
+import app.companion.ui.kit.ToolButton
+import app.companion.ui.kit.Tone
+import app.companion.ui.kit.empty
+import app.companion.ui.kit.motion
+import app.companion.ui.kit.part
+import app.companion.ui.kit.rememberHaptic
 import app.companion.ui.money
 import app.companion.ui.pal
 import app.companion.ui.shortDay
 import app.companion.ui.today
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val CRED = "com.dreamplug.androidapp"
 private val titles = listOf("Overdue", "This week", "Later", "No date")
 
 private fun bucket(b: Item, day: LocalDate) = when (b.dueDate?.let { daysTo(it, day) }) {
@@ -61,11 +70,11 @@ fun BillsScreen(go: (String) -> Unit) {
     val day = remember { today() }
     val soon = bills.filter { b -> b.dueDate?.let { daysTo(it, day) <= 30 } == true }
     val sub = if (bills.isEmpty()) "Nothing due" else "${soon.size} due · ${inr(soon.sumOf { it.paise })} in the next 30 days"
-    Screen("Bills", sub, tools = { ToolButton(Ic.Plan, "Plan") { go("plan") } }) {
+    val groups = remember(bills, day) { bills.groupBy { bucket(it, day) } }
+    Screen("Bills", sub, tools = { ToolButton(Ic.Plan, "Plan and reminders") { go("plan") } }) {
         if (bills.isEmpty()) {
-            emptyPage("No bills due", Voice.addr(profile.name, "nothing is waiting to be paid"))
+            empty(Ic.Bills, "No bills due", Voice.addr(profile.name, "nothing is waiting to be paid."))
         } else {
-            val groups = bills.groupBy { bucket(it, day) }
             titles.forEachIndexed { i, t ->
                 groups[i]?.let { section(t, it, day, cred, { id -> scope.launch { repo.pay(id) } }) { intent -> c.startActivity(intent) } }
             }
@@ -75,12 +84,9 @@ fun BillsScreen(go: (String) -> Unit) {
 
 private fun LazyListScope.section(title: String, list: List<Item>, day: LocalDate, cred: Intent?, onPay: (Long) -> Unit, onCred: (Intent) -> Unit) {
     item(key = "h$title") { Section(title) }
-    item(key = "g$title") {
-        Group {
-            list.forEachIndexed { i, b ->
-                if (i > 0) Rule()
-                BillLine(b, day, cred, { onPay(b.id) }, onCred)
-            }
+    itemsIndexed(list, key = { _, b -> "b${b.id}" }) { k, b ->
+        Box(Modifier.animateItem().part(pal, k == 0, k == list.lastIndex)) {
+            BillLine(b, day, cred, { onPay(b.id) }, onCred)
         }
     }
 }
@@ -88,22 +94,44 @@ private fun LazyListScope.section(title: String, list: List<Item>, day: LocalDat
 @Composable
 private fun BillLine(b: Item, day: LocalDate, cred: Intent?, onPay: () -> Unit, onCred: (Intent) -> Unit) {
     val p = pal
+    val scope = rememberCoroutineScope()
+    val haptic = rememberHaptic()
+    val on = motion()
+    var paid by remember { mutableStateOf(false) }
     val due = b.dueDate
+    val days = due?.let { daysTo(it, day) }
     val card = listOfNotNull(b.bank, b.last4?.let { "··$it" }).joinToString(" ").ifEmpty { null }
-    val sub = listOfNotNull(due?.let { inDays(daysTo(it, day)) }, card, b.minPaise?.let { "min ${money(it, b.currency)}" }).joinToString(" · ")
+    val sub = listOfNotNull(days?.let { inDays(it).replaceFirstChar(Char::uppercase) }, card, b.minPaise?.let { "min ${money(it, b.currency)}" }).joinToString(" · ")
     PassLine(
         b.title,
         sub,
+        lead = Ic.Bolt,
+        tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent,
         trailing = {
             Column(horizontalAlignment = Alignment.End) {
-                Text(money(b.paise, b.currency), style = Ty.mono(15, FontWeight.Bold).copy(color = p.ink))
-                if (due != null) Stamp("DUE ${shortDay(due).uppercase()}", Modifier.padding(top = 8.dp, end = 4.dp))
+                Text(money(b.paise, b.currency), style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink))
+                val label = when {
+                    paid -> "PAID"
+                    days != null && days < 0 -> "OVERDUE"
+                    due != null -> "DUE ${shortDay(due).uppercase()}"
+                    else -> null
+                }
+                if (label != null) StateStamp(label, if (paid) Ink.Green else Ink.Red, Modifier.padding(top = 8.dp))
             }
         },
         actions = {
-            Btn("Mark paid", go = true, onClick = onPay)
-            if (cred != null) Btn("Pay with CRED") { onCred(cred) }
-            if (due != null) RemindBtn(b.title, due)
+            if (!paid) {
+                Btn("Mark paid", go = true) {
+                    paid = true
+                    haptic(HapticFeedbackType.Confirm)
+                    scope.launch {
+                        delay(if (on) 560 else 120)
+                        onPay()
+                    }
+                }
+                if (cred != null) Btn("Pay with CRED") { onCred(cred) }
+                if (due != null) RemindBtn(b.title, due)
+            }
         },
     )
 }

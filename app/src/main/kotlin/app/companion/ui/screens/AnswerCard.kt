@@ -1,28 +1,43 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.Alignment
-import androidx.compose.runtime.key
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.companion.ai.Answer
-import app.companion.ai.Drill
 import app.companion.ai.Answers
+import app.companion.ai.Drill
 import app.companion.ai.DrillBox
 import app.companion.core.Edit
 import app.companion.core.Query
@@ -36,10 +51,15 @@ import app.companion.ui.dateOf
 import app.companion.ui.dayLabel
 import app.companion.ui.inr
 import app.companion.ui.kit.Btn
-import app.companion.ui.kit.Chip
 import app.companion.ui.kit.Field
 import app.companion.ui.kit.Group
+import app.companion.ui.kit.Ic
+import app.companion.ui.kit.MoneyRow
+import app.companion.ui.kit.Motion
+import app.companion.ui.kit.Roll
 import app.companion.ui.kit.Rule
+import app.companion.ui.kit.TextBtn
+import app.companion.ui.kit.rememberHaptic
 import app.companion.ui.pal
 import app.companion.ui.shortDay
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +68,7 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 
 @Composable
-fun AnswerCard(first: Answer, go: (String) -> Unit) {
+fun AnswerCard(first: Answer, go: (String) -> Unit, modifier: Modifier = Modifier) {
     val p = pal
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -61,67 +81,80 @@ fun AnswerCard(first: Answer, go: (String) -> Unit) {
         DrillBox.pending.value = d
         go("ledger")
     }
-    Group(Modifier.padding(bottom = 12.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(a.says, Modifier.weight(1f), style = Ty.mono(11, FontWeight.Bold).copy(color = p.ink2, letterSpacing = 0.4.sp))
-                Chip(if (editing) "Close" else "Edit", editing, Modifier.padding(start = 8.dp)) { editing = !editing }
+    Group(modifier.padding(bottom = 12.dp), raised = true) {
+        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 8.dp)) {
+            Row(
+                Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(20.dp)).background(p.accentBox)
+                    .clickable(role = Role.Button, onClickLabel = if (editing) "Close edit" else "Edit what was understood") { editing = !editing }
+                    .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Normal)) { append("Understood as ") }
+                        append(a.says)
+                    },
+                    Modifier.weight(1f, fill = false),
+                    style = Ty.ui(14).copy(color = p.onAccentBox),
+                )
+                Icon(if (editing) Ic.Close else Ic.Edit, null, Modifier.padding(start = 8.dp).size(16.dp), tint = p.onAccentBox)
             }
-            if (editing) {
-                edit.labels(a.query).forEachIndexed { i, l ->
-                    Field(l, vals[i], { v -> vals = vals.toMutableList().also { it[i] = v } }, Modifier.padding(top = 8.dp), mono = true)
-                }
-                if (bad) Text("Check the values", Modifier.padding(top = 8.dp), style = Ty.mono(11).copy(color = p.ink2))
-                Btn("Apply", Modifier.padding(top = 10.dp), go = true) {
-                    val q = edit.apply(a.query, vals)
-                    bad = q == null
-                    if (q != null) {
-                        scope.launch {
-                            a = withContext(Dispatchers.Default) { Answers.run(q, c.sl.repo) }
-                            editing = false
+            AnimatedVisibility(editing, enter = expandVertically(Motion.soft()) + fadeIn(), exit = shrinkVertically(Motion.soft()) + fadeOut()) {
+                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    edit.labels(a.query).forEachIndexed { i, l ->
+                        Field(l, vals.getOrElse(i) { "" }, { v -> vals = vals.toMutableList().also { it[i] = v } }, Modifier.padding(top = 8.dp), mono = true)
+                    }
+                    if (bad) Text("Check the values", style = Ty.ui(13, FontWeight.Normal).copy(color = p.red))
+                    Btn("Apply", Modifier.padding(top = 4.dp), go = true) {
+                        val q = edit.apply(a.query, vals)
+                        bad = q == null
+                        if (q != null) {
+                            scope.launch {
+                                a = withContext(Dispatchers.Default) { Answers.run(q, c.sl.repo) }
+                                editing = false
+                            }
                         }
                     }
                 }
             }
-            a.total?.let {
-                Text(inr(it), Modifier.padding(top = 6.dp), style = Ty.mono(30, FontWeight.ExtraBold).copy(color = p.ink))
-            }
+            a.total?.let { Roll(inr(it), Ty.mono(36, FontWeight.Bold).copy(color = p.ink), Modifier.padding(top = 14.dp)) }
             a.count?.let {
-                Text(if (it == 0) "Nothing found" else "$it ${if (it == 1) "payment" else "payments"}", Modifier.padding(top = 2.dp), style = Ty.mono(12).copy(color = p.ink2))
+                Text(
+                    if (it == 0) "Nothing found" else "$it ${if (it == 1) "payment" else "payments"}",
+                    Modifier.padding(top = 2.dp),
+                    style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2),
+                )
             }
             a.proposal?.let { key(it) { Proposal(it) } }
         }
         a.lines.forEach { l ->
             Rule()
-            Row(Modifier.fillMaxWidth().clickable { drill(l.drill ?: a.drill) }.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Text(shortDay(l.date), Modifier.padding(end = 12.dp), style = Ty.mono(12).copy(color = p.ink2))
-                Column(Modifier.weight(1f)) {
-                    Text(l.title, style = Ty.ui(14).copy(color = p.ink), maxLines = 1)
-                    if (l.sub.isNotEmpty()) Text(l.sub, style = Ty.mono(10).copy(color = p.ink2), maxLines = 1)
-                }
-                Text(inr(l.paise), style = Ty.mono(13, FontWeight.Bold).copy(color = p.ink), textAlign = TextAlign.End)
-            }
+            MoneyRow(l.title, l.sub, inr(l.paise), false, time = shortDay(l.date), onClick = { drill(l.drill ?: a.drill) })
         }
         if (a.drill != null && a.count != 0) {
-            Column(Modifier.padding(16.dp)) { Btn("Open in Ledger") { drill(a.drill) } }
+            Rule()
+            TextBtn("Open in Ledger", Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp)) { drill(a.drill) }
         }
     }
 }
 
 @Composable
 private fun Proposal(q: Query) {
+    val p = pal
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
+    val haptic = rememberHaptic()
     var done by remember { mutableStateOf(false) }
     val at = when (q) {
         is Query.CreateReminder -> q.at
         is Query.CreateEvent -> q.start
         else -> return
     }
-    Text("${dayLabel(dateOf(at))} ${clock(at)}", Modifier.padding(top = 4.dp), style = Ty.mono(12).copy(color = pal.ink2))
-    Btn(if (done) "Done" else "Confirm", Modifier.padding(top = 10.dp), go = !done) {
+    Text("${dayLabel(dateOf(at))} ${clock(at)}", Modifier.padding(top = 12.dp), style = Ty.mono(15).copy(color = p.ink))
+    Btn(if (done) "Done" else "Confirm", Modifier.padding(top = 8.dp), go = !done, icon = if (done) Ic.Check else null) {
         if (!done) {
             done = true
+            haptic(HapticFeedbackType.Confirm)
             scope.launch {
                 when (q) {
                     is Query.CreateReminder -> Plan.remind(c, q.title, q.at)

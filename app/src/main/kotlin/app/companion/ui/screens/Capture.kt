@@ -1,8 +1,9 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -11,11 +12,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -50,11 +49,11 @@ fun CaptureSheet(initial: String, onDone: () -> Unit) {
     var text by remember { mutableStateOf(initial) }
     val s = remember(text) { text.takeIf { it.isNotBlank() }?.let { Suggest.shared(it, System.currentTimeMillis(), zone()) } }
     val todo = { scope.launch { Plan.save(c, Task(title = text.trim().lineSequence().first().take(120), note = text.trim().takeIf { it.contains('\n') })); onDone() } }
-    ModalBottomSheet(onDismissRequest = onDone, containerColor = pal.card) {
+    ModalBottomSheet(onDismissRequest = onDone, containerColor = pal.bg) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp)) {
-            Text("New reminder", style = Ty.ui(20, FontWeight.ExtraBold).copy(color = pal.ink))
+            Text("New reminder", style = Ty.ui(24, FontWeight.Bold).copy(color = pal.ink))
             Field("What should I remember?", text, { text = it }, Modifier.padding(top = 12.dp))
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (s) {
                     is Suggestion.Cal -> {
                         Btn("Add to calendar · ${whenText(s.start)}", go = true) {

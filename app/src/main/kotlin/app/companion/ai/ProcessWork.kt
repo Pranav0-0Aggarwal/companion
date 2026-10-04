@@ -222,7 +222,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
     private suspend fun finish() {
         val text = if (job == Job.Reprocess) Refile.summary(cur.moved, cur.ask, cur.skip) else Refile.imported(cur.done, cur.moved, cur.ask)
         repo.atomic {
-            if (job == Job.Reprocess) repo.edit { it.copy(model = cur.sha) }
+            repo.edit { if (job == Job.Reprocess || it.model == null) it.copy(model = cur.sha) else it }
             repo.dropMark(job.name)
         }
         Live.refresh(c)

@@ -42,7 +42,7 @@ Fully on device and private: no network permission, nothing leaves the phone. It
 
 ## Brand Commitments
 
-Name: Companion (working name). Voice: calm, plain, brief.
+Name: Companion (working name). Voice: calm, plain, brief. Look: One UI native, refined; it should sit beside Samsung's own One UI apps, with passbook stamps and tabular figures only where they carry state or numbers (owner's standing choice).
 
 ## Evidence on Hand
 

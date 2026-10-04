@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.ai.Active
 import app.companion.ai.Manifest
 import app.companion.ai.Models
 import app.companion.core.Rules
@@ -46,14 +47,14 @@ fun LearnSettings() {
     val rules by repo.rules.collectAsStateWithLifecycle(emptyList())
     val share = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { Export.discard(c) }
     val ver by produceState<Pair<String?, String?>>(null to null) {
-        value = withContext(Dispatchers.IO) { Models.version(c, Manifest.decide) to Models.version(c, Manifest.calibration) }
+        value = withContext(Dispatchers.IO) { Active.version(c) to Models.version(c, Manifest.calibration) }
     }
     val (decide, cal) = ver
     Section("Corrections")
     Group {
         PassLine("Since last export", "$n ${if (n == 1) "correction" else "corrections"}")
         Rule()
-        PassLine("Decide model", listOfNotNull(decide?.let { "version $it" } ?: "not installed", cal?.let { "calibration $it" }).joinToString(" · "))
+        PassLine("Message classifier", listOfNotNull(decide?.let { "version $it" } ?: "not installed", cal?.let { "calibration $it" }).joinToString(" · "))
         Rule()
         PassLine(
             "Export corrections",

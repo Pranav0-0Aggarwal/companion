@@ -137,7 +137,7 @@ object Processing {
     }
 
     internal suspend fun verify(c: Context) {
-        val sha = Models.sha(c, Manifest.decide)
+        val sha = Active.sha(c)
         changed.value = sha != null && sha != c.sl.repo.profileNow().model
     }
 
@@ -175,7 +175,7 @@ object Processing {
 
     private suspend fun plan(c: Context, job: Job): Progress {
         val repo = c.sl.repo
-        val sha = if (job == Job.Reprocess) Models.sha(c, Manifest.decide) else null
+        val sha = if (job == Job.Reprocess) Active.sha(c) else null
         val p = Batch.resume(repo.mark(job.name)?.progress(), sha)
             ?: if (job == Job.Reprocess) Batch.start(0, repo.top(), sha) else Batch.start(Long.MAX_VALUE, repo.topLink(), null)
         val left = when {

@@ -5,12 +5,14 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Process
 import androidx.work.WorkManager
+import app.companion.ai.BertScorer
 import app.companion.ai.DecideScorer
 import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
 import app.companion.ai.NeedlePlanner
 import app.companion.ai.Pending
 import app.companion.ai.Processing
+import app.companion.ai.Scorers
 import app.companion.ui.Proc
 import app.companion.core.NoExtractor
 import app.companion.core.Planner
@@ -31,7 +33,7 @@ class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
     val repo by lazy { Repo(db) }
     val gov by lazy { Governor(app) }
-    val scorer by lazy { DecideScorer(app, gov) }
+    val scorer by lazy { Scorers(app, DecideScorer(app, gov), BertScorer(app, gov)) }
     val rules by lazy { RulesClassifier() }
     val refine by lazy { Refine(rules, NoExtractor, scorer::calibration, scorer) }
     val pending by lazy { Pending(app, repo, refine, gov) }

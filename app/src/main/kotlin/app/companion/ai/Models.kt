@@ -48,7 +48,7 @@ object Models {
         return m
     }
 
-    private fun verified(c: Context, f: File, sha: String): Boolean {
+    internal fun verified(c: Context, f: File, sha: String): Boolean {
         if (!f.isFile) return false
         val prefs = c.getSharedPreferences("models", Context.MODE_PRIVATE)
         val stamp = "${f.length()}:${f.lastModified()}:$sha"

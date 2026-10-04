@@ -99,7 +99,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
     }
 
     private suspend fun halted(): Result {
-        val why = if (Models.file(c, Manifest.decide) == null) "No model installed" else "Not enough free memory, try again"
+        val why = if (Active.bert(c) == null && Models.file(c, Manifest.decide) == null) "No model installed" else "Not enough free memory, try again"
         Processing.publish(null, token)
         Note.done(c, job, why)
         return Result.failure()
@@ -205,7 +205,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
 
     private suspend fun finish() {
         val text = if (job == Job.Reprocess) Refile.summary(cur.moved, cur.ask, cur.skip) else Refile.imported(cur.done, cur.moved, cur.ask)
-        val sha = cur.sha ?: Models.sha(c, Manifest.decide)
+        val sha = cur.sha ?: Active.sha(c)
         repo.atomic {
             repo.edit { if (job == Job.Reprocess || it.model == null) it.copy(model = sha) else it }
             repo.dropMark(job.name)

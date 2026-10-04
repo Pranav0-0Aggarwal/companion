@@ -1,5 +1,6 @@
 package app.companion
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,45 +30,67 @@ import app.companion.ui.kit.Tab
 import app.companion.ui.kit.cloth
 import app.companion.ui.pal
 import app.companion.ui.screens.BillsScreen
+import app.companion.ui.screens.CaptureSheet
 import app.companion.ui.screens.CardsScreen
 import app.companion.ui.screens.FlexScreen
 import app.companion.ui.screens.InboxScreen
 import app.companion.ui.screens.LedgerScreen
+import app.companion.ui.screens.LocalCapture
 import app.companion.ui.screens.LockScreen
 import app.companion.ui.screens.OnboardingScreen
+import app.companion.ui.screens.PlanScreen
 import app.companion.ui.screens.SearchScreen
 import app.companion.ui.screens.SettingsScreen
 import app.companion.ui.screens.TodayScreen
 
 class MainActivity : FragmentActivity() {
     private var unlocked by mutableStateOf(false)
+    private var capture by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { CompanionTheme { Root(this, unlocked) { unlocked = true } } }
+        take(intent)
+        setContent { CompanionTheme { Root(this, unlocked, capture, { capture = it }) { unlocked = true } } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        take(intent)
+    }
+
+    private fun take(i: Intent?) {
+        capture = when (i?.action) {
+            Intent.ACTION_SEND -> i.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+            NEW -> ""
+            else -> capture
+        }
     }
 
     override fun onStop() {
         super.onStop()
         unlocked = false
     }
+
+    companion object {
+        const val NEW = "app.companion.NEW"
+    }
 }
 
 @Composable
-private fun Root(a: FragmentActivity, unlocked: Boolean, onUnlock: () -> Unit) {
+private fun Root(a: FragmentActivity, unlocked: Boolean, capture: String?, setCapture: (String?) -> Unit, onUnlock: () -> Unit) {
     val p by a.sl.repo.profile.collectAsStateWithLifecycle<Profile?>(null)
     val pr = p
     when {
         pr == null -> Box(Modifier.fillMaxSize().cloth(pal))
         !pr.done -> OnboardingScreen()
         pr.lock && !unlocked -> LockScreen(a, onUnlock)
-        else -> Shell(a)
+        else -> Shell(a, capture, setCapture)
     }
 }
 
 @Composable
-private fun Shell(a: FragmentActivity) {
+private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -> Unit) {
     val info by remember { WindowInfoTracker.getOrCreate(a).windowLayoutInfo(a) }.collectAsStateWithLifecycle(null)
     val fold = info?.displayFeatures?.filterIsInstance<FoldingFeature>()?.firstOrNull()
     val tabletop = fold != null && fold.state == FoldingFeature.State.HALF_OPENED && fold.orientation == FoldingFeature.Orientation.HORIZONTAL
@@ -83,7 +106,7 @@ private fun Shell(a: FragmentActivity) {
             launchSingleTop = true
         }
     }
-    CompositionLocalProvider(LocalFold provides fold) {
+    CompositionLocalProvider(LocalFold provides fold, LocalCapture provides { setCapture(it) }) {
         Box(Modifier.fillMaxSize()) {
             if (tabletop && top) {
                 FlexScreen(go)
@@ -96,9 +119,11 @@ private fun Shell(a: FragmentActivity) {
                     composable("inbox") { InboxScreen(go) }
                     composable("search") { SearchScreen { nav.popBackStack() } }
                     composable("settings") { SettingsScreen { nav.popBackStack() } }
+                    composable("plan") { PlanScreen({ nav.popBackStack() }) }
                 }
                 if (top) FloatNav(route, Modifier.align(Alignment.BottomCenter), go)
             }
+            capture?.let { CaptureSheet(it) { setCapture(null) } }
         }
     }
 }

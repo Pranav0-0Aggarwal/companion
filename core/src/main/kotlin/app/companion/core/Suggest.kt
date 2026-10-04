@@ -14,6 +14,8 @@ object Suggest {
     private val ref = Regex("(?i)(?:pnr|booking\\s*(?:id|ref(?:erence)?|no\\.?)|confirmation\\s*(?:code|no\\.?|number)|ref(?:erence)?\\s*(?:no\\.?|number|id))\\s*[:#-]?\\s*([A-Z0-9]{5,12})")
     private val hour = 60 * 60 * 1000L
 
+    fun ref(text: String): String? = ref.find(text)?.groupValues?.get(1)
+
     fun bill(title: String, due: LocalDate, now: Long, zone: ZoneId): List<Suggestion.Remind> =
         listOf(due.minusDays(2), due)
             .map { Suggestion.Remind(title, Slot(it, LocalTime.of(9, 0)).millis(zone)) }
@@ -22,7 +24,7 @@ object Suggest {
     fun travel(e: Event.Travel, text: String, now: Long, zone: ZoneId): Suggestion.Cal? {
         val date = e.date ?: return null
         val t = Slots.find(text, now, zone)?.takeIf { it.date == date }?.time
-        val code = ref.find(text)?.groupValues?.get(1)
+        val code = ref(text)
         val note = code?.let { "Ref $it" }.orEmpty()
         val title = "${e.what} booking"
         return if (t != null) {

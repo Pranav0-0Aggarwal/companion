@@ -5,7 +5,12 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Process
 import androidx.work.WorkManager
+import app.companion.ai.DecideScorer
+import app.companion.ai.Governor
+import app.companion.ai.NeedlePlanner
 import app.companion.core.Classifier
+import app.companion.core.DecideClassifier
+import app.companion.core.Planner
 import app.companion.core.RulesClassifier
 import app.companion.data.Repo
 import app.companion.data.Vault
@@ -20,7 +25,9 @@ import kotlinx.coroutines.runBlocking
 class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
     val repo by lazy { Repo(db) }
-    val classifier: Classifier = RulesClassifier()
+    val gov by lazy { Governor(app) }
+    val classifier: Classifier by lazy { DecideClassifier(RulesClassifier(), scorer = DecideScorer(app, gov)) }
+    val planner: Planner by lazy { NeedlePlanner(app, gov) }
     val ingest by lazy { Ingest(app, repo, classifier) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
@@ -41,6 +48,11 @@ class CompanionApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Live.boot(this)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        sl.gov.trim(level)
     }
 }
 

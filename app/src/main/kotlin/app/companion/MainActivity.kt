@@ -117,7 +117,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                     composable("cards") { CardsScreen(go) }
                     composable("bills") { BillsScreen(go) }
                     composable("inbox") { InboxScreen(go) }
-                    composable("search") { SearchScreen { nav.popBackStack() } }
+                    composable("search") { SearchScreen({ nav.popBackStack() }, go) }
                     composable("settings") { SettingsScreen { nav.popBackStack() } }
                     composable("plan") { PlanScreen({ nav.popBackStack() }) }
                 }

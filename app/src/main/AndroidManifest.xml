@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
@@ -98,6 +99,11 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".ai.NeedleService"
+            android:exported="false"
+            android:isolatedProcess="true" />
+
         <receiver
             android:name=".system.CopyReceiver"
             android:exported="false" />
@@ -114,6 +120,26 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name="com.google.android.play.core.assetpacks.AssetPackExtractionService"
+            tools:node="remove" />
+
+        <receiver
+            android:name="com.google.android.play.core.assetpacks.SessionStateBroadcastReceiver"
+            tools:node="remove" />
+
+        <service
+            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+            tools:node="remove" />
+
+        <receiver
+            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+            tools:node="remove" />
+
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            tools:node="remove" />
 
     </application>
 </manifest>

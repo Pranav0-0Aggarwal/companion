@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -30,7 +31,9 @@ import app.companion.data.Card
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.credit
+import app.companion.ai.DrillBox
 import app.companion.sl
+import java.time.temporal.ChronoUnit
 import app.companion.ui.Ty
 import app.companion.ui.clock
 import app.companion.ui.dateOf
@@ -73,14 +76,27 @@ fun LedgerScreen(go: (String) -> Unit) {
     var acct by rememberSaveable { mutableLongStateOf(0L) }
     var cat by rememberSaveable { mutableStateOf<String?>(null) }
     var open by rememberSaveable { mutableLongStateOf(-1L) }
+    var who by rememberSaveable { mutableStateOf<String?>(null) }
+    val drill by DrillBox.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(drill, cards) {
+        drill?.let { d ->
+            cat = d.category
+            who = d.merchant
+            acct = cards.firstOrNull { it.last4 == d.last4 }?.id ?: 0L
+            back = ChronoUnit.MONTHS.between(YearMonth.from(d.start), YearMonth.from(today())).toInt()
+            DrillBox.pending.value = null
+        }
+    }
     val now = today()
     val ym = YearMonth.from(now).minusMonths(back.toLong())
     val inMonth = remember(money, ym) { money.filter { it.at >= ym.ms() && it.at < ym.plusMonths(1).ms() } }
     val card = cards.firstOrNull { it.id == acct }
-    val rows = remember(inMonth, card, cat) { inMonth.filter { (card == null || card.has(it)) && (cat == null || it.category == cat) } }
+    val rows = remember(inMonth, card, cat, who) {
+        inMonth.filter { (card == null || card.has(it)) && (cat == null || it.category == cat) && (who == null || it.title.contains(who!!, true)) }
+    }
     val cats = remember(inMonth) { Category.entries.map { it.label }.filter { l -> inMonth.any { it.category == l } } }
     val links = rememberLinks(rows)
-    val all = card == null && cat == null
+    val all = card == null && cat == null && who == null
     val spent = rows.tot(false)
     val budget = prof.budget.takeIf { all }
     val span = Span(ym.atDay(1), if (back == 0) now else ym.atEndOfMonth())
@@ -96,6 +112,7 @@ fun LedgerScreen(go: (String) -> Unit) {
             ) {
                 Chip("All accounts", card == null) { acct = 0 }
                 cards.forEach { c -> Chip("${c.bank} ··${c.last4}", acct == c.id) { acct = c.id } }
+                who?.let { w -> Chip("$w ✕", true) { who = null } }
                 cats.forEach { c -> Chip(c.cap(), cat == c) { cat = if (cat == c) null else c } }
             }
         }

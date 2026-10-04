@@ -63,6 +63,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "reads") { Section("What Gmail reads") }
             item(key = "reads-list") { Group { Reads() } }
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
+            item(key = "ai") { AiSettings() }
             item(key = "lock") { Section("Lock") }
             item(key = "lock-row") { Group { LockRow(p.lock) { v -> save { it.copy(lock = v) } } } }
             item(key = "wipe") { Section("Data") }

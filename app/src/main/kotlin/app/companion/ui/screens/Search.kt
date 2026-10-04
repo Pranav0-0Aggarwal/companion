@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -19,7 +20,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
 import app.companion.data.credit
 import app.companion.data.money
+import app.companion.ai.Answer
+import app.companion.ai.Answers
 import app.companion.sl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.companion.ui.Secure
 import app.companion.ui.Ty
 import app.companion.ui.dateOf
@@ -37,10 +42,11 @@ import app.companion.ui.money as amt
 private fun Item.sub() = listOfNotNull(note.take(80).takeIf { it.isNotBlank() && !money }).plus(meta()).plus(shortDay(dateOf(at))).joinToString(" · ")
 
 @Composable
-fun SearchScreen(back: () -> Unit) {
+fun SearchScreen(back: () -> Unit, go: (String) -> Unit) {
     Secure()
     val p = pal
-    val repo = LocalContext.current.sl.repo
+    val sl = LocalContext.current.sl
+    val repo = sl.repo
     var q by rememberSaveable { mutableStateOf("") }
     var live by remember { mutableStateOf(q) }
     LaunchedEffect(q) {
@@ -48,13 +54,20 @@ fun SearchScreen(back: () -> Unit) {
         live = q
     }
     val hits by remember(live) { repo.search(live) }.collectAsStateWithLifecycle(emptyList())
+    val answers by produceState(emptyList<Answer>(), live) {
+        value = withContext(Dispatchers.Default) {
+            val plan = if (live.length < 3) null else sl.planner.plan(live, System.currentTimeMillis())
+            plan?.takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, repo) }
+        }
+    }
     Screen(
         "Search",
         if (live.isBlank()) "On this phone only" else "${hits.size} found",
         tools = { ToolButton(Ic.Back, "Back", back) },
     ) {
-        item { Field("Search", q, { q = it }, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), hint = "Merchant, bank or note") }
-        if (hits.isEmpty()) {
+        item { Field("Search", q, { q = it }, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), hint = "Merchant, bank, or ask: food last month") }
+        items(answers.size) { AnswerCard(answers[it], go) }
+        if (hits.isEmpty() && answers.isEmpty()) {
             item { Quiet(if (live.isBlank()) "Type a merchant, bank or note" else "Nothing found") }
         }
         items(hits, key = { it.id }) { i ->

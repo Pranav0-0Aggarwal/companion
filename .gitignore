@@ -11,3 +11,4 @@ models/
 /data/
 .env
 .claude/
+.impeccable/questions/

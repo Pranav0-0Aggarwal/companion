@@ -13,3 +13,4 @@ models/
 .claude/
 .impeccable/questions/
 .cxx/
+.kotlin/

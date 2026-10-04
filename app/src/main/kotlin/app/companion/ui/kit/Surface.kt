@@ -239,10 +239,10 @@ internal fun LazyListScope.empty(icon: ImageVector, title: String, body: String,
 fun Empty(icon: ImageVector, title: String, body: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     val p = pal
     Column(modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(72.dp).background(p.card, CircleShape), contentAlignment = Alignment.Center) {
+        Box(Modifier.rise().size(72.dp).background(p.card, CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, null, Modifier.size(30.dp), tint = p.ink2)
         }
-        Text(title, Modifier.padding(top = 18.dp).semantics { heading() }, style = Ty.ui(18, FontWeight.Bold).copy(color = p.ink))
+        Text(title, Modifier.rise(1).padding(top = 18.dp).semantics { heading() }, style = Ty.ui(18, FontWeight.Bold).copy(color = p.ink))
         Text(body, Modifier.padding(top = 6.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2, lineHeight = 20.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center))
         if (action != null) Box(Modifier.padding(top = 16.dp)) { action() }
     }

@@ -24,6 +24,28 @@ android {
         buildConfigField("String", "GMAIL_CLIENT_ID", "\"${local.getProperty("gmail.webClientId", "")}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = local.getProperty("release.store")?.let(::file)
+            storePassword = local.getProperty("release.password")
+            keyAlias = "companion"
+            keyPassword = local.getProperty("release.password")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    packaging {
+        resources.excludes += listOf("META-INF/**/LICENSE*", "META-INF/*.version", "META-INF/*.kotlin_module", "kotlin/**", "DebugProbesKt.bin")
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

@@ -1,0 +1,3 @@
+-keep class net.zetetic.database.** { *; }
+-keep class com.google.ai.edge.litert.** { *; }
+-dontwarn com.google.ai.edge.litert.**

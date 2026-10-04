@@ -6,7 +6,7 @@ internal data class Amt(val paise: Long, val currency: String, val at: Int, val 
 
 internal object Money {
     private const val NUM = "([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"
-    private val pre = Regex("(?i)(?<![a-z])(rs\\.?|inr|₹|usd|\\$|eur|€|gbp|£)\\s*$NUM")
+    private val pre = Regex("(?i)(?<![a-z])(rs\\.?|inr|₹|usd|\\$|eur|€|gbp|£)\\s*(?:(?:dr|cr)\\.?\\s*)?$NUM")
     private val post = Regex("(?i)(?<![0-9,.])$NUM\\s*(inr|rs\\.?|usd)(?![a-z])")
     private val skip = Regex("(?i)bal|avl|avail|limit|outstanding")
 

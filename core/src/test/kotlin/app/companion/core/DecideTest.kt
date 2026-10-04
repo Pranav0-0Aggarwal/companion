@@ -46,7 +46,35 @@ class DecideTest {
     @Test
     fun `sure rules are never overridden`() {
         val c = DecideClassifier(rules) { mapOf(Kind.Promo to 0.99f) }
-        assertIs<Verdict.Sure>(c.classify(sms("VM-HDFCBK", "123456 is your OTP. Valid for 5 minutes.")))
+        val v = assertIs<Verdict.Sure>(c.classify(sms("VM-HDFCBK", "123456 is your OTP. Valid for 5 minutes.")))
+        assertIs<Event.Otp>(v.event)
+    }
+
+    @Test
+    fun `a promo guess never erases a code`() {
+        val c = DecideClassifier(RulesClassifier(IST, 0.99f)) { mapOf(Kind.Promo to 0.99f) }
+        val v = assertIs<Verdict.Unsure>(c.classify(sms("VM-HDFCBK", "123456 is your OTP. Valid for 5 minutes.")))
+        assertIs<Event.Otp>(v.event)
+    }
+
+    @Test
+    fun `confident alert settles an unsure notice`() {
+        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.95f) }
+        val v = assertIs<Verdict.Sure>(c.classify(sms("VM-ACMEBK-S", "Your plan renewal summary")))
+        assertEquals(Event.Alert, v.event)
+    }
+
+    @Test
+    fun `confident nothing settles a weak alert fallback`() {
+        val c = DecideClassifier(rules) { mapOf(Kind.Unknown to 0.95f) }
+        val v = assertIs<Verdict.Sure>(c.classify(sms("VM-ACMEBK-S", "Your plan renewal summary")))
+        assertEquals(Event.Unknown, v.event)
+    }
+
+    @Test
+    fun `alert guess does not relabel a money event`() {
+        val c = DecideClassifier(rules) { mapOf(Kind.Alert to 0.95f) }
+        assertIs<Verdict.Unsure>(c.classify(sms("VM-HDFCBK-S", "Rs 450 debited on 04-10-26")))
     }
 
     @Test

@@ -4,13 +4,14 @@ import java.time.LocalDate
 
 internal object Bill {
     private val statement = Regex("(?i)statement|total\\s+(?:amt|amount)?\\s*due|total\\s+due")
-    private val billy = Regex("(?i)\\bbill\\b|\\bdue\\b|invoice|outstanding")
-    private val paid = Regex("(?i)payment\\s+(?:of\\s+.{0,20})?(?:received|successful)|thank you for (?:the )?payment|has been paid|\\bpaid\\b")
+    private val billy = Regex("(?i)\\bbill\\b|\\bdues?\\b(?!\\s+to)|invoice|outstanding")
+    private val no = Regex("(?i)declin|returned|insufficient|refund|credited|purchase|reversal|not successful|fail|delayed|download your bill|\\bwill be deducted")
+    private val paid = Regex("(?i)payment\\s+(?:of\\s+.{0,20})?(?:received|successful)|thank you for (?:the )?payment|has been paid|(?<!\\bif )(?<!\\bif already )\\bpaid\\b")
     private val total = Regex("(?i)total\\s+(?:amt|amount)?\\s*due|total\\s+due|amount\\s+due|(?:bill|statement)\\s+amount|outstanding(?:\\s+amount)?|amount\\s+payable|bill\\s+of")
     private val min = Regex("(?i)min(?:imum)?\\.?\\s*(?:amt|amount|payment)?\\.?\\s*(?:due)?")
 
     fun parse(r: Raw, t: String, ref: LocalDate): Event? {
-        if (!billy.containsMatchIn(t) || paid.containsMatchIn(t)) return null
+        if (!billy.containsMatchIn(t) || paid.containsMatchIn(t) || no.containsMatchIn(t)) return null
         val minAmt = Money.after(t, min)
         val total = Money.after(t, total) ?: Money.all(t).firstOrNull { it != minAmt && !Regex("(?i)bal|limit").containsMatchIn(t.substring(maxOf(0, it.at - 20), it.at)) } ?: return null
         val due = Dates.due(t, ref)

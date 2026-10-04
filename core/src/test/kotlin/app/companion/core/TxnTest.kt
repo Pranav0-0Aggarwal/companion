@@ -28,10 +28,10 @@ class TxnTest {
 
     @Test
     fun `sent to name`() {
-        val e = assertIs<Event.Debit>(extract(sms("VM-HDFCBK", "Sent Rs.1,500.00 From HDFC Bank A/C *1234 To ROHAN M On 04/10/26 Ref 427190123456 Not You? Call 18002586161")))
-        assertEquals(150000L, e.paise)
+        val e = assertIs<Event.Debit>(extract(sms("VM-HDFCBK", "Sent Rs.111.00 From ACME Bank A/C *1234 To JOHN D On 01/01/30 Ref 000111222333. Dispute? Call 000")))
+        assertEquals(11100L, e.paise)
         assertEquals("1234", e.last4)
-        assertEquals("Rohan M", e.merchant)
+        assertEquals("John D", e.merchant)
     }
 
     @Test
@@ -96,5 +96,85 @@ class TxnTest {
         assertEquals("USD", Money.all("USD 12.50")[0].currency)
         assertEquals(99900L, Money.all("999 INR")[0].paise)
         assertEquals(0, Money.all("5 hours ago, hours 5").size)
+    }
+
+    @Test
+    fun `merchant after on with is successful`() {
+        val e = assertIs<Event.CardSpend>(extract(sms("AD-SLCEIT-S", "Your ACME credit card transaction of Rs. 111 on Shopco is successful. Questions? Call 000")))
+        assertEquals(11100L, e.paise)
+        assertEquals("Shopco", e.merchant)
+    }
+
+    @Test
+    fun `merchant after the date`() {
+        val e = assertIs<Event.CardSpend>(extract(sms("VA-ICICIT-S", "INR 111.00 spent using ACME Bank Card XX1234 on 01-Jan-30 on SHOPCO ONLINE. Avl Limit: INR 99,999.00. Dispute? Call 000")))
+        assertEquals("1234", e.last4)
+        assertEquals("Shopco Online", e.merchant)
+    }
+
+    @Test
+    fun `merchant after the time stamp`() {
+        val e = assertIs<Event.CardSpend>(extract(sms("JK-AXISBK-S", "Spent INR 111 ACME Bank Card no. XX1234 01-01-30 10:00:00 IST Shopco Mart Avl Limit: INR 9999 Report to 000")))
+        assertEquals(11100L, e.paise)
+        assertEquals("1234", e.last4)
+        assertEquals("Shopco Mart", e.merchant)
+    }
+
+    @Test
+    fun `merchant from the upi info string`() {
+        val e = assertIs<Event.Debit>(extract(sms("VM-SBIUPI-S", "Rs 450 debited from a/c XX1234 on 04-10-26. Info: UPI/DR/412345678901/ZOMATO/HDFC/zomato@icici")))
+        assertEquals("Zomato", e.merchant)
+        assertEquals(Mode.Upi, e.mode)
+    }
+
+    @Test
+    fun `merchant from a bank info line`() {
+        val e = assertIs<Event.Debit>(extract(sms("JD-HDFCBK-S", "UPDATE: INR 111.00 debited from ACME Bank XX1234 on 01-JAN-30. Info: SHOPCO STORE. Avl bal:INR 9,999.00")))
+        assertEquals("Shopco Store", e.merchant)
+    }
+
+    @Test
+    fun `vpa handle becomes the merchant`() {
+        val e = assertIs<Event.Debit>(extract(sms("VM-HDFCBK", "Rs.199.00 debited from a/c XX1234 on 04-10-26 to swiggy@icici (UPI Ref No 427190123456)")))
+        assertEquals("Swiggy", e.merchant)
+        assertEquals(Category.Food, Category.of(e))
+    }
+
+    @Test
+    fun `payee stops before thru`() {
+        val e = assertIs<Event.Debit>(extract(sms("AD-PNBSMS-S", "A/c X1234 debited INR 111.00 Dt 01-01-30 10:00:00 to ACME Club thru UPI:000111222333.Bal INR 9999.00")))
+        assertEquals("ACME Club", e.merchant)
+        assertEquals("1234", e.last4)
+    }
+
+    @Test
+    fun `masked long account keeps the last four`() {
+        assertEquals("5678", Txn.last4("Ledger entry in a/c *12345678 for shares"))
+    }
+
+    @Test
+    fun `future debits and money requests are not transactions`() {
+        assertNull(Txn.parse(sms("VM-PHONPE-S", ""), "ACME has asked for money from you. Rs.111 will be debited on approving the request"))
+        assertNull(Txn.parse(sms("VM-HDFCBK-S", ""), "Rs 450 debited from a/c XX1234 but the transaction failed"))
+        assertNull(Txn.parse(sms("VM-HDFCBK-S", ""), "Rs 111.00 transferred to your savings A/c XX1234 using Net Banking"))
+    }
+
+    @Test
+    fun `refund and reversal credits`() {
+        val e = assertIs<Event.Credit>(extract(sms("VA-SLCBNK-S", "Refund of Rs. 111 from Flipkart has been processed to your credit card xxxx1234")))
+        assertEquals("Flipkart", e.merchant)
+        assertEquals("1234", e.last4)
+        assertIs<Event.Credit>(extract(sms("AD-HDFCBK-S", "Reversed: Rs.111 for a purchase on your ACME credit card xx1234")))
+    }
+
+    @Test
+    fun `dr and cr tags after the currency`() {
+        assertEquals(22200L, Money.all("Due: INR  Dr. 222.00")[0].paise)
+    }
+
+    @Test
+    fun `upi mode needs a real handle`() {
+        val e = assertIs<Event.Debit>(extract(sms("VM-HDFCBK-S", "Rs 450 debited from a/c XX1234 on 04-10-26. Write to support@acmebank.com")))
+        assertEquals(Mode.Other, e.mode)
     }
 }

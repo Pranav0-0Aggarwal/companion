@@ -51,7 +51,7 @@ object Items {
             is Event.Otp -> base.copy(title = e.service ?: "Code", code = e.code, expires = e.expiresAt, note = e.purpose.orEmpty())
             is Event.Move -> {
                 val credit = e is Event.Credit
-                val cat = learned ?: Category.of(e.merchant, credit).label
+                val cat = learned ?: Category.of(e).label
                 base.copy(
                     title = e.merchant ?: e.bank?.let { "$it ${if (credit) "credit" else "debit"}" } ?: if (credit) "Credit" else "Debit",
                     paise = e.paise, currency = e.currency, last4 = e.last4, bank = e.bank, merchant = e.merchant,
@@ -84,7 +84,7 @@ object Items {
                     state = State.CHECK, start = c?.start, end = c?.end,
                 )
             }
-            Event.Unknown -> base.copy(title = r.title.ifBlank { r.sender }, note = r.body.take(160))
+            Event.Unknown, Event.Alert -> base.copy(title = r.title.ifBlank { r.sender }, note = r.body.take(160))
             Event.Promo -> base.copy(title = r.sender)
         }
     }

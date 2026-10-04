@@ -58,6 +58,56 @@ class MiscTest {
 
     @Test
     fun `unknown business text`() {
-        assertIs<Event.Unknown>(extract(sms("VM-POLICY", "Your policy renewal reminder")))
+        assertIs<Event.Unknown>(extract(sms("VM-ACME", "Your plan renewal summary")))
+    }
+
+    @Test
+    fun `security and booking notices are alerts`() {
+        assertIs<Event.Alert>(extract(sms("VM-ACME", "New login to your account from a new device. If this was not you, reset your password.")))
+        assertIs<Event.Alert>(extract(sms("VM-ACME", "Your appointment is confirmed for 12 Oct, 10:30 AM.")))
+        assertIs<Event.Alert>(extract(sms("VM-ACME", "Beware of fraud calls. Never share your card details with anyone.")))
+    }
+
+    @Test
+    fun `service sender leftovers are alerts and bare senders stay unknown`() {
+        assertIs<Event.Alert>(extract(sms("AD-ACMEBK-S", "Your plan renewal summary")))
+        assertIs<Event.Unknown>(extract(sms("AD-ACMEBK", "Your plan renewal summary")))
+    }
+
+    @Test
+    fun `promotional sender is promo even with a credited word`() {
+        assertIs<Event.Promo>(extract(sms("VM-SHOPAP-P", "ADDED: Rs 111 credited to your wallet! Redeem on min purchase of 999")))
+    }
+
+    @Test
+    fun `service sender with an offer word is not promo`() {
+        assertIs<Event.Alert>(extract(sms("VM-ACMEBK-S", "Your credit card offer limit was updated. Visit the app")))
+    }
+
+    @Test
+    fun `return and refund parcels are not deliveries`() {
+        assertIs<Event.Alert>(extract(sms("AD-SHOPAP-S", "Your return for order 1234 has been picked up. Refund will follow.")))
+    }
+
+    @Test
+    fun `placed and shipped stages`() {
+        assertEquals(Stage.Shipped, assertIs<Event.Delivery>(extract(sms("AD-DLHVRY-S", "Your order has been shipped. Track AWB 12345678901"))).stage)
+        assertEquals(Stage.Placed, assertIs<Event.Delivery>(extract(sms("AD-SHOPAP-S", "Your order 4821 is confirmed. Tracking id 998877"))).stage)
+    }
+
+    @Test
+    fun `cashback offers are promo not income`() {
+        assertIs<Event.Promo>(extract(sms("AD-SHOPAP", "Get Rs 50 cashback on your first order. Order now")))
+        assertIs<Event.Promo>(extract(sms("VM-SHOPAP-P", "Rs 301 cashback is waiting for you. Pay with UPI and claim your reward")))
+    }
+
+    @Test
+    fun `real cashback credit is still money`() {
+        assertIs<Event.Credit>(extract(sms("VM-HDFCBK-S", "Cashback of Rs 50 credited to your a/c XX1234 on 04-10-26")))
+    }
+
+    @Test
+    fun `security notice with offer words is an alert not promo`() {
+        assertIs<Event.Alert>(extract(sms("VM-ACME", "Security alert: new login from a new device. Learn about our offers and fraud tips at acme.example")))
     }
 }

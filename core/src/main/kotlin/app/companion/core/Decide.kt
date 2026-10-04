@@ -75,8 +75,9 @@ class DecideClassifier(private val rules: Classifier, private val bar: Float = 0
         val s = scorer.score(raw) ?: return v
         val top = s.maxByOrNull { it.value } ?: return v
         return when {
-            top.key == Kind.Promo && top.value >= bar -> Verdict.Sure(Event.Promo, top.value)
-            top.key == Kind.Unknown && top.value >= bar && v.event == Event.Unknown -> Verdict.Sure(Event.Unknown, top.value)
+            top.key == Kind.Promo && top.value >= bar && v.event !is Event.Otp -> Verdict.Sure(Event.Promo, top.value)
+            top.key == Kind.Alert && top.value >= bar && (v.event == Event.Alert || v.event == Event.Unknown) -> Verdict.Sure(Event.Alert, top.value)
+            top.key == Kind.Unknown && top.value >= bar && (v.event == Event.Unknown || v.event == Event.Alert) -> Verdict.Sure(Event.Unknown, top.value)
             else -> Verdict.Unsure(v.event, maxOf(v.confidence, top.value.coerceAtMost(bar - 0.01f)))
         }
     }

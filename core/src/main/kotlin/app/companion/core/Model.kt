@@ -6,7 +6,7 @@ enum class Source { Sms, Notif, Mail, Wa, Ig }
 
 enum class Mode { Upi, Card, Netbanking, Other }
 
-enum class Kind { Otp, Debit, Credit, CardSpend, Bill, Statement, Delivery, Travel, Promo, Personal, Unknown }
+enum class Kind { Otp, Debit, Credit, CardSpend, Bill, Statement, Delivery, Travel, Alert, Promo, Personal, Unknown }
 
 enum class Stage { Placed, Shipped, Out, Delivered }
 
@@ -88,6 +88,10 @@ sealed interface Event {
 
     data class Travel(val what: String, val date: LocalDate?) : Event {
         override val kind get() = Kind.Travel
+    }
+
+    data object Alert : Event {
+        override val kind get() = Kind.Alert
     }
 
     data object Promo : Event {

@@ -51,4 +51,33 @@ class BillTest {
         assertEquals(day(2026, 10, 31), e.due)
         assertEquals("4417", e.last4)
     }
+
+    @Test
+    fun `due to is not a due date`() {
+        assertNull(extract(sms("AD-PNBSMS-S", "Return charges of Rs 111.00 debited, due to low funds in the account")) as? Event.Bill)
+        assertNull(extract(sms("CP-NEWMEZ-S", "Parcel 1234 slowed down due to weather. Rs 111 off on your next buy")) as? Event.Bill)
+    }
+
+    @Test
+    fun `ignore if paid does not cancel a statement`() {
+        val e = assertIs<Event.Statement>(extract(sms("CP-PNBCCD-S", "Your ACME Card XX9876 stmt dt 01-01-2030 total Due Rs. 222.00 and Min Due Rs. 22.00 payable by 15-01-2030 has been sent. Please ignore if paid.")))
+        assertEquals(22200L, e.paise)
+    }
+
+    @Test
+    fun `dr tagged statement amounts`() {
+        val e = assertIs<Event.Statement>(extract(sms("AX-AXISBK-S", "ACME Bank Credit Card no. XX9876 statement is ready. Due on: 15-01-31 Total amt: INR  Dr. 222.00 Minimum payable: INR  Dr. 22.00")))
+        assertEquals(22200L, e.paise)
+        assertEquals(2200L, e.minPaise)
+    }
+
+    @Test
+    fun `unpaid dues`() {
+        assertIs<Event.Bill>(extract(sms("AX-ACTGRP-S", "Notice: service may pause because dues of Rs 111.00 remain unpaid. Pay today")))
+    }
+
+    @Test
+    fun `purchase receipt is not a bill`() {
+        assertNull(extract(sms("CP-APLPHR-S", "We appreciate your purchase. Open the app to get the bill for Rs 111.00")) as? Event.Bill)
+    }
 }

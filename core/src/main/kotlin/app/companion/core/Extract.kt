@@ -11,16 +11,15 @@ object Extract {
         val ref = Instant.ofEpochMilli(r.at).atZone(zone).toLocalDate()
         if (r.source == Source.Wa || r.source == Source.Ig) return Event.Personal
         Otp.parse(r, t)?.let { return it }
-        val promo = Misc.promo(t) && !moved.containsMatchIn(t)
-        if (!promo) {
-            Bill.parse(r, t, ref)?.let { return it }
-            Txn.parse(r, t)?.let { return it }
-            Misc.receipt(r, t)?.let { return it }
-        }
+        val promo = Misc.promo(r.sender, t) && !(moved.containsMatchIn(t) && Txn.last4(t) != null)
+        if (promo) return Event.Promo
+        Bill.parse(r, t, ref)?.let { return it }
+        Txn.parse(r, t)?.let { return it }
+        Misc.receipt(r, t)?.let { return it }
         Misc.delivery(r, t)?.let { return it }
         Misc.travel(t, ref)?.let { return it }
+        if (Misc.alert(t) || Misc.service(r.sender)) return Event.Alert
         return when {
-            promo -> Event.Promo
             r.source == Source.Sms && r.sender.any { it.isLetter() } -> Event.Unknown
             r.source == Source.Mail || r.source == Source.Notif -> Event.Unknown
             else -> Event.Personal

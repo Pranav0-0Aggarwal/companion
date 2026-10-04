@@ -14,6 +14,7 @@ object Rebuild {
         got[Field.Amount]?.let(Verbatim::paise)?.let { p -> x = amount(x, raw, t, ref, p) }
         got[Field.Merchant]?.let(Txn::name)?.let { x = merchant(x, it) }
         got[Field.Due]?.let { Dates.first(it, ref) }?.let { d -> x = due(x, d) }
+        got[Field.Last4]?.let(Verbatim::last4)?.let { x = last4(x, it) }
         return x
     }
 
@@ -28,6 +29,15 @@ object Rebuild {
         is Event.Credit -> if (e.merchant == null) e.copy(merchant = m) else e
         is Event.CardSpend -> if (e.merchant == null) e.copy(merchant = m) else e
         is Event.Bill -> if (e.biller == null) e.copy(biller = m) else e
+        else -> e
+    }
+
+    private fun last4(e: Event, d: String): Event = when (e) {
+        is Event.Debit -> if (e.last4 == null) e.copy(last4 = d) else e
+        is Event.Credit -> if (e.last4 == null) e.copy(last4 = d) else e
+        is Event.CardSpend -> if (e.last4 == null) e.copy(last4 = d) else e
+        is Event.Bill -> if (e.last4 == null) e.copy(last4 = d) else e
+        is Event.Statement -> if (e.last4 == null) e.copy(last4 = d) else e
         else -> e
     }
 

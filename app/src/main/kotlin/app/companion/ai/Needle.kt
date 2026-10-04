@@ -81,7 +81,7 @@ class NeedleService : Service() {
     }
 }
 
-private class Link : ServiceConnection {
+internal class Link : ServiceConnection {
     val ready = CountDownLatch(1)
 
     @Volatile var binder: IBinder? = null
@@ -100,6 +100,20 @@ private class Link : ServiceConnection {
     override fun onBindingDied(n: ComponentName) {
         dead = true
     }
+}
+
+internal fun ask(to: Messenger, what: Int, data: Bundle, secs: Long): Bundle? {
+    val got = AtomicReference<Bundle?>()
+    val latch = CountDownLatch(1)
+    val back = Messenger(
+        Handler(Looper.getMainLooper()) { m ->
+            got.set(m.data)
+            latch.countDown()
+            true
+        },
+    )
+    to.send(Message.obtain(null, what).apply { replyTo = back; this.data = data })
+    return if (latch.await(secs, TimeUnit.SECONDS)) got.get() else null
 }
 
 class NeedleClient private constructor(private val c: Context, private val link: Link, private val to: Messenger, override val mb: Long) : Runner {
@@ -127,20 +141,6 @@ class NeedleClient private constructor(private val c: Context, private val link:
         private const val BIND_SECS = 5L
         private const val LOAD_SECS = 20L
         private const val RUN_SECS = 15L
-
-        private fun ask(to: Messenger, what: Int, data: Bundle, secs: Long): Bundle? {
-            val got = AtomicReference<Bundle?>()
-            val latch = CountDownLatch(1)
-            val back = Messenger(
-                Handler(Looper.getMainLooper()) { m ->
-                    got.set(m.data)
-                    latch.countDown()
-                    true
-                },
-            )
-            to.send(Message.obtain(null, what).apply { replyTo = back; this.data = data })
-            return if (latch.await(secs, TimeUnit.SECONDS)) got.get() else null
-        }
 
         fun open(c: Context, model: File): NeedleClient {
             val link = Link()

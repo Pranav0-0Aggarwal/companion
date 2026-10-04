@@ -140,7 +140,7 @@ object Dl {
         for (s in todo) {
             var tries = 0
             while (true) {
-                val out = fetch.pull(Manifest.BASE + s.file, s.bytes, s.sha, Models.part(c, s), Models.base(c, s), alive) { pos ->
+                val out = fetch.pull(Manifest.url(s), s.bytes, s.sha, Models.part(c, s), Models.base(c, s), alive) { pos ->
                     val t = SystemClock.elapsedRealtime()
                     val p = at.get()
                     if (alive() && (pos >= s.bytes || t - p >= 250) && at.compareAndSet(p, t)) {

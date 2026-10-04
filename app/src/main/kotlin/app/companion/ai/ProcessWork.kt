@@ -47,7 +47,7 @@ class ProcessWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     }
 }
 
-private fun vitals(c: Context): Vitals {
+internal fun vitals(c: Context): Vitals {
     val pm = c.getSystemService(PowerManager::class.java)
     val b = c.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     val level = b?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1

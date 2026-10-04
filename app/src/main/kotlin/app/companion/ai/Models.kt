@@ -6,16 +6,20 @@ import app.companion.core.Hash
 import app.companion.core.Json
 import java.io.File
 
-class Spec(val name: String, val file: String, val bytes: Long, val sha: String, val idleMs: Long = 0)
+class Spec(val name: String, val file: String, val bytes: Long, val sha: String, val idleMs: Long = 0, val tag: String = "models-v1")
 
 object Manifest {
-    const val BASE = "https://github.com/Pranav0-0Aggarwal/companion/releases/download/models-v1/"
+    private const val HOST = "https://github.com/Pranav0-0Aggarwal/companion/releases/download/"
+
+    fun url(s: Spec) = "$HOST${s.tag}/${s.file}"
+
     val decide = Spec("Decide", "decide.tflite", 518772848, "9f7655625d6861ee22792fca56d9fa7291192ec5f893f6c169b8e7dd69ae2072", 30_000)
     val tokenizer = Spec("Tokenizer", "tokenizer.dtk", 2354330, "746e5a467d4019afbbef1c945c8fbe4fb2b4a9da5401a3cb8526ab19cb57d0fa")
     val schema = Spec("Schema", "schema_prefix.json", 3396, "58d7211b245e5a45260190b4edb5d29df62c0d7897e6d0359f8a8a566c4140d5")
     val calibration = Spec("Calibration", "calibration.json", 938, "37e2bcaf993b8a44b0c87f6391ef1a45c9a4fff00991cb09ae4dd12380ca0ae1")
     val needle = Spec("Needle 3", "needle3.cact", 35335380, "c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38", 60_000)
-    val all = listOf(needle, tokenizer, schema, calibration, decide)
+    val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 0, "PLACEHOLDER", 60_000, "models-v2")
+    val all = listOf(needle, tokenizer, schema, calibration, decide, nux)
 }
 
 enum class Have { No, Base, Custom }

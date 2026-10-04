@@ -83,7 +83,7 @@ fun AiSettings() {
             PassLine(f.name, if (on) "$text · loaded · ${live?.accel} · about ${live?.mb} MB" else text)
             Rule()
         }
-        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle, Needle after 60 s.")
+        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle, Needle and Smart extraction after 60 s.")
         Rule()
         Column(Modifier.padding(16.dp)) {
             if (missing || busy) {

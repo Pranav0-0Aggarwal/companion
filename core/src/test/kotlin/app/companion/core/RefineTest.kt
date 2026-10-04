@@ -84,6 +84,7 @@ class RefineTest {
 
     @Test
     fun `a rebuilt move is scored by the rules like any other move`() {
+        type = mapOf("expense" to 0.99f, "alert" to 0.01f)
         gave = mapOf(Field.Amount to "2500", Field.Merchant to "Corner Cafe")
         val m = sms("VK-BANKXY", "INR.2500 debited from A/c XX1234 at Corner Cafe on 04-10-26. Alert")
         val v = refine.run(m)

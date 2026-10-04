@@ -1,6 +1,10 @@
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Properties
+import javax.inject.Inject
+import org.gradle.api.file.ArchiveOperations
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.file.RelativePath
 
 plugins {
     alias(libs.plugins.android.application)
@@ -38,6 +42,60 @@ abstract class FetchNeedle : DefaultTask() {
     }
 }
 
+abstract class FetchLlama : DefaultTask() {
+    @get:Input abstract val urls: MapProperty<String, String>
+
+    @get:Input abstract val pins: MapProperty<String, String>
+
+    @get:OutputDirectory abstract val dir: DirectoryProperty
+
+    @get:Inject abstract val fs: FileSystemOperations
+
+    @get:Inject abstract val arc: ArchiveOperations
+
+    private fun sha(f: File): String {
+        val d = MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { i ->
+            val b = ByteArray(1 shl 16)
+            while (true) {
+                val n = i.read(b)
+                if (n < 0) break
+                d.update(b, 0, n)
+            }
+        }
+        return d.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @TaskAction
+    fun fetch() {
+        val out = dir.get().asFile
+        out.deleteRecursively()
+        out.mkdirs()
+        urls.get().forEach { (name, url) ->
+            val tgz = File(temporaryDir, "$name.tar.gz")
+            val c = URI(url).also { check(it.scheme == "https") }.toURL().openConnection()
+            c.connectTimeout = 30_000
+            c.readTimeout = 60_000
+            c.getInputStream().use { i -> tgz.outputStream().use { i.copyTo(it) } }
+            if (sha(tgz) != pins.get().getValue(name)) {
+                tgz.delete()
+                throw GradleException("$name does not match its pinned SHA-256")
+            }
+            fs.copy {
+                from(arc.tarTree(arc.gzip(tgz)))
+                into(File(out, name))
+                includeEmptyDirs = false
+                eachFile {
+                    val s = relativePath.segments.filter { it.isNotEmpty() }
+                    if (s.any { it == ".." || it == "." }) throw GradleException("$name holds an unsafe path")
+                    relativePath = RelativePath(true, *s.drop(1).toTypedArray())
+                }
+            }
+            tgz.delete()
+        }
+    }
+}
+
 val needleDir = layout.buildDirectory.dir("needle")
 val fetchNeedle = tasks.register<FetchNeedle>("fetchNeedle") {
     rev = "27c0a9a5b3ca835e0b7dbeaccf555df03dac493d"
@@ -47,7 +105,19 @@ val fetchNeedle = tasks.register<FetchNeedle>("fetchNeedle") {
     )
     dir = needleDir
 }
-tasks.matching { t -> listOf("generateJsonModel", "configureCMake", "buildCMake", "externalNativeBuild").any(t.name::startsWith) }.configureEach { dependsOn(fetchNeedle) }
+val llamaDir = layout.buildDirectory.dir("llama")
+val fetchLlama = tasks.register<FetchLlama>("fetchLlama") {
+    urls = mapOf(
+        "llama.cpp" to "https://github.com/ggml-org/llama.cpp/archive/refs/tags/b11306.tar.gz",
+        "kleidiai" to "https://github.com/ARM-software/kleidiai/releases/download/v1.24.0/kleidiai-v1.24.0-src.tar.gz",
+    )
+    pins = mapOf(
+        "llama.cpp" to "9423090c8c8543d1f8ee79057ce140cd601c7156bb6157b76a2c88051979900f",
+        "kleidiai" to "9348b969e042d8890a54b01a463dbe71f5a4c074b5329e9c26a85ef3b68aa19b",
+    )
+    dir = llamaDir
+}
+tasks.matching { t -> listOf("generateJsonModel", "configureCMake", "buildCMake", "externalNativeBuild").any(t.name::startsWith) }.configureEach { dependsOn(fetchNeedle, fetchLlama) }
 
 val ver = System.getenv("COMPANION_VERSION") ?: "0.1.0"
 val local = Properties().apply {
@@ -67,7 +137,14 @@ android {
         versionName = ver
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild {
-            cmake { arguments += listOf("-DNEEDLE_DIR=${needleDir.get().asFile}", "-DANDROID_STL=c++_static") }
+            cmake {
+                arguments += listOf(
+                    "-DNEEDLE_DIR=${needleDir.get().asFile}",
+                    "-DLLAMA_DIR=${llamaDir.get().asFile}/llama.cpp",
+                    "-DKLEIDIAI_DIR=${llamaDir.get().asFile}/kleidiai",
+                    "-DANDROID_STL=c++_static",
+                )
+            }
         }
         buildConfigField("String", "GMAIL_CLIENT_ID", "\"${local.getProperty("gmail.webClientId", "")}\"")
     }

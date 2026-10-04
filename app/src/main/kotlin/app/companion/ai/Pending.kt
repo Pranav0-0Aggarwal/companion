@@ -10,9 +10,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.await
 import androidx.work.workDataOf
+import app.companion.core.Extractor
+import app.companion.core.Field
+import app.companion.core.Guard
+import app.companion.core.Memo
+import app.companion.core.Nux
 import app.companion.core.Raw
 import app.companion.core.Refine
+import app.companion.core.Scorer
 import app.companion.core.Source
+import app.companion.core.Verdict
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.Repo
@@ -28,8 +35,24 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-class Pending(private val app: Application, private val repo: Repo, private val refine: Refine, private val gov: Governor) {
+class Pending(
+    private val app: Application,
+    private val repo: Repo,
+    private val refine: Refine,
+    private val gov: Governor,
+    private val scorer: Scorer,
+    private val nux: Extractor,
+) {
     private class Todo(val raw: Raw?, val state: String?)
+
+    private class Probe : Extractor {
+        val asked = HashSet<Raw>()
+
+        override fun extract(raw: Raw, want: Set<Field>): Map<Field, String> {
+            if (want.any(Nux.FIELDS::contains)) asked.add(raw)
+            return emptyMap()
+        }
+    }
 
     private val lock = Any()
     private val queue = LinkedHashMap<Long, Todo>()
@@ -61,11 +84,28 @@ class Pending(private val app: Application, private val repo: Repo, private val 
         try {
             val p = repo.profileNow()
             gov.hold {
+                val raws = LinkedHashMap<Long, Raw>()
+                val out = LinkedHashMap<Long, Verdict>()
+                val memo = Memo(scorer)
+                val probe = Probe()
+                for ((i, t) in todo) {
+                    currentCoroutineContext().ensureActive()
+                    val raw = soft { t.raw ?: row(i) } ?: continue
+                    out[i] = soft { refine.run(raw, probe, memo) } ?: continue
+                    raws[i] = raw
+                }
+                for ((i, raw) in raws) {
+                    if (raw !in probe.asked) continue
+                    currentCoroutineContext().ensureActive()
+                    if (hot()) break
+                    soft { refine.run(raw, nux, memo) }?.let { out[i] = it }
+                }
                 val it = todo.iterator()
                 while (it.hasNext()) {
                     val (i, t) = it.next()
                     currentCoroutineContext().ensureActive()
-                    changed = one(i, t, p) || changed
+                    val v = out[i]
+                    if (v != null) changed = soft { repo.refine(i, raws.getValue(i), v, p, t.state).moved } == true || changed
                     it.remove()
                 }
             }
@@ -75,13 +115,14 @@ class Pending(private val app: Application, private val repo: Repo, private val 
         }
     }
 
-    private suspend fun one(id: Long, t: Todo, p: Profile): Boolean = try {
-        val raw = t.raw ?: row(id)
-        if (raw == null) false else repo.refine(id, raw, refine.run(raw), p, t.state).moved
+    private fun hot() = vitals(app).let { it.thermal >= Guard.MODERATE || it.saver }
+
+    private suspend fun <T> soft(f: suspend () -> T): T? = try {
+        f()
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
-        false
+        null
     }
 
     private suspend fun row(id: Long): Raw? {

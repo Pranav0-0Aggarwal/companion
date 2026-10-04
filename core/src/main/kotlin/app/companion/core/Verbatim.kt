@@ -9,6 +9,7 @@ object Verbatim {
     private val num = Regex("\\d[\\d,]*(?:\\.\\d+)?")
     private val prefix = Regex("(?i)(?<![a-z])(?:rs|inr|usd|eur|gbp)$")
     private val space = Regex("\\s+")
+    private val mask = Regex("(?i)[x*•\\s-]*(\\d{4})")
     private val epoch = LocalDate.of(2000, 1, 1)
 
     internal fun code(digits: String) = Regex("(?<![\\p{L}\\d])(?<!\\d[.,-])$digits(?![\\p{L}\\d])(?![.,-]\\d)")
@@ -21,10 +22,15 @@ object Verbatim {
 
     fun paise(value: String): Long? = number(value)?.let { runCatching { it.movePointRight(2).toBigIntegerExact().longValueExact() }.getOrNull() }?.takeIf { it > 0 }
 
+    fun last4(value: String): String? = mask.matchEntire(value.trim())?.groupValues?.get(1)
+
+    private fun card(d: String, text: String) = Regex("(?i)(?<![\\p{L}\\d])(?<!\\d[.,-])(?:[x*•]{1,12}[\\s-]?)?$d(?![\\p{L}\\d])(?![.,-]\\d)").containsMatchIn(text)
+
     fun ok(field: Field, value: String, text: String): Boolean = when (field) {
         Field.OtpCode -> value.trim().let { it.length in 4..8 && it.all(Char::isDigit) && code(it).containsMatchIn(text) }
         Field.Amount -> number(value)?.let { n -> num.findAll(text).any { m -> standalone(text, m.range.first) && m.value.replace(",", "").toBigDecimalOrNull()?.compareTo(n) == 0 } } == true
         Field.Merchant -> norm(value).let { it.length >= 2 && it.any(Char::isLetter) && norm(text).contains(it, ignoreCase = true) }
+        Field.Last4 -> last4(value)?.let { card(it, text) } == true
         Field.Due -> norm(value).let { it.isNotEmpty() && norm(text).contains(it, ignoreCase = true) && Dates.first(it, epoch) != null }
     }
 }

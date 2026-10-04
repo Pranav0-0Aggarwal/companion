@@ -3,7 +3,7 @@ package app.companion.core
 import java.time.Instant
 import java.time.ZoneId
 
-enum class Field { OtpCode, Amount, Merchant, Due }
+enum class Field { OtpCode, Amount, Merchant, Due, Last4 }
 
 interface Extractor {
     fun extract(raw: Raw, want: Set<Field>): Map<Field, String>
@@ -13,7 +13,7 @@ object NoExtractor : Extractor {
     override fun extract(raw: Raw, want: Set<Field>) = emptyMap<Field, String>()
 }
 
-internal fun Raw.text() = listOf(title, body).filter { it.isNotBlank() }.joinToString("\n")
+fun Raw.text() = listOf(title, body).filter { it.isNotBlank() }.joinToString("\n")
 
 object Gaps {
     private const val NAME = "(?!(?:${Txn.BAD}|ac)\\b)\\p{L}{2}"
@@ -22,6 +22,7 @@ object Gaps {
     private val verb = Regex("(?i)\\b(?:debited|credited|spent|withdrawn|paid|sent|received|refund(?:ed)?|deposited)\\b")
     private val billy = Regex("(?i)\\bbill\\b|\\bdues?\\b|statement|stmt|invoice|outstanding")
     private val payee = Regex("(?i)\\b(?:at|towards|vpa|info|merchant|payee|beneficiary|(?:paid|sent|trf|transferred)\\s+to)\\b[\\s:/-]*$NAME")
+    private val card = Regex("(?i)\\b(?:card|a/c|acct|account)\\b[^\\n]{0,30}?(?<![\\d.,/-])\\d{4}(?!\\d|[.,/-]\\d)")
     private val payer = Regex("(?i)\\b(?:from|by|payer|sender|vpa|info)\\b[\\s:/-]*$NAME")
 
     private fun open(e: Event) = e == Event.Alert || e == Event.Unknown
@@ -47,6 +48,13 @@ object Gaps {
                 else -> amount && billy.containsMatchIn(t)
             }
             if (due && dated) add(Field.Due)
+            val bare = when (e) {
+                is Event.Move -> e.last4 == null
+                is Event.Bill -> e.last4 == null
+                is Event.Statement -> e.last4 == null
+                else -> false
+            }
+            if (bare && card.containsMatchIn(t)) add(Field.Last4)
         }
     }
 

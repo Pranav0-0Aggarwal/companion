@@ -111,6 +111,11 @@
             android:isolatedProcess="true" />
 
         <service
+            android:name=".ai.NuxService"
+            android:exported="false"
+            android:isolatedProcess="true" />
+
+        <service
             android:name=".ai.ModelJob"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />

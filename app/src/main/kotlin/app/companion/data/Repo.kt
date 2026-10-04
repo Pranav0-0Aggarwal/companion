@@ -165,16 +165,9 @@ class Repo(private val db: Db) {
         val tpl = Template.of(raw)
         val (v, learnedCat) = ruled(tpl, verdict)
         val e = v.event
-        val zone = ZoneId.systemDefault()
-        val day = Instant.ofEpochMilli(raw.at).atZone(zone).toLocalDate().toEpochDay()
-        val folded = when {
-            e == Event.Promo -> "Promo"
-            e == Event.Unknown && v is Verdict.Sure -> "Other"
-            e == Event.Personal && !Worth.dm(raw.sender, raw.title + " " + raw.body, p.vips) -> raw.source.name
-            else -> null
-        }
+        val folded = foldKey(e, raw, v, p)
         if (folded != null) {
-            d.count(day, folded)
+            d.count(day(raw), folded)
             if (live && !p.imported && raw.source == Source.Sms) d.fold(Fold(raw.sender, raw.at))
             return null
         }
@@ -198,6 +191,34 @@ class Repo(private val db: Db) {
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         fresh[id] = System.currentTimeMillis()
         return Added(item.copy(id = id), true)
+    }
+
+    private fun day(raw: Raw) = Instant.ofEpochMilli(raw.at).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+
+    private fun foldKey(e: Event, raw: Raw, v: Verdict, p: Profile) = when {
+        e == Event.Promo -> "Promo"
+        e == Event.Unknown && v is Verdict.Sure -> "Other"
+        e == Event.Personal && !Worth.dm(raw.sender, raw.title + " " + raw.body, p.vips) -> raw.source.name
+        else -> null
+    }
+
+    suspend fun refine(id: Long, raw: Raw, verdict: Verdict, p: Profile, was: String?): Change = db.withTransaction {
+        val cur = d.item(id)?.takeIf { (was == null || it.state == was) && frozen(listOf(it)).isEmpty() } ?: return@withTransaction Change(false, false)
+        val (v, cat) = ruled(cur.tpl ?: Template.of(raw), verdict)
+        val e = v.event
+        val key = foldKey(e, raw, v, p)
+        if (key != null) {
+            d.drop(id)
+            d.count(day(raw), key)
+            if (!p.imported && raw.source == Source.Sms) d.fold(Fold(raw.sender, raw.at))
+            fresh.remove(id)
+            return@withTransaction Change(true, false)
+        }
+        val learned = cat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, model = v.guess?.label, mprob = v.guess?.prob)
+        if (n == cur || Refile.lost(cur.filed(), n.filed())) return@withTransaction Change(false, false)
+        d.update(n)
+        Change(true, Refile.asks(cur.filed(), n.filed()))
     }
 
     suspend fun <T> atomic(f: suspend () -> T): T = db.withTransaction { f() }

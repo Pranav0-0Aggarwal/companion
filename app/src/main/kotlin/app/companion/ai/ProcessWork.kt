@@ -151,11 +151,8 @@ private class Engine(private val c: Context, private val job: Job, private val t
 
     private suspend fun read(i: Item, from: String?): Pair<Raw, Verdict>? {
         currentCoroutineContext().ensureActive()
-        val src = Source.entries.firstOrNull { it.name == i.src } ?: return null
-        val who = from ?: i.title
-        val text = i.body ?: if (src == Source.Sms) SmsImport.find(c, who, i.at) else null
-        val raw = Raw(src, who, "", text ?: return null, i.at)
-        val v = sl.classifier.classify(raw)
+        val raw = Pending.raw(c, i, from) ?: return null
+        val v = sl.refine.run(raw)
         return if (Refile.usable(v)) raw to v else null
     }
 
@@ -170,7 +167,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
                 val p = repo.profileNow()
                 val out = rows.filterNot { repo.seen(it.from, it.sent, it.at, cur.cap) }.map {
                     currentCoroutineContext().ensureActive()
-                    Raw(Source.Sms, it.from, "", it.body, it.at).let { r -> r to sl.classifier.classify(r) }
+                    Raw(Source.Sms, it.from, "", it.body, it.at).let { r -> r to sl.refine.run(r) }
                 }
                 cur = repo.atomic {
                     var added = 0

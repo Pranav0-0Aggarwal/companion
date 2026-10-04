@@ -124,7 +124,7 @@ private fun Bar(f: Float, state: String) {
 private fun RunBody(r: Run) {
     val c = LocalContext.current
     val p = pal
-    val title = if (r.job == Job.Import) "Importing message history" else "Reprocessing everything"
+    val title = if (r.job == Job.Import) "Importing message history" else "Reprocessing SMS and chats"
     val user = r.paused && r.reason == null
     val status = when {
         r.reason != null -> r.reason
@@ -244,8 +244,8 @@ fun ProcessingSection() {
             )
             Rule(72.dp)
             PassLine(
-                "Reprocess everything", resub, lead = Ic.Swap, lines = 4,
-                actions = { Btn("Reprocess", Modifier.semantics { contentDescription = "Reprocess everything" }, enabled = (k ?: 0) > 0) { start(Job.Reprocess) } },
+                "Reprocess SMS and chats", resub, lead = Ic.Swap, lines = 4,
+                actions = { Btn("Reprocess", Modifier.semantics { contentDescription = "Reprocess SMS and chats" }, enabled = (k ?: 0) > 0) { start(Job.Reprocess) } },
             )
             Rule(72.dp)
             Charge()

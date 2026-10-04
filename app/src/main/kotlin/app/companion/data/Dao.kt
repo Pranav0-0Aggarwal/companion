@@ -66,6 +66,9 @@ interface Dao {
     @Query("DELETE FROM items WHERE kind = 'Otp' AND expires <= :now")
     suspend fun sweep(now: Long): Int
 
+    @Query("DELETE FROM items WHERE id = :id")
+    suspend fun drop(id: Long)
+
     @Query("UPDATE items SET body = NULL WHERE body IS NOT NULL AND at < :before")
     suspend fun blank(before: Long): Int
 

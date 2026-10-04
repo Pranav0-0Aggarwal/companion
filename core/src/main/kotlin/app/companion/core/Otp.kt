@@ -24,6 +24,9 @@ internal object Otp {
         Regex("(?i)\\b(?:ref(?:erence)?|order|txn|trxn|awb|folio|booking|request|invoice|utr|rrn|id|no\\.?|number)\\s*(?:id|no\\.?|number)?\\s*[:#.-]?\\s*[a-z]{0,4}\\d[a-z0-9/_-]*"),
         Regex("(?:\\+?91[-\\s]?)?[6-9]\\d{9}"),
     )
+    private val named = Regex("(?i)\\b(?:$STRONG)\\b|ओटीपी")
+    private val token = Verbatim.code("\\d{4,8}")
+    private val intent = Regex("(?i)\\b(?:verify|verification|log\\s?in|sign\\s?in|authenticat\\w*|confirm\\w*|(?:do not|don't|never)\\s+share)\\b")
     private val ttl = Regex("(?i)(?:valid|expir\\w*|within|active|next)[^.\\d]{0,25}?(\\d+)\\s*(sec|min|hour|hr)")
 
     private val purposes = listOf(
@@ -33,20 +36,36 @@ internal object Otp {
         Regex("(?i)regist|verif|sign\\s?up") to "verify",
     )
 
+    private fun clean(text: String) = scrub.fold(text) { s, re -> re.replace(s, " ") }
+
+    private fun free(t: String, re: Regex) = re.findAll(t).any { m -> !skip.containsMatchIn(t.substring(maxOf(0, m.range.first - 30), m.range.first)) }
+
     private fun first(t: String, vararg res: Regex): String? = res.firstNotNullOfOrNull { re ->
         re.findAll(t).firstOrNull { m -> !skip.containsMatchIn(t.substring(maxOf(0, m.groups.last()!!.range.first - 30), m.groups.last()!!.range.first)) }?.groupValues?.last()
     }
 
     fun parse(r: Raw, text: String): Event.Otp? {
         if (!cue.containsMatchIn(text) || Misc.promoSender(r.sender)) return null
-        val t = scrub.fold(text) { s, re -> re.replace(s, " ") }
+        val t = clean(text)
         val code = when {
             moved.containsMatchIn(t) -> first(t, lead, verb)
             deal.containsMatchIn(t) -> first(t, lead, strong)
             else -> first(t, lead, strong, weak, direct, verb)
         } ?: google.find(t)?.groupValues?.get(1) ?: return null
-        return Event.Otp(code, r.at + seconds(text) * 1000, Brands.service(r.sender, text), purposes.firstOrNull { it.first.containsMatchIn(text) }?.second)
+        return make(r, text, code)
     }
+
+    fun make(r: Raw, text: String, code: String) =
+        Event.Otp(code, r.at + seconds(text) * 1000, Brands.service(r.sender, text), purposes.firstOrNull { it.first.containsMatchIn(text) }?.second)
+
+    fun maybe(r: Raw, text: String): Boolean {
+        if (Misc.promoSender(r.sender)) return false
+        val t = clean(text)
+        if (!free(t, token)) return false
+        return if (deal.containsMatchIn(t)) named.containsMatchIn(text) else cue.containsMatchIn(text) || intent.containsMatchIn(text)
+    }
+
+    fun fits(text: String, code: String) = free(clean(text), Verbatim.code(Regex.escape(code)))
 
     private fun seconds(t: String): Long {
         val m = ttl.find(t) ?: return 600

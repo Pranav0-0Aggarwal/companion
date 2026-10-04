@@ -23,6 +23,8 @@ object Refile {
 
     fun moved(old: Filed, new: Filed) = new != old && otp(old) == otp(new)
 
+    fun lost(old: Filed, new: Filed) = otp(old) && !otp(new)
+
     fun asks(old: Filed, new: Filed) = moved(old, new) && new.state == ASK && old.state != ASK
 
     fun summary(moved: Int, ask: Int, skip: Int) = buildList {

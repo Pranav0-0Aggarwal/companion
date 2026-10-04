@@ -10,10 +10,10 @@ internal object Bill {
     private val total = Regex("(?i)total\\s+(?:amt|amount)?\\s*due|total\\s+due|amount\\s+due|(?:bill|statement)\\s+amount|outstanding(?:\\s+amount)?|amount\\s+payable|bill\\s+of")
     private val min = Regex("(?i)min(?:imum)?\\.?\\s*(?:amt|amount|payment)?\\.?\\s*(?:due)?")
 
-    fun parse(r: Raw, t: String, ref: LocalDate): Event? {
+    fun parse(r: Raw, t: String, ref: LocalDate, given: Amt? = null): Event? {
         if (!billy.containsMatchIn(t) || paid.containsMatchIn(t) || no.containsMatchIn(t)) return null
         val minAmt = Money.after(t, min)
-        val total = Money.after(t, total) ?: Money.all(t).firstOrNull { it != minAmt && !Regex("(?i)bal|limit").containsMatchIn(t.substring(maxOf(0, it.at - 20), it.at)) } ?: return null
+        val total = Money.after(t, total) ?: Money.all(t).firstOrNull { it != minAmt && !Regex("(?i)bal|limit").containsMatchIn(t.substring(maxOf(0, it.at - 20), it.at)) } ?: given ?: return null
         val due = Dates.due(t, ref)
         val last4 = Txn.last4(t)
         val bank = Brands.bank(r.sender, t)

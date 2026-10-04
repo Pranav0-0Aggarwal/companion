@@ -10,8 +10,9 @@ class RulesClassifier(private val zone: ZoneId = ZoneId.systemDefault(), private
     private val setback = Regex("(?i)unsuccessful|fail|reject|tried|attempt|delay|cancel|resched|undeliver")
     private val moved = Regex("(?i)credit|debit|received|refund|\\bbill\\b|\\bdues?\\b|statement|emi\\b|application|kyc|otp|added to|loan")
 
-    override fun classify(raw: Raw): Verdict {
-        val e = Extract.from(raw, zone)
+    override fun classify(raw: Raw) = judge(Extract.from(raw, zone), raw)
+
+    fun judge(e: Event, raw: Raw): Verdict {
         val c = score(e, raw)
         return if (c >= bar) Verdict.Sure(e, c) else Verdict.Unsure(e, c)
     }

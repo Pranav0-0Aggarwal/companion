@@ -9,11 +9,12 @@ import app.companion.ai.DecideScorer
 import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
 import app.companion.ai.NeedlePlanner
+import app.companion.ai.Pending
 import app.companion.ai.Processing
 import app.companion.ui.Proc
-import app.companion.core.Classifier
-import app.companion.core.DecideClassifier
+import app.companion.core.NoExtractor
 import app.companion.core.Planner
+import app.companion.core.Refine
 import app.companion.core.RulesClassifier
 import app.companion.data.Repo
 import app.companion.data.Vault
@@ -31,9 +32,11 @@ class Services(val app: Application) {
     val repo by lazy { Repo(db) }
     val gov by lazy { Governor(app) }
     val scorer by lazy { DecideScorer(app, gov) }
-    val classifier: Classifier by lazy { DecideClassifier(RulesClassifier(), scorer::calibration, scorer) }
+    val rules by lazy { RulesClassifier() }
+    val refine by lazy { Refine(rules, NoExtractor, scorer::calibration, scorer) }
+    val pending by lazy { Pending(app, repo, refine, gov) }
     val planner: Planner by lazy { NeedlePlanner(app, gov) }
-    val ingest by lazy { Ingest(app, repo, classifier) }
+    val ingest by lazy { Ingest(app, repo, rules, pending) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
 

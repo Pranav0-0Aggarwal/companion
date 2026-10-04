@@ -24,12 +24,13 @@ internal object Txn {
     private val to = Regex("(?i)\\b(?:trf to|paid to|sent to|to)\\s+(?:vpa\\s+)?([^\\n]{2,40}?)$END")
     private val from = Regex("(?i)\\b(?:from|by)\\s+(?:vpa\\s+)?([^\\n]{2,40}?)$END")
     private val gap = Regex("\\s+")
-    private val bad = Regex("(?i)^(your|a/c|acct|account|card|the|my|you|this|credit|debit|bank|neft|imps|rtgs|upi|ach|cheque|cash|transfer|slice|customer|ref|date|rs|inr)\\b")
+    const val BAD = "your|a/c|acct|account|card|the|my|you|this|credit|debit|bank|neft|imps|rtgs|upi|ach|cheque|cash|transfer|slice|customer|ref|date|rs|inr"
+    private val bad = Regex("(?i)^($BAD)\\b")
 
     fun last4(t: String): String? =
         (ending.find(t) ?: mask.find(t) ?: acct.find(t))?.groupValues?.get(1)
 
-    private fun name(raw: String?): String? {
+    fun name(raw: String?): String? {
         var s = raw?.trim()?.trimEnd('-', ' ', ':', '/') ?: return null
         if (s.contains('@')) s = s.substringBefore('@')
         if (s.isBlank() || s.all { it.isDigit() || it == ' ' } || bad.containsMatchIn(s) || s.first().isDigit() && s.contains('-')) return null
@@ -46,13 +47,13 @@ internal object Txn {
         else -> Mode.Other
     }
 
-    fun parse(r: Raw, t: String): Event.Move? {
+    fun parse(r: Raw, t: String, given: Amt? = null): Event.Move? {
         val d = dr.find(t)
         val c = cr.find(t)
         val credit = c != null && (d == null || c.range.first < d.range.first)
         if (d == null && c == null && !weak.containsMatchIn(t)) return null
         if ((if (credit) noCr else noDr).containsMatchIn(t)) return null
-        val amt = Money.txn(t) ?: return null
+        val amt = Money.txn(t) ?: given ?: return null
         val last4 = last4(t)
         val bank = Brands.bank(r.sender, t)
         val mode = mode(t)

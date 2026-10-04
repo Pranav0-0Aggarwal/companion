@@ -1,0 +1,809 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T20:56:34+00:00",
+  "title": "Design System: Companion",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Cool Grey Ground",
+        "canonical": "#F4F5F7",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#232425",
+          "#3F4041",
+          "#5D5E5F",
+          "#7F8082",
+          "#A4A4A6",
+          "#CACACB",
+          "#EEEEEF"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Grey",
+        "canonical": "#F0F1F4",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#232426",
+          "#3F4042",
+          "#5D5D60",
+          "#7F8083",
+          "#A4A4A7",
+          "#CACACC",
+          "#EEEEEF"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111317",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#222427",
+          "#3D4044",
+          "#5B5E63",
+          "#7E8085",
+          "#A2A5A9",
+          "#C9CACE",
+          "#EEEEEF"
+        ]
+      },
+      "ink2": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "canonical": "#5D626B",
+        "tonalRamp": [
+          "#090B0F",
+          "#21242A",
+          "#3C4048",
+          "#595E67",
+          "#7B8089",
+          "#A0A5AD",
+          "#C7CBD0",
+          "#EDEEF0"
+        ]
+      },
+      "ink3": {
+        "role": "neutral",
+        "displayName": "Outline Ink",
+        "canonical": "#8A8F98",
+        "tonalRamp": [
+          "#090B0E",
+          "#21242A",
+          "#3C4047",
+          "#595E66",
+          "#7C8089",
+          "#A1A5AC",
+          "#C8CBD0",
+          "#EDEEF0"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E6E8EC",
+        "tonalRamp": [
+          "#0A0B0C",
+          "#232426",
+          "#3E4043",
+          "#5C5E61",
+          "#7E8084",
+          "#A3A4A8",
+          "#C9CACC",
+          "#EEEEEF"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Companion Blue",
+        "canonical": "#2A62DB",
+        "tonalRamp": [
+          "#000134",
+          "#00136A",
+          "#01309D",
+          "#1B51C9",
+          "#4079EE",
+          "#6FA1FF",
+          "#A6CBFF",
+          "#E2EFFF"
+        ]
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "On Blue",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "accent-box": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#E4ECFD",
+        "tonalRamp": [
+          "#090B11",
+          "#20242D",
+          "#3A404C",
+          "#575E6C",
+          "#79808F",
+          "#9FA5B1",
+          "#C6CBD3",
+          "#EDEEF2"
+        ]
+      },
+      "on-accent-box": {
+        "role": "primary",
+        "displayName": "On Blue Wash",
+        "canonical": "#1846B0",
+        "tonalRamp": [
+          "#000330",
+          "#001864",
+          "#0B3494",
+          "#2454BF",
+          "#487AE4",
+          "#75A2FD",
+          "#AACBFF",
+          "#E3EFFF"
+        ]
+      },
+      "red": {
+        "role": "tertiary",
+        "displayName": "Stamp Red",
+        "canonical": "#C0302A",
+        "tonalRamp": [
+          "#270000",
+          "#550000",
+          "#830000",
+          "#AD1918",
+          "#D44B41",
+          "#F27D70",
+          "#FFB2A7",
+          "#FFE6E2"
+        ]
+      },
+      "red-box": {
+        "role": "tertiary",
+        "displayName": "Red Tint",
+        "canonical": "#FCE9E7",
+        "tonalRamp": [
+          "#0F0909",
+          "#2B2120",
+          "#4A3C3B",
+          "#695958",
+          "#8C7C7A",
+          "#AFA19F",
+          "#D2C8C7",
+          "#F1EDED"
+        ]
+      },
+      "green": {
+        "role": "tertiary",
+        "displayName": "Settled Green",
+        "canonical": "#17784A",
+        "tonalRamp": [
+          "#001203",
+          "#002F11",
+          "#004F27",
+          "#067043",
+          "#409365",
+          "#73B68D",
+          "#ABD7BB",
+          "#E4F3E9"
+        ]
+      },
+      "green-box": {
+        "role": "tertiary",
+        "displayName": "Green Tint",
+        "canonical": "#E2F3EA",
+        "tonalRamp": [
+          "#070D0A",
+          "#1D2722",
+          "#36433D",
+          "#53625A",
+          "#76847D",
+          "#9BA8A1",
+          "#C4CDC8",
+          "#ECEFEE"
+        ]
+      },
+      "amber": {
+        "role": "tertiary",
+        "displayName": "Expiry Amber",
+        "canonical": "#B25E00",
+        "tonalRamp": [
+          "#1F0100",
+          "#470D00",
+          "#6F2600",
+          "#954300",
+          "#BA691F",
+          "#D9925C",
+          "#F0BF9C",
+          "#FDEBDE"
+        ]
+      },
+      "bar": {
+        "role": "neutral",
+        "displayName": "Nav Bar Surface",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "bg-night": {
+        "role": "neutral",
+        "displayName": "Cool Grey Ground (night)",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "card-night": {
+        "role": "neutral",
+        "displayName": "Card White (night)",
+        "canonical": "#17171A",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#242426",
+          "#3F3F43",
+          "#5D5D61",
+          "#808083",
+          "#A4A4A7",
+          "#CACACC",
+          "#EEEEEF"
+        ]
+      },
+      "raised-night": {
+        "role": "neutral",
+        "displayName": "Raised Grey (night)",
+        "canonical": "#232327",
+        "tonalRamp": [
+          "#0B0B0D",
+          "#242427",
+          "#3F3F43",
+          "#5D5D62",
+          "#808084",
+          "#A4A4A8",
+          "#CACACD",
+          "#EEEEEF"
+        ]
+      },
+      "ink-night": {
+        "role": "neutral",
+        "displayName": "Ink (night)",
+        "canonical": "#F2F3F5",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#232425",
+          "#3F4041",
+          "#5D5E5F",
+          "#7F8082",
+          "#A4A4A6",
+          "#CACACB",
+          "#EEEEEF"
+        ]
+      },
+      "ink2-night": {
+        "role": "neutral",
+        "displayName": "Secondary Ink (night)",
+        "canonical": "#A3A8B0",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#212429",
+          "#3C4046",
+          "#595E65",
+          "#7C8088",
+          "#A1A5AB",
+          "#C8CBCF",
+          "#EDEEF0"
+        ]
+      },
+      "ink3-night": {
+        "role": "neutral",
+        "displayName": "Outline Ink (night)",
+        "canonical": "#6E737B",
+        "tonalRamp": [
+          "#090B0E",
+          "#212429",
+          "#3C4047",
+          "#595E66",
+          "#7C8088",
+          "#A1A5AC",
+          "#C8CBCF",
+          "#EDEEF0"
+        ]
+      },
+      "line-night": {
+        "role": "neutral",
+        "displayName": "Hairline (night)",
+        "canonical": "#2A2B30",
+        "tonalRamp": [
+          "#0B0B0D",
+          "#232427",
+          "#3E3F44",
+          "#5C5D63",
+          "#7F8086",
+          "#A3A4A9",
+          "#C9CACE",
+          "#EEEEF0"
+        ]
+      },
+      "accent-night": {
+        "role": "primary",
+        "displayName": "Companion Blue (night)",
+        "canonical": "#7EA6FF",
+        "tonalRamp": [
+          "#010728",
+          "#0A1D56",
+          "#1D3982",
+          "#3658AA",
+          "#597DCE",
+          "#82A3EA",
+          "#B3CBFC",
+          "#E6EFFF"
+        ]
+      },
+      "on-accent-night": {
+        "role": "primary",
+        "displayName": "On Blue (night)",
+        "canonical": "#0B1A3A",
+        "tonalRamp": [
+          "#050B19",
+          "#17233C",
+          "#2F3F60",
+          "#4A5D83",
+          "#6D80A6",
+          "#94A5C6",
+          "#BFCBE2",
+          "#EAEFF7"
+        ]
+      },
+      "accent-box-night": {
+        "role": "primary",
+        "displayName": "Blue Wash (night)",
+        "canonical": "#1D2A47",
+        "tonalRamp": [
+          "#060B17",
+          "#1A2339",
+          "#323F5C",
+          "#4E5D7E",
+          "#7080A1",
+          "#97A5C2",
+          "#C1CBDF",
+          "#EBEFF6"
+        ]
+      },
+      "on-accent-box-night": {
+        "role": "primary",
+        "displayName": "On Blue Wash (night)",
+        "canonical": "#C9D8FF",
+        "tonalRamp": [
+          "#070A17",
+          "#1B2339",
+          "#343F5C",
+          "#505D7E",
+          "#737FA1",
+          "#99A4C2",
+          "#C2CADF",
+          "#EBEEF6"
+        ]
+      },
+      "red-night": {
+        "role": "tertiary",
+        "displayName": "Stamp Red (night)",
+        "canonical": "#FF6B61",
+        "tonalRamp": [
+          "#270000",
+          "#550000",
+          "#830000",
+          "#AD171C",
+          "#D54A43",
+          "#F37C72",
+          "#FFB2A8",
+          "#FFE6E2"
+        ]
+      },
+      "red-box-night": {
+        "role": "tertiary",
+        "displayName": "Red Tint (night)",
+        "canonical": "#3A1614",
+        "tonalRamp": [
+          "#160605",
+          "#371B19",
+          "#593431",
+          "#7B514D",
+          "#9F746F",
+          "#C09A96",
+          "#DEC3C0",
+          "#F6ECEB"
+        ]
+      },
+      "green-night": {
+        "role": "tertiary",
+        "displayName": "Settled Green (night)",
+        "canonical": "#4CC38A",
+        "tonalRamp": [
+          "#001302",
+          "#00310F",
+          "#005225",
+          "#007340",
+          "#199763",
+          "#61BA8C",
+          "#A2DABA",
+          "#E1F4E8"
+        ]
+      },
+      "green-box-night": {
+        "role": "tertiary",
+        "displayName": "Green Tint (night)",
+        "canonical": "#10301F",
+        "tonalRamp": [
+          "#030E07",
+          "#132A1D",
+          "#2A4736",
+          "#466653",
+          "#698975",
+          "#91AD9B",
+          "#BDD0C4",
+          "#EAF0EC"
+        ]
+      },
+      "amber-night": {
+        "role": "tertiary",
+        "displayName": "Expiry Amber (night)",
+        "canonical": "#FFB547",
+        "tonalRamp": [
+          "#1C0300",
+          "#431400",
+          "#692D00",
+          "#8E4B00",
+          "#B27000",
+          "#D29846",
+          "#EBC390",
+          "#FAECDA"
+        ]
+      },
+      "bar-night": {
+        "role": "neutral",
+        "displayName": "Nav Bar Surface (night)",
+        "canonical": "#1E1E22",
+        "tonalRamp": [
+          "#0B0B0D",
+          "#242427",
+          "#3F3F43",
+          "#5D5D62",
+          "#808084",
+          "#A4A4A8",
+          "#CACACD",
+          "#EEEEEF"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "header": {
+        "displayName": "Header",
+        "purpose": "Collapsing viewing-area title on every screen."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sheet and dialog titles."
+      },
+      "title-bar": {
+        "displayName": "Toolbar Title",
+        "purpose": "Collapsed toolbar title, month headers."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Row titles, field text, Ask pill hint."
+      },
+      "support": {
+        "displayName": "Support",
+        "purpose": "Buttons, chips, section titles (SemiBold); quiet copy (Regular)."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Row sublines, times, provenance."
+      },
+      "tab-label": {
+        "displayName": "Tab Label",
+        "purpose": "Nav labels, capped at 1.3x font scale."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "State stamps only."
+      },
+      "figure-hero": {
+        "displayName": "Hero Figure",
+        "purpose": "Spent today, Flex tiles; 32-36sp for secondary totals."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "One-time codes on code cards."
+      },
+      "code-big": {
+        "displayName": "Code (Flex)",
+        "purpose": "Code on the Flex glance pane."
+      },
+      "figure-row": {
+        "displayName": "Row Amount",
+        "purpose": "Trailing amounts in list rows."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 4px 12px rgba(0,0,0,0.10), 0 0 8px rgba(0,0,0,0.05)",
+        "purpose": "Compose shadow(10dp), ambient black 5%, spot black 10%. Light mode only: code card, Ask pill, answer cards, Flex tiles."
+      },
+      {
+        "name": "float",
+        "value": "0 6px 14px rgba(0,0,0,0.16), 0 0 10px rgba(0,0,0,0.08)",
+        "purpose": "Compose shadow(14dp), ambient black 8%, spot black 16%. Light mode only: nav pill and Ask button."
+      }
+    ],
+    "motion": [
+      {
+        "name": "gate",
+        "value": "LocalMotion / motion() from ANIMATOR_DURATION_SCALE != 0",
+        "purpose": "Every animation checks it; off means crossfade or instant state."
+      },
+      {
+        "name": "soft",
+        "value": "spring(dampingRatio 0.9, StiffnessMediumLow)",
+        "purpose": "Reveals and layout."
+      },
+      {
+        "name": "snappy",
+        "value": "spring(dampingRatio 0.8, StiffnessMedium)",
+        "purpose": "State changes, digit roll, nav indicator."
+      },
+      {
+        "name": "bouncy",
+        "value": "spring(dampingRatio 0.55, StiffnessMedium)",
+        "purpose": "Press, stamps, swipe return."
+      },
+      {
+        "name": "tab-fade-through",
+        "value": "fadeIn 210ms after 90ms + scaleIn from 0.97; fadeOut 90ms",
+        "purpose": "Top-level tab switches."
+      },
+      {
+        "name": "push-shared-axis-x",
+        "value": "slide 1/6 width on soft + fade 200/150ms; reversed on pop",
+        "purpose": "Settings and Plan."
+      },
+      {
+        "name": "header-collapse",
+        "value": "title alpha 1-t, scale 1-0.12t from bottom-left; toolbar title alpha over last 45%",
+        "purpose": "Collapsing header, graphicsLayer only."
+      },
+      {
+        "name": "ask-transform",
+        "value": "clip morph spring(0.86, 420) open, spring(1.0, 700) close; scrim 45%; dismiss past 120dp",
+        "purpose": "Ask pill or button to full sheet."
+      },
+      {
+        "name": "rise",
+        "value": "20dp up + fade on soft, stagger 45ms, cap 6",
+        "purpose": "Chips, answers, empty states (once)."
+      },
+      {
+        "name": "stamp-thump",
+        "value": "scale 1.35 to 1, rotate -8deg to 0, bouncy",
+        "purpose": "ASK to SETTLED, DUE to PAID."
+      },
+      {
+        "name": "swipe-accept",
+        "value": "threshold 30% width, rubber band 0.3, GestureThresholdActivate / SegmentTick haptics",
+        "purpose": "Filing by swipe."
+      },
+      {
+        "name": "filing-dwell",
+        "value": "560ms Today/Bills, 480ms Inbox; 100-120ms with motion off",
+        "purpose": "Let the stamp land before the write and animateItem exit."
+      },
+      {
+        "name": "code-drain",
+        "value": "1000ms linear per tick; amber + 650ms pulse in last 15s",
+        "purpose": "Code countdown bar."
+      },
+      {
+        "name": "pace-draw",
+        "value": "700ms FastOutSlowIn, once",
+        "purpose": "Pacing line."
+      },
+      {
+        "name": "flex-posture",
+        "value": "crossfade 220ms in / 160ms out; panes slide -48dp / +48dp on soft",
+        "purpose": "Tabletop posture change."
+      },
+      {
+        "name": "onboarding-step",
+        "value": "slide 1/5 width + fade on soft; label scale 0.75, lift 11dp",
+        "purpose": "Onboarding steps and fields."
+      },
+      {
+        "name": "loops",
+        "value": "skeleton 700ms, code pulse 650ms, mic ring 900ms, all reverse",
+        "purpose": "Only while their condition holds."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "flip-inner",
+        "value": "360x840dp"
+      },
+      {
+        "name": "flex-tabletop",
+        "value": "FoldingFeature HALF_OPENED, horizontal"
+      },
+      {
+        "name": "cover-widget",
+        "value": "Glance, cover screen"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled pill for the one main action; presses to 0.94.",
+      "html": "<button class=\"ds-btn-go\">Settle</button>",
+      "css": ".ds-btn-go{font-family: system-ui, sans-serif;background:#2A62DB;color:#fff;border:none;border-radius:9999px;height:40px;padding:0 18px;font-size:14px;font-weight:600;transition:transform .18s cubic-bezier(.3,1.5,.6,1)}.ds-btn-go:active{transform:scale(.94)}.ds-btn-go:focus-visible{outline:2px solid #1846B0;outline-offset:2px}"
+    },
+    {
+      "name": "Tonal Button",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Blue-wash pill for secondary and filing choices; presses to 0.97.",
+      "html": "<button class=\"ds-btn-tonal\">Groceries</button>",
+      "css": ".ds-btn-tonal{font-family: system-ui, sans-serif;background:#E4ECFD;color:#1846B0;border:none;border-radius:9999px;height:40px;padding:0 18px;font-size:14px;font-weight:600;transition:transform .18s cubic-bezier(.3,1.5,.6,1)}.ds-btn-tonal:active{transform:scale(.97)}.ds-btn-tonal:focus-visible{outline:2px solid #2A62DB;outline-offset:2px}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "36dp pill; hairline at rest, blue wash when selected.",
+      "html": "<button class=\"ds-chip\">This month</button> <button class=\"ds-chip ds-on\">Food</button>",
+      "css": ".ds-chip{font-family: system-ui, sans-serif;background:#fff;color:#111317;border:1px solid #E6E8EC;border-radius:9999px;height:36px;padding:0 14px;font-size:14px;font-weight:500;transition:background .25s}.ds-chip.ds-on{background:#E4ECFD;color:#1846B0;border-color:transparent;font-weight:600}.ds-chip:focus-visible{outline:2px solid #2A62DB;outline-offset:2px}"
+    },
+    {
+      "name": "Floating Label Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Raised fill; on focus the fill turns white, a 2dp blue edge appears and the label lifts.",
+      "html": "<label class=\"ds-field\"><input placeholder=\" \"><span>Your name</span></label>",
+      "css": ".ds-field{position:relative;display:block;font-family: system-ui, sans-serif;}.ds-field input{width:100%;height:60px;box-sizing:border-box;padding:24px 16px 8px;border:2px solid transparent;border-radius:16px;background:#F0F1F4;font-size:16px;color:#111317;outline:none;transition:background .25s,border-color .25s}.ds-field span{position:absolute;left:18px;top:19px;font-size:16px;font-weight:500;color:#5D626B;transform-origin:0 0;transition:transform .2s,color .2s}.ds-field input:focus{background:#fff;border-color:#2A62DB}.ds-field input:focus+span{color:#2A62DB}.ds-field input:focus+span,.ds-field input:not(:placeholder-shown)+span{transform:translateY(-11px) scale(.75)}"
+    },
+    {
+      "name": "Segmented List Group",
+      "kind": "card",
+      "refersTo": "card-group",
+      "description": "26dp card group of 64dp rows with 72dp-inset hairlines, tabular amounts.",
+      "html": "<div class=\"ds-group\"><div class=\"ds-row\"><i class=\"ds-lead\"></i><div><b>QuickMart</b><small>10:02 · Demo Bank</small></div><em>₹1,240</em></div><div class=\"ds-row\"><i class=\"ds-lead ds-g\"></i><div><b>Refund</b><small>09:40 · UPI</small></div><em class=\"ds-in\">+₹320</em></div></div>",
+      "css": ".ds-group{font-family: system-ui, sans-serif;background:#fff;border-radius:26px;overflow:hidden;max-width:360px}.ds-row{display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 18px;box-sizing:border-box;position:relative}.ds-row+.ds-row:before{content:\"\";position:absolute;left:72px;right:18px;top:0;height:1px;background:#E6E8EC}.ds-row div{flex:1;display:flex;flex-direction:column}.ds-row b{font-size:16px;font-weight:500;color:#111317}.ds-row small{font-size:13px;color:#5D626B;font-variant-numeric:tabular-nums}.ds-row em{font-style:normal;font-size:16px;font-weight:600;color:#111317;font-variant-numeric:tabular-nums lining-nums}.ds-row em.ds-in{color:#17784A}.ds-lead{width:40px;height:40px;border-radius:50%;background:#E4ECFD}.ds-lead.ds-g{background:#E2F3EA}.ds-row:hover{background:#F0F1F4}"
+    },
+    {
+      "name": "Code Card",
+      "kind": "custom",
+      "refersTo": "code-card",
+      "description": "Lifted hero card: 36sp tabular code over a 3dp draining bar; tap to copy.",
+      "html": "<div class=\"ds-code\"><b>Demo Bank</b><small>Login</small><div class=\"ds-otp\">482 913</div><div class=\"ds-meta\"><span>0:40 left</span><a>Copy</a></div><div class=\"ds-bar\"><i></i></div></div>",
+      "css": ".ds-code{font-family: system-ui, sans-serif;background:#fff;border-radius:26px;padding:16px 18px 14px;max-width:340px;box-shadow:0 4px 12px rgba(0,0,0,.10),0 0 8px rgba(0,0,0,.05)}.ds-code b{display:block;font-size:15px;font-weight:600;color:#111317}.ds-code small{font-size:13px;color:#5D626B}.ds-otp{font-size:36px;font-weight:700;letter-spacing:2px;color:#111317;font-variant-numeric:tabular-nums lining-nums;margin-top:4px}.ds-meta{display:flex;justify-content:space-between;font-size:14px;color:#5D626B;font-variant-numeric:tabular-nums}.ds-meta a{color:#2A62DB;font-weight:600;cursor:pointer}.ds-meta a:hover{text-decoration:underline}.ds-bar{height:3px;border-radius:2px;background:#E6E8EC;margin-top:8px}.ds-bar i{display:block;height:100%;width:66%;border-radius:2px;background:#2A62DB;transition:width 1s linear}"
+    },
+    {
+      "name": "State Stamps",
+      "kind": "custom",
+      "refersTo": "stamp-red",
+      "description": "Outlined 11sp caps labels for state only: red ASK/DUE, green SETTLED/PAID, quiet CHECK.",
+      "html": "<span class=\"ds-stamp\">ASK</span> <span class=\"ds-stamp ds-ok\">SETTLED</span> <span class=\"ds-stamp ds-q\">CHECK</span>",
+      "css": ".ds-stamp{font-family: system-ui, sans-serif;display:inline-block;border:1.5px solid #C0302A;color:#C0302A;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;letter-spacing:1.2px}.ds-stamp.ds-ok{border-color:#17784A;color:#17784A}.ds-stamp.ds-q{border-color:#5D626B;color:#5D626B}"
+    },
+    {
+      "name": "Floating Nav and Ask Button",
+      "kind": "nav",
+      "refersTo": "nav-bar",
+      "description": "64dp pill of five tabs with a sliding blue-wash indicator and a detached 64dp Ask circle.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-pill\"><a class=\"ds-on\"><i></i>Today</a><a><i></i>Ledger</a><a><i></i>Cards</a><a><i></i>Bills</a><a><i></i>Inbox</a></div><button class=\"ds-ask\" aria-label=\"Ask Companion\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"1.8\" stroke-linejoin=\"round\"><path d=\"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z\"/></svg></button></nav>",
+      "css": ".ds-nav{font-family: system-ui, sans-serif;display:flex;gap:8px;align-items:center;max-width:360px}.ds-pill{flex:1;display:flex;height:64px;padding:0 4px;background:#fff;border:1px solid #E6E8EC;border-radius:32px;box-shadow:0 6px 14px rgba(0,0,0,.16),0 0 10px rgba(0,0,0,.08)}.ds-pill a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#5D626B;cursor:pointer}.ds-pill a i{width:52px;height:30px;border-radius:15px;transition:background .25s}.ds-pill a.ds-on{color:#2A62DB;font-weight:700}.ds-pill a.ds-on i{background:#E4ECFD}.ds-pill a:hover i{background:#F0F1F4}.ds-ask{width:64px;height:64px;border-radius:50%;border:none;background:#2A62DB;display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.16);transition:transform .18s cubic-bezier(.3,1.5,.6,1)}.ds-ask:active{transform:scale(.92)}.ds-ask:focus-visible{outline:2px solid #1846B0;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Galaxy Native",
+    "overview": "Companion should read as one of Samsung's own One UI apps (Settings, Wallet, My Files) that happens to know your money. Every screen opens on One UI's calm viewing-area header: a tall empty top region, a 32sp title sitting low, actions up in the toolbar, and content that starts within thumb reach. Content lives in rounded white cards on a cool grey ground (pure black at night). A floating translucent pill of five tabs sits above the gesture bar with a detached round Ask button beside it.\n\nThe old Bank Passbook world survives only where it carries meaning: small outlined caps stamps for state (ASK, DUE, SETTLED, PAID, CHECK) and tabular figures for every amount, date, time and code. There is no ruled paper, no ledger lines, no faux-print texture. Density is relaxed: 64dp minimum rows, 16dp gutters, one accent. Glance surfaces (code cards, Flex top half, the cover widget) show only the next decision, with figures at monumental scale.\n\nMotion is spring-based, short and physical, routed through one helper that honours the system animator scale. The one signature moment: filing an item thumps a stamp in and the row folds away.",
+    "keyCharacteristics": [
+      "One UI collapsing header, rounded 26dp cards, segmented list groups, floating pill nav.",
+      "One accent (Companion blue) for actions, selection and the Ask sparkle; red, green and amber are state colours only.",
+      "System sans throughout; tabular lining figures stand in for any monospace face.",
+      "Soft neutral lift only on hero objects in light mode; lists sit flat; dark mode has no shadows.",
+      "Stamps for state, never for decoration.",
+      "Springs everywhere, crossfades or instant states when animations are off."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Companion Blue is the only accent. Red, green and amber are never used decoratively; each appears only when its state is true.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamp Red Rule",
+        "body": "Stamp red is #C0302A in light mode, not #D2372D. Any new red text on a red tint must clear 4.5:1.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Every amount, date, time and code is set with `tnum, lnum` in the system face. A monospace family is never used.",
+        "section": "typography"
+      },
+      {
+        "name": "The Said Once Rule",
+        "body": "Nothing is labelled twice. Section titles are sentence case 14sp ink2; there are no eyebrows or kickers above titles.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hero Lift Rule",
+        "body": "A shadow means \"this is the object to act on\". Lists never lift, and nothing lifts at night.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do open every primary screen with the collapsing viewing-area header (32sp title, 26% height, 150 to 300dp).",
+      "Do put content in 26dp cards on the grey ground, with segmented rows separated by 72dp-inset hairlines.",
+      "Do keep every touch target at least 48dp and every row at least 64dp.",
+      "Do set every amount, date, time and code with tabular lining figures in the system face.",
+      "Do use stamps only for real state: red ASK/DUE, green SETTLED/PAID, quiet CHECK.",
+      "Do lift only hero objects (code card, Ask pill, nav pill and Ask button, answer cards, Flex tiles), and only in light mode.",
+      "Do route every animation through `motion()` and the three springs, with a crossfade or instant fallback.",
+      "Do hold FLAG_SECURE, reference-counted, only while a live code is on screen.",
+      "Do cap tab labels at 1.3x font scale."
+    ],
+    "donts": [
+      "Don't use gradients anywhere.",
+      "Don't bring back ruled-ledger or passbook pastiche: no ruled lines, paper textures or faux print.",
+      "Don't put kickers or eyebrows above titles, or label anything twice.",
+      "Don't add decorative chrome: badges, ornaments or tinted panels that carry no state.",
+      "Don't use a monospace face; use tabular figures instead.",
+      "Don't use red, green or amber unless the state they mean is true.",
+      "Don't add shadows to lists, or any shadow in dark mode.",
+      "Don't loop an animation without a live condition behind it.",
+      "Don't place controls near the Flex crease."
+    ]
+  }
+}

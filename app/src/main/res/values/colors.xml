@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="cover">#1F3A68</color>
-    <color name="foil">#D9B95F</color>
+    <color name="ground">#F4F5F7</color>
+    <color name="brand">#2A62DB</color>
+    <color name="mark">#FFFFFF</color>
 </resources>

@@ -24,7 +24,6 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
-import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -41,12 +40,12 @@ import app.companion.ui.daysTo
 import app.companion.ui.inDays
 import app.companion.ui.money
 
-private val cover = ColorProvider(Color(0xFF1F3A68), Color(0xFF0F1F3D))
-private val paper = ColorProvider(Color(0xFFFFFFFF), Color(0xFF1B2A4A))
-private val ink = ColorProvider(Color(0xFF2A2A2A), Color(0xFFF2F0E8))
-private val stamp = ColorProvider(Color(0xFFB3261E), Color(0xFFE8776F))
-private val foil = ColorProvider(Color(0xFFD9B95F), Color(0xFFD9B95F))
-private val white = ColorProvider(Color.White, Color.White)
+private val ground = ColorProvider(Color(0xFFFFFFFF), Color(0xFF000000))
+private val card = ColorProvider(Color(0xFFF0F1F4), Color(0xFF17171A))
+private val ink = ColorProvider(Color(0xFF111317), Color(0xFFF2F3F5))
+private val ink2 = ColorProvider(Color(0xFF5D626B), Color(0xFFA3A8B0))
+private val accent = ColorProvider(Color(0xFF2A62DB), Color(0xFF7EA6FF))
+private val red = ColorProvider(Color(0xFFC0302A), Color(0xFFFF6B61))
 private val codeKey = ActionParameters.Key<String>("code")
 
 class OtpWidget : GlanceAppWidget() {
@@ -58,53 +57,51 @@ class OtpWidget : GlanceAppWidget() {
         val soon = repo.pending().firstOrNull()?.takeIf { (it.remindAt ?: 0) - System.currentTimeMillis() < 3_600_000L }
         provideContent {
             Column(
-                GlanceModifier.fillMaxSize().background(cover).cornerRadius(24.dp).padding(10.dp)
+                GlanceModifier.fillMaxSize().background(ground).cornerRadius(28.dp).padding(horizontal = 16.dp, vertical = 14.dp)
                     .clickable(actionStartActivity<MainActivity>()),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (otp == null && bill == null && soon == null) Text(Voice.greet(name, 0), style = TextStyle(color = foil, fontSize = 18.sp, fontWeight = FontWeight.Bold))
-                if (otp != null) Coupon(otp)
-                if (soon != null) Soon(soon)
-                if (bill != null) Due(bill)
+                if (otp == null && bill == null && soon == null) {
+                    Text(Voice.greet(name, 0), style = TextStyle(color = ink, fontSize = 20.sp, fontWeight = FontWeight.Bold))
+                    Text("Nothing needs you", style = TextStyle(color = ink2, fontSize = 14.sp))
+                }
+                if (otp != null) Code(otp)
+                if (soon != null) Soon(soon, otp != null)
+                if (bill != null) Due(bill, otp != null || soon != null)
             }
         }
     }
 }
 
 @Composable
-private fun Coupon(i: Item) {
+private fun Code(i: Item) {
     val value = i.code ?: return
-    Column(
-        GlanceModifier.fillMaxWidth().background(paper).cornerRadius(14.dp).padding(horizontal = 12.dp, vertical = 8.dp)
-            .clickable(actionRunCallback<CopyAction>(actionParametersOf(codeKey to value))),
-    ) {
-        Text(
-            codeText(value),
-            style = TextStyle(color = ink, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
-        )
+    Column(GlanceModifier.fillMaxWidth().clickable(actionRunCallback<CopyAction>(actionParametersOf(codeKey to value)))) {
+        Text(listOf(i.title, i.note.ifBlank { null }).filterNotNull().joinToString(" · "), style = TextStyle(color = ink2, fontSize = 13.sp), maxLines = 1)
+        Text(codeText(value), style = TextStyle(color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold))
         Row(GlanceModifier.fillMaxWidth()) {
-            Text(i.title, style = TextStyle(color = ink, fontSize = 12.sp), maxLines = 1, modifier = GlanceModifier.defaultWeight())
-            Text("expires ${clock(i.expires ?: i.at)}", style = TextStyle(color = stamp, fontSize = 12.sp))
+            Text("Until ${clock(i.expires ?: i.at)}", style = TextStyle(color = red, fontSize = 13.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())
+            Text("Tap to copy", style = TextStyle(color = accent, fontSize = 13.sp, fontWeight = FontWeight.Medium))
         }
     }
 }
 
 @Composable
-private fun Soon(t: Task) {
-    Row(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(t.title, style = TextStyle(color = foil, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1, modifier = GlanceModifier.defaultWeight())
-        Text(clock(t.remindAt ?: 0), style = TextStyle(color = white, fontSize = 13.sp, fontFamily = FontFamily.Monospace))
+private fun Soon(t: Task, gap: Boolean) {
+    Row(GlanceModifier.fillMaxWidth().padding(top = if (gap) 10.dp else 0.dp).background(card).cornerRadius(16.dp).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Text(t.title, style = TextStyle(color = ink, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+        Text(clock(t.remindAt ?: 0), style = TextStyle(color = ink2, fontSize = 14.sp))
     }
 }
 
 @Composable
-private fun Due(b: Item) {
+private fun Due(b: Item, gap: Boolean) {
     val days = daysTo(b.dueDate ?: return)
-    Column(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(b.title, style = TextStyle(color = foil, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+    Column(GlanceModifier.fillMaxWidth().padding(top = if (gap) 10.dp else 0.dp).background(card).cornerRadius(16.dp).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Text("Next bill · ${inDays(days)}", style = TextStyle(color = if (days < 0) red else ink2, fontSize = 12.sp))
         Row(GlanceModifier.fillMaxWidth()) {
-            Text(inDays(days), style = TextStyle(color = white, fontSize = 13.sp), modifier = GlanceModifier.defaultWeight())
-            if (b.paise > 0) Text(money(b.paise, b.currency), style = TextStyle(color = white, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text(b.title, style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Medium), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+            if (b.paise > 0) Text(money(b.paise, b.currency), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
         }
     }
 }

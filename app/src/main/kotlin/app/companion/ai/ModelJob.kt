@@ -44,14 +44,14 @@ class ModelJob : JobService() {
                 }
             }
             when (r) {
-                Run.Done -> done(p, "Models ready")
-                Run.Bad -> done(p, "Download failed: size or checksum does not match")
-                Run.Full -> done(p, "Not enough storage: need ${Show.mbUp(Dl.state.value.need)} MB free")
-                Run.Retry -> {
+                Pull.Done -> done(p, "Models ready")
+                Pull.Bad -> done(p, "Download failed: size or checksum does not match")
+                Pull.Full -> done(p, "Not enough storage: need ${Show.mbUp(Dl.state.value.need)} MB free")
+                Pull.Retry -> {
                     ModelJobs.fallback(this@ModelJob)
                     jobFinished(p, true)
                 }
-                Run.Stop -> Unit
+                Pull.Stop -> Unit
             }
         }
         return true

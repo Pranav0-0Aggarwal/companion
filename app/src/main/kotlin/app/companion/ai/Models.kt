@@ -73,6 +73,12 @@ object Models {
         Have.No -> null
     }
 
+    fun sha(c: Context, s: Spec): String? = when (have(c, s)) {
+        Have.Custom -> listing(c)[s.file]
+        Have.Base -> s.sha
+        Have.No -> null
+    }
+
     fun version(c: Context, s: Spec): String? = when (have(c, s)) {
         Have.Custom -> "${listing(c)[s.file]?.take(8)} custom"
         Have.Base -> s.sha.take(8)

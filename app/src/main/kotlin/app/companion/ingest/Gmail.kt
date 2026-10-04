@@ -1,14 +1,20 @@
 package app.companion.ingest
 
+import android.content.Context
 import app.companion.BuildConfig
 import app.companion.core.Raw
 import app.companion.core.Source
 import app.companion.data.Repo
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
+import com.google.android.gms.tasks.Tasks
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -16,6 +22,12 @@ import org.json.JSONObject
 
 class Gmail(private val repo: Repo, private val ingest: Ingest) {
     val enabled = BuildConfig.GMAIL_CLIENT_ID.isNotBlank()
+
+    fun token(c: Context): String? = runCatching {
+        val request = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(SCOPE))).build()
+        val r = Tasks.await(Identity.getAuthorizationClient(c).authorize(request), TIMEOUT.toLong(), TimeUnit.MILLISECONDS)
+        r.accessToken.takeUnless { r.hasResolution() }
+    }.getOrNull()
 
     suspend fun sync(token: String): Int = withContext(Dispatchers.IO) {
         val p = repo.profileNow()
@@ -92,6 +104,7 @@ class Gmail(private val repo: Repo, private val ingest: Ingest) {
     private fun JSONArray?.items(): List<JSONObject> = if (this == null) emptyList() else List(length()) { getJSONObject(it) }
 
     private companion object {
+        const val SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
         const val API = "https://gmail.googleapis.com/gmail/v1/users/me/"
         const val QUERY = "category:primary OR category:updates (statement OR receipt OR invoice OR bill OR order OR booking OR delivered)"
         const val TIMEOUT = 15_000

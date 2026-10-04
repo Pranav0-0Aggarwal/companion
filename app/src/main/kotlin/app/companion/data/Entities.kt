@@ -6,6 +6,8 @@ import androidx.room.ForeignKey
 import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import app.companion.core.Progress
+import app.companion.core.Refile
 import app.companion.core.Source
 
 @Entity(tableName = "profile")
@@ -30,6 +32,7 @@ data class Profile(
     val gtasks: Boolean = false,
     val since: String? = null,
     @ColumnInfo(defaultValue = "365") val keep: Int = 365,
+    val model: String? = null,
 ) {
     val name get() = call.ifBlank { first }
     val vips get() = vip.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
@@ -149,6 +152,27 @@ data class Task(
     val gone: Boolean = false,
 )
 
+@Entity(tableName = "marks")
+data class Mark(
+    @PrimaryKey val job: String,
+    val pos: Long,
+    val cap: Long,
+    val done: Int,
+    val total: Int,
+    val moved: Int,
+    val ask: Int,
+    val skip: Int,
+    val sha: String?,
+    val battery: Boolean,
+    val paused: Boolean,
+) {
+    fun progress() = Progress(pos, cap, done, total, moved, ask, skip, sha)
+}
+
+fun Progress.mark(job: String, battery: Boolean, paused: Boolean = false) = Mark(job, pos, cap, done, total, moved, ask, skip, sha, battery, paused)
+
+data class Sender(val itemId: Long, val sender: String)
+
 object Src {
     const val ASK = "ask"
     const val EDIT = "edit"
@@ -157,8 +181,8 @@ object Src {
 }
 
 object State {
-    const val ASK = "ask"
-    const val CHECK = "check"
-    const val SETTLED = "settled"
-    const val PAID = "paid"
+    const val ASK = Refile.ASK
+    const val CHECK = Refile.CHECK
+    const val SETTLED = Refile.SETTLED
+    const val PAID = Refile.PAID
 }

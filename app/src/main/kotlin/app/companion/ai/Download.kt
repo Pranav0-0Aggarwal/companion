@@ -65,7 +65,7 @@ private object Http : Net {
 
 enum class Mode { Idle, Waiting, Running, Paused, Failed, Full }
 
-enum class Run { Done, Retry, Stop, Bad, Full }
+enum class Pull { Done, Retry, Stop, Bad, Full }
 
 data class DlState(
     val mode: Mode = Mode.Idle,
@@ -116,8 +116,8 @@ object Dl {
         state.value = DlState()
     }
 
-    fun run(c: Context, live: () -> Boolean, ping: (DlState) -> Unit = {}): Run {
-        if (!gate.tryLock(15, TimeUnit.SECONDS)) return Run.Retry
+    fun run(c: Context, live: () -> Boolean, ping: (DlState) -> Unit = {}): Pull {
+        if (!gate.tryLock(15, TimeUnit.SECONDS)) return Pull.Retry
         try {
             return go(c, { live() && !paused }, ping)
         } finally {
@@ -125,7 +125,7 @@ object Dl {
         }
     }
 
-    private fun go(c: Context, alive: () -> Boolean, ping: (DlState) -> Unit): Run {
+    private fun go(c: Context, alive: () -> Boolean, ping: (DlState) -> Unit): Pull {
         val todo = pins.filter { Models.have(c, it) == Have.No }
         var ready = total - todo.sumOf { it.bytes }
         val rate = Rate()
@@ -155,26 +155,26 @@ object Dl {
                         break
                     }
                     Fetcher.Out.Retry -> {
-                        if (!alive()) return end(c, Run.Stop)
-                        if (++tries > TRIES) return end(c, Run.Retry)
+                        if (!alive()) return end(c, Pull.Stop)
+                        if (++tries > TRIES) return end(c, Pull.Retry)
                         repeat(tries * 10) { if (alive()) Thread.sleep(100) }
                     }
-                    Fetcher.Out.Bad -> return end(c, Run.Bad)
-                    Fetcher.Out.Full -> return end(c, Run.Full, todo.dropWhile { it !== s }.sumOf { it.bytes - partial(c, it) })
+                    Fetcher.Out.Bad -> return end(c, Pull.Bad)
+                    Fetcher.Out.Full -> return end(c, Pull.Full, todo.dropWhile { it !== s }.sumOf { it.bytes - partial(c, it) })
                 }
             }
         }
-        return end(c, Run.Done)
+        return end(c, Pull.Done)
     }
 
-    private fun end(c: Context, r: Run, need: Long = 0): Run {
-        if (r != Run.Retry && r != Run.Stop) want(c, false)
+    private fun end(c: Context, r: Pull, need: Long = 0): Pull {
+        if (r != Pull.Retry && r != Pull.Stop) want(c, false)
         state.value = when (r) {
-            Run.Done -> DlState()
-            Run.Retry -> DlState(Mode.Waiting)
-            Run.Stop -> DlState(if (paused) Mode.Paused else Mode.Waiting)
-            Run.Bad -> DlState(Mode.Failed)
-            Run.Full -> DlState(Mode.Full, need = need)
+            Pull.Done -> DlState()
+            Pull.Retry -> DlState(Mode.Waiting)
+            Pull.Stop -> DlState(if (paused) Mode.Paused else Mode.Waiting)
+            Pull.Bad -> DlState(Mode.Failed)
+            Pull.Full -> DlState(Mode.Full, need = need)
         }
         return r
     }
@@ -184,9 +184,9 @@ class ModelWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val job = coroutineContext.job
         when (Dl.run(applicationContext, { job.isActive })) {
-            Run.Done -> Result.success()
-            Run.Bad, Run.Full -> Result.failure()
-            Run.Retry, Run.Stop -> Result.retry()
+            Pull.Done -> Result.success()
+            Pull.Bad, Pull.Full -> Result.failure()
+            Pull.Retry, Pull.Stop -> Result.retry()
         }
     }
 }

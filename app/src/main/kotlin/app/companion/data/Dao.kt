@@ -143,6 +143,42 @@ interface Dao {
     @Query("DELETE FROM rules WHERE hash = :hash AND task = :task")
     suspend fun deleteRule(hash: String, task: String)
 
+    @Query("SELECT * FROM marks WHERE job = :job")
+    suspend fun mark(job: String): Mark?
+
+    @Upsert
+    suspend fun putMark(m: Mark)
+
+    @Query("UPDATE marks SET pos = :pos, done = :done, total = :total, moved = :moved, ask = :ask, skip = :skip WHERE job = :job")
+    suspend fun step(job: String, pos: Long, done: Int, total: Int, moved: Int, ask: Int, skip: Int)
+
+    @Query("UPDATE marks SET paused = :paused WHERE job = :job")
+    suspend fun setPaused(job: String, paused: Boolean)
+
+    @Query("DELETE FROM marks WHERE job = :job")
+    suspend fun dropMark(job: String)
+
+    @Query("SELECT COALESCE(MAX(id), 0) FROM items")
+    suspend fun top(): Long
+
+    @Query("SELECT COUNT(*) FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND (body IS NOT NULL OR src = 'Sms')")
+    suspend fun stale(after: Long, cap: Long): Int
+
+    @Query("SELECT * FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND (body IS NOT NULL OR src = 'Sms') ORDER BY id LIMIT :n")
+    suspend fun staleBatch(after: Long, cap: Long, n: Int): List<Item>
+
+    @Query("SELECT DISTINCT itemId FROM corrections WHERE itemId IN (:ids)")
+    suspend fun corrected(ids: List<Long>): List<Long>
+
+    @Query("SELECT DISTINCT hash FROM rules WHERE hash IN (:hashes) AND count >= ${Rules.MIN}")
+    suspend fun taught(hashes: List<String>): List<String>
+
+    @Query("SELECT itemId, sender FROM links WHERE itemId IN (:ids) ORDER BY at, id")
+    suspend fun senders(ids: List<Long>): List<Sender>
+
+    @Query("UPDATE items SET kind = :kind, tags = :tags, category = :category, state = :state, conf = :conf, model = :model, mprob = :mprob WHERE id = :id AND state != 'paid'")
+    suspend fun refile(id: Long, kind: String, tags: String?, category: String?, state: String, conf: Float, model: String?, mprob: Float?)
+
     @Query("SELECT * FROM tasks WHERE gone = 0 ORDER BY done, remindAt IS NULL, remindAt, due IS NULL, due, id DESC")
     fun tasks(): Flow<List<Task>>
 

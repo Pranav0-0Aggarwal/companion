@@ -9,7 +9,9 @@ import app.companion.core.Group
 import app.companion.core.Kind
 import app.companion.core.Repeat
 import app.companion.core.Rules
+import app.companion.core.Progress
 import app.companion.core.Raw
+import app.companion.core.Refile
 import app.companion.core.Template
 import app.companion.core.Types
 import app.companion.core.Verdict
@@ -22,6 +24,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 data class Added(val item: Item, val fresh: Boolean)
+
+data class Change(val moved: Boolean, val ask: Boolean)
 
 class Repo(private val db: Db) {
     private val d = db.dao()
@@ -191,6 +195,45 @@ class Repo(private val db: Db) {
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         fresh[id] = System.currentTimeMillis()
         return Added(item.copy(id = id), true)
+    }
+
+    suspend fun <T> atomic(f: suspend () -> T): T = db.withTransaction { f() }
+
+    suspend fun mark(job: String) = d.mark(job)
+
+    suspend fun putMark(m: Mark) = d.putMark(m)
+
+    suspend fun dropMark(job: String) = d.dropMark(job)
+
+    suspend fun step(job: String, p: Progress) = d.step(job, p.pos, p.done, p.total, p.moved, p.ask, p.skip)
+
+    suspend fun setPaused(job: String, paused: Boolean) = d.setPaused(job, paused)
+
+    suspend fun top() = d.top()
+
+    suspend fun stale(after: Long, cap: Long) = d.stale(after, cap)
+
+    suspend fun stale(after: Long, cap: Long, n: Int) = d.staleBatch(after, cap, n)
+
+    suspend fun senders(ids: List<Long>) = d.senders(ids).distinctBy { it.itemId }.associate { it.itemId to it.sender }
+
+    suspend fun frozen(items: List<Item>): Set<Long> {
+        val corrected = d.corrected(items.map { it.id }).toSet()
+        val taught = d.taught(items.mapNotNull { it.tpl }).toSet()
+        return items.filter { Refile.locked(it.filed(), it.merchant != null, it.id in corrected, it.tpl in taught) }.map { it.id }.toSet()
+    }
+
+    suspend fun refile(id: Long, raw: Raw, v: Verdict, p: Profile): Change {
+        val cur = d.item(id)?.takeIf { frozen(listOf(it)).isEmpty() } ?: return Change(false, false)
+        val e = v.event
+        val learned = (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()))
+        val old = cur.filed()
+        val new = n.filed()
+        val go = Refile.moved(old, new)
+        val f = if (go) new else old
+        d.refile(id, f.kind, f.tags, f.category, f.state, n.conf, v.guess?.label, v.guess?.prob)
+        return Change(go, Refile.asks(old, new))
     }
 
     private suspend fun near(f: Fingerprint, i: Item): List<Item> {

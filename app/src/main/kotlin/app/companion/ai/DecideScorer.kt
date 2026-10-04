@@ -29,6 +29,17 @@ class DecideScorer(private val app: Application, private val gov: Governor) : Sc
         return runCatching { Models.loadCalibration(app).takeIf { it.fits(Calibration.TYPE, spec.labels(Calibration.TYPE)) && (!spec.has(Calibration.CATEGORY) || it.fits(Calibration.CATEGORY, spec.labels(Calibration.CATEGORY))) } }.getOrNull() ?: Calibration.DEFAULT
     }
 
+    fun warm(): Boolean {
+        val model = Models.file(app, Manifest.decide) ?: return false
+        if (assets() == null) return false
+        val path = model.path
+        return try {
+            runBlocking { gov.run(Manifest.decide, { DecideRunner.open(app, path) }) { true } }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun score(raw: Raw): Scored? {
         val model = Models.file(app, Manifest.decide) ?: return null
         val (tok, spec) = assets() ?: return null

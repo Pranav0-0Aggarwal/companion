@@ -4,9 +4,11 @@ import android.app.ActivityManager
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Debug
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 interface Runner : AutoCloseable {
     val accel: String
@@ -31,6 +34,7 @@ class Governor(private val app: Application) {
     private var spec: Spec? = null
     private var runner: Runner? = null
     private var idle: Job? = null
+    private val holds = AtomicInteger()
     val live = MutableStateFlow<Live?>(null)
 
     private fun pss() = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }.totalPss / 1024L
@@ -63,15 +67,29 @@ class Governor(private val app: Application) {
         try {
             block(runner as R)
         } finally {
-            idle = scope.launch {
-                delay(s.idleMs)
-                lock.withLock { if (spec == s) drop() }
-            }
+            arm(s)
+        }
+    }
+
+    private fun arm(s: Spec) {
+        idle?.cancel()
+        idle = scope.launch {
+            delay(s.idleMs)
+            lock.withLock { if (spec == s && holds.get() == 0) drop() }
+        }
+    }
+
+    suspend fun <T> hold(block: suspend () -> T): T {
+        holds.incrementAndGet()
+        try {
+            return block()
+        } finally {
+            if (holds.decrementAndGet() == 0) withContext(NonCancellable) { lock.withLock { spec?.let(::arm) } }
         }
     }
 
     fun trim(level: Int) {
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && (holds.get() == 0 || level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)) {
             idle?.cancel()
             scope.launch { lock.withLock { drop() } }
         }

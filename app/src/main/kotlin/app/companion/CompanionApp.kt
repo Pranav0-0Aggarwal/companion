@@ -9,6 +9,7 @@ import app.companion.ai.DecideScorer
 import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
 import app.companion.ai.NeedlePlanner
+import app.companion.ai.Processing
 import app.companion.core.Classifier
 import app.companion.core.DecideClassifier
 import app.companion.core.Planner
@@ -28,7 +29,7 @@ class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
     val repo by lazy { Repo(db) }
     val gov by lazy { Governor(app) }
-    private val scorer by lazy { DecideScorer(app, gov) }
+    val scorer by lazy { DecideScorer(app, gov) }
     val classifier: Classifier by lazy { DecideClassifier(RulesClassifier(), scorer::calibration, scorer) }
     val planner: Planner by lazy { NeedlePlanner(app, gov) }
     val ingest by lazy { Ingest(app, repo, classifier) }
@@ -53,6 +54,7 @@ class CompanionApp : Application() {
         super.onCreate()
         if (Process.isIsolated()) return
         Live.boot(this)
+        Processing.boot(this)
         Export.sweep(this)
     }
 

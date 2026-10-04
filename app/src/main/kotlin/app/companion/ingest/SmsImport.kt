@@ -5,60 +5,46 @@ import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
 import android.provider.Telephony
-import androidx.work.Constraints
-import androidx.work.CoroutineWorker
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.WorkerParameters
-import app.companion.core.Raw
-import app.companion.core.Source
-import app.companion.sl
-import app.companion.system.Live
+import app.companion.ai.Job
+import app.companion.ai.Processing
 import app.companion.ui.has
 
+class Sms(val id: Long, val from: String, val body: String, val at: Long)
+
 object SmsImport {
-    fun enqueue(c: Context) {
-        val work = OneTimeWorkRequestBuilder<SmsImportWorker>()
-            .setConstraints(Constraints.Builder().setRequiresCharging(true).setRequiresDeviceIdle(true).build())
-            .build()
-        WorkManager.getInstance(c).enqueueUniqueWork("sms-import", ExistingWorkPolicy.KEEP, work)
-    }
-}
+    private val uri = Telephony.Sms.Inbox.CONTENT_URI
 
-class SmsImportWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
-    override suspend fun doWork(): Result {
-        val sl = applicationContext.sl
-        if (sl.repo.profileNow().imported || !applicationContext.has(Manifest.permission.READ_SMS)) return Result.success()
-        var offset = 0
-        do {
-            val n = page(offset)
-            offset += n
-        } while (n == PAGE)
-        sl.repo.edit { it.copy(imported = true) }
-        Live.refresh(applicationContext)
-        return Result.success()
+    fun can(c: Context) = c.has(Manifest.permission.READ_SMS)
+
+    fun enqueue(c: Context) = Processing.start(c, Job.Import, false)
+
+    private fun args(sel: String, vararg a: String) = Bundle().apply {
+        putString(ContentResolver.QUERY_ARG_SQL_SELECTION, sel)
+        putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, a)
     }
 
-    private suspend fun page(offset: Int): Int {
-        val args = Bundle().apply {
-            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${Telephony.Sms.DATE} DESC")
-            putInt(ContentResolver.QUERY_ARG_LIMIT, PAGE)
-            putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
+    fun count(c: Context, below: Long): Int {
+        if (!c.has(Manifest.permission.READ_SMS)) return 0
+        return c.contentResolver.query(uri, arrayOf(Telephony.Sms._ID), args("${Telephony.Sms._ID} < ?", below.toString()), null)?.use { it.count } ?: 0
+    }
+
+    fun page(c: Context, below: Long, n: Int): List<Sms> {
+        if (n <= 0 || !c.has(Manifest.permission.READ_SMS)) return emptyList()
+        val q = args("${Telephony.Sms._ID} < ?", below.toString()).apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${Telephony.Sms._ID} DESC")
+            putInt(ContentResolver.QUERY_ARG_LIMIT, n)
         }
-        val cols = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE)
-        val ingest = applicationContext.sl.ingest
-        var n = 0
-        applicationContext.contentResolver.query(Telephony.Sms.Inbox.CONTENT_URI, cols, args, null)?.use { c ->
-            while (c.moveToNext()) {
-                ingest.handle(Raw(Source.Sms, c.getString(0).orEmpty(), "", c.getString(1).orEmpty(), c.getLong(2)), refresh = false)
-                n++
-            }
-        }
-        return n
+        val cols = arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE)
+        return c.contentResolver.query(uri, cols, q, null)?.use { r ->
+            buildList { while (r.moveToNext()) add(Sms(r.getLong(0), r.getString(1).orEmpty(), r.getString(2).orEmpty(), r.getLong(3))) }
+        }.orEmpty()
     }
 
-    private companion object {
-        const val PAGE = 200
+    fun find(c: Context, from: String, at: Long): String? {
+        if (!c.has(Manifest.permission.READ_SMS)) return null
+        val sel = "(${Telephony.Sms.DATE} = ? OR ${Telephony.Sms.DATE_SENT} = ?) AND ${Telephony.Sms.ADDRESS} = ?"
+        return c.contentResolver.query(uri, arrayOf(Telephony.Sms.BODY), args(sel, at.toString(), at.toString(), from), null)?.use { r ->
+            if (r.moveToFirst()) r.getString(0) else null
+        }
     }
 }

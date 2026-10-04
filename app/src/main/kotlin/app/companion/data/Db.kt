@@ -6,8 +6,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class],
-    version = 3,
+    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class],
+    version = 4,
     exportSchema = false,
 )
 abstract class Db : RoomDatabase() {
@@ -41,5 +41,12 @@ val Migrate2to3 = object : Migration(2, 3) {
         db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_items_fts_AFTER_UPDATE AFTER UPDATE ON `items` BEGIN INSERT INTO `items_fts`(`docid`, `title`, `merchant`, `note`, `bank`, `category`, `body`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`merchant`, NEW.`note`, NEW.`bank`, NEW.`category`, NEW.`body`); END")
         db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_items_fts_AFTER_INSERT AFTER INSERT ON `items` BEGIN INSERT INTO `items_fts`(`docid`, `title`, `merchant`, `note`, `bank`, `category`, `body`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`merchant`, NEW.`note`, NEW.`bank`, NEW.`category`, NEW.`body`); END")
         db.execSQL("INSERT INTO `items_fts`(`items_fts`) VALUES('rebuild')")
+    }
+}
+
+val Migrate3to4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `model` TEXT")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `marks` (`job` TEXT NOT NULL, `pos` INTEGER NOT NULL, `cap` INTEGER NOT NULL, `done` INTEGER NOT NULL, `total` INTEGER NOT NULL, `moved` INTEGER NOT NULL, `ask` INTEGER NOT NULL, `skip` INTEGER NOT NULL, `sha` TEXT, `battery` INTEGER NOT NULL, `paused` INTEGER NOT NULL, PRIMARY KEY(`job`))")
     }
 }

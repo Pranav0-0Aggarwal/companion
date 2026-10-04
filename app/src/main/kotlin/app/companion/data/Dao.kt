@@ -72,6 +72,9 @@ interface Dao {
     )
     fun search(q: String): Flow<List<Item>>
 
+    @Query("SELECT * FROM items WHERE start IS NOT NULL AND start > :now AND at > :since AND (ping & 8) = 0 ORDER BY start LIMIT 5")
+    fun suggested(now: Long, since: Long): Flow<List<Item>>
+
     @Query("UPDATE items SET state = :state WHERE id = :id")
     suspend fun setState(id: Long, state: String)
 

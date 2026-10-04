@@ -51,6 +51,8 @@ fun TodayScreen(go: (String) -> Unit) {
                 }
             }
         }
+        item { Suggested() }
+        item { NextUp(go) }
         item { Section("Printed today", "Ledger") { go("ledger") } }
         item { TodayLines(d.printed, d.links) }
     }

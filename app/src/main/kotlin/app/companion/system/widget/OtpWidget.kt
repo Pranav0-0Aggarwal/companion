@@ -30,6 +30,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.companion.MainActivity
 import app.companion.data.Item
+import app.companion.data.Task
 import app.companion.data.dueDate
 import app.companion.sl
 import app.companion.ui.Voice
@@ -54,14 +55,16 @@ class OtpWidget : GlanceAppWidget() {
         val otp = repo.otpsNow().firstOrNull()
         val bill = repo.billsNow().firstOrNull { it.due != null }
         val name = repo.profileNow().name
+        val soon = repo.pending().firstOrNull()?.takeIf { (it.remindAt ?: 0) - System.currentTimeMillis() < 3_600_000L }
         provideContent {
             Column(
                 GlanceModifier.fillMaxSize().background(cover).cornerRadius(24.dp).padding(10.dp)
                     .clickable(actionStartActivity<MainActivity>()),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (otp == null && bill == null) Text(Voice.greet(name, 0), style = TextStyle(color = foil, fontSize = 18.sp, fontWeight = FontWeight.Bold))
+                if (otp == null && bill == null && soon == null) Text(Voice.greet(name, 0), style = TextStyle(color = foil, fontSize = 18.sp, fontWeight = FontWeight.Bold))
                 if (otp != null) Coupon(otp)
+                if (soon != null) Soon(soon)
                 if (bill != null) Due(bill)
             }
         }
@@ -83,6 +86,14 @@ private fun Coupon(i: Item) {
             Text(i.title, style = TextStyle(color = ink, fontSize = 12.sp), maxLines = 1, modifier = GlanceModifier.defaultWeight())
             Text("expires ${clock(i.expires ?: i.at)}", style = TextStyle(color = stamp, fontSize = 12.sp))
         }
+    }
+}
+
+@Composable
+private fun Soon(t: Task) {
+    Row(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(t.title, style = TextStyle(color = foil, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+        Text(clock(t.remindAt ?: 0), style = TextStyle(color = white, fontSize = 13.sp, fontFamily = FontFamily.Monospace))
     }
 }
 

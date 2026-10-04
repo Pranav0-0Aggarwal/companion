@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.data.Profile
 import app.companion.data.Task
 import app.companion.sl
 import app.companion.system.Plan
@@ -28,6 +29,7 @@ import app.companion.ui.Ty
 import app.companion.ui.clock
 import app.companion.ui.dateOf
 import app.companion.ui.dayLabel
+import app.companion.ui.rememberTasksLink
 import app.companion.ui.kit.Group
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Rule
@@ -38,10 +40,12 @@ import app.companion.ui.pal
 import kotlinx.coroutines.launch
 
 @Composable
-fun PlanScreen(back: () -> Unit, sync: (() -> Unit)? = null) {
+fun PlanScreen(back: () -> Unit) {
     val c = LocalContext.current
     val tasks by c.sl.repo.tasks.collectAsStateWithLifecycle(emptyList())
     val capture = LocalCapture.current
+    val gt by c.sl.repo.profile.collectAsStateWithLifecycle(Profile())
+    val sync = rememberTasksLink {}
     val scope = rememberCoroutineScope()
     val open = tasks.filter { !it.done }
     val done = tasks.filter { it.done }.take(10)
@@ -49,7 +53,7 @@ fun PlanScreen(back: () -> Unit, sync: (() -> Unit)? = null) {
         "Plan", if (open.isEmpty()) "Nothing open" else "${open.size} open",
         tools = {
             ToolButton(Ic.Back, "Back", back)
-            if (sync != null) ToolButton(Ic.Plan, "Sync Google Tasks", sync)
+            if (gt.gtasks) ToolButton(Ic.Plan, "Sync Google Tasks", sync)
             ToolButton(Ic.Add, "New reminder") { capture("") }
         },
     ) {

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import app.companion.core.Repeat
 import app.companion.sl
+import app.companion.system.widget.OtpWidget
+import androidx.glance.appwidget.updateAll
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,10 +33,14 @@ class Remind : BroadcastReceiver() {
         when (action) {
             FIRE -> {
                 Notices.fire(c, t, repo.profileNow().name)
+                OtpWidget().updateAll(c)
                 val next = t.remindAt?.let { Repeat.after(it, t.repeat, now, ZoneId.systemDefault()) }
                 if (next != null) Alarms.set(c, repo.saveTask(t.copy(remindAt = next)))
             }
-            NEAR -> Notices.near(c, t)
+            NEAR -> {
+                Notices.near(c, t)
+                OtpWidget().updateAll(c)
+            }
             DONE -> {
                 Notices.clear(c, id)
                 if (t.repeat == null) Plan.finish(c, id)

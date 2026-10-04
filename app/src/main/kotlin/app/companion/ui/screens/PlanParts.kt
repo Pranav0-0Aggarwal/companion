@@ -32,7 +32,10 @@ import app.companion.system.Cals
 import app.companion.system.Plan
 import app.companion.ui.Ty
 import app.companion.ui.Voice
+import app.companion.data.cal
 import app.companion.ui.clock
+import app.companion.ui.dateOf
+import app.companion.ui.dayLabel
 import app.companion.ui.has
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Group
@@ -53,11 +56,12 @@ import kotlinx.coroutines.withContext
 private val calPerms = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
 
 @Composable
-fun CalBtn(s: Suggestion.Cal, modifier: Modifier = Modifier) {
+fun CalBtn(s: Suggestion.Cal, modifier: Modifier = Modifier, onAdded: () -> Unit = {}) {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
     var added by remember { mutableStateOf(false) }
-    val add = { scope.launch { added = withContext(Dispatchers.IO) { Cals.add(c, c.sl.repo.profileNow().cal, s) } } }
+    val add = { scope.launch { added = withContext(Dispatchers.IO) { Cals.add(c, c.sl.repo.profileNow().cal, s) }
+        if (added) onAdded() } }
     val ask = rememberPerms(*calPerms) { add() }
     Btn(if (added) "Added" else "Add to calendar", modifier) {
         if (!added) if (c.has(Manifest.permission.WRITE_CALENDAR)) add() else ask()
@@ -117,6 +121,24 @@ fun NextUp(go: (String) -> Unit) {
             PassLine("Show today's calendar", "Read only on this phone", actions = { Btn("Allow") { ask() } })
         } else if (n == null && events.isEmpty()) {
             PassLine("Nothing planned", Voice.addr(p.name, "your day is open"))
+        }
+    }
+}
+
+@Composable
+fun Suggested() {
+    val repo = LocalContext.current.sl.repo
+    val items by repo.suggested().collectAsStateWithLifecycle(emptyList())
+    val scope = rememberCoroutineScope()
+    if (items.isEmpty()) return
+    Section("Suggested")
+    Group {
+        items.forEachIndexed { k, i ->
+            val s = i.cal() ?: return@forEachIndexed
+            if (k > 0) Rule()
+            PassLine(s.title, "${dayLabel(dateOf(s.start))}${if (s.allDay) "" else " ${clock(s.start)}"}", actions = {
+                CalBtn(s) { scope.launch { repo.ping(i.id, i.ping or 8) } }
+            })
         }
     }
 }

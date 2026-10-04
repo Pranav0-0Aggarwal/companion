@@ -32,6 +32,7 @@ import app.companion.data.Card
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.credit
+import app.companion.data.tagList
 import app.companion.ai.DrillBox
 import app.companion.sl
 import java.time.temporal.ChronoUnit
@@ -143,6 +144,7 @@ fun LedgerScreen(go: (String) -> Unit) {
                         dateOf(i.at).dayOfMonth.toString().padStart(2, '0'), i.title, i.srcLine(links),
                         if (i.credit) "" else plain(i.paise), if (i.credit) plain(i.paise) else "",
                         onClick = { open = if (open == i.id) -1 else i.id },
+                        tags = i.tagList, stamp = i.stamp(),
                     )
                     if (open == i.id) Detail(i, cards.firstOrNull { it.has(i) }, links) { cat -> scope.launch { repo.file(i.id, cat) } }
                 }

@@ -10,5 +10,6 @@ object Types {
         Kind.Travel, Kind.Alert, Kind.Unknown -> "alert"
         Kind.Personal -> "personal"
         Kind.Promo -> "promo"
+        Kind.Spam -> "spam"
     }
 }

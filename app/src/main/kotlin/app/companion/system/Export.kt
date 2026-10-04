@@ -32,7 +32,7 @@ object Export {
         if (rows.isEmpty()) return null
         sweep(c)
         val f = File(dir(c).also { it.mkdirs() }, FILE)
-        f.writeText(rows.joinToString("\n", postfix = "\n") { Corrections.line(it.sender, it.title, it.note, it.task, it.model, it.prob, it.chosen) })
+        f.writeText(rows.joinToString("\n", postfix = "\n") { Corrections.line(it.sender, it.title, it.note, it.body, it.task, it.model, it.prob, it.chosen) })
         return f
     }
 

@@ -168,6 +168,7 @@ fun PassLine(
     title: String,
     sub: String,
     modifier: Modifier = Modifier,
+    tags: List<String> = emptyList(),
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
@@ -177,6 +178,7 @@ fun PassLine(
             Column(Modifier.weight(1f)) {
                 Text(title, style = Ty.ui(14).copy(color = p.ink))
                 Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(12).copy(color = p.ink2))
+                Tags(tags, Modifier.padding(top = 6.dp))
             }
             if (trailing != null) trailing()
         }

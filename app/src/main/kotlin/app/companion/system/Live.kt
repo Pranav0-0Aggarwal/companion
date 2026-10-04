@@ -30,6 +30,8 @@ object Live {
         )
         val daily = PeriodicWorkRequestBuilder<Reminders>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("reminders", ExistingPeriodicWorkPolicy.KEEP, daily)
+        val retain = PeriodicWorkRequestBuilder<Sweep>(1, TimeUnit.DAYS).build()
+        WorkManager.getInstance(app).enqueueUniquePeriodicWork("retain", ExistingPeriodicWorkPolicy.KEEP, retain)
     }
 
     suspend fun refresh(c: Context) {

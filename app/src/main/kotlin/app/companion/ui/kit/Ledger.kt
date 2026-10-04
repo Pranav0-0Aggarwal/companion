@@ -2,6 +2,7 @@ package app.companion.ui.kit
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -50,6 +51,8 @@ fun LedgerRow(
     modifier: Modifier = Modifier,
     printing: Boolean = false,
     onClick: (() -> Unit)? = null,
+    tags: List<String> = emptyList(),
+    stamp: String? = null,
 ) {
     val p = pal
     Column(
@@ -61,6 +64,12 @@ fun LedgerRow(
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 Printed(name, Ty.mono(12).copy(color = p.ink), printing)
                 Text(src, Modifier.padding(top = 2.dp), style = Ty.mono(10).copy(color = p.ink2), maxLines = 1)
+                if (stamp != null || tags.isNotEmpty()) {
+                    Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        stamp?.let { Stamp(it, size = 9) }
+                        Tags(tags)
+                    }
+                }
             }
             Text(dr, Modifier.width(AMT).padding(end = 6.dp), style = Ty.mono(12).copy(color = p.ink), textAlign = TextAlign.End)
             Text(cr, Modifier.width(AMT).padding(end = 6.dp), style = Ty.mono(12).copy(color = p.settled), textAlign = TextAlign.End)

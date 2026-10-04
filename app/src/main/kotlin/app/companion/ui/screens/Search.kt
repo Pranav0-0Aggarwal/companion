@@ -39,7 +39,7 @@ import app.companion.ui.shortDay
 import kotlinx.coroutines.delay
 import app.companion.ui.money as amt
 
-private fun Item.sub() = listOfNotNull(note.take(80).takeIf { it.isNotBlank() && !money }).plus(meta()).plus(shortDay(dateOf(at))).joinToString(" · ")
+private fun Item.sub() = listOfNotNull(note.ifBlank { body.orEmpty() }.take(80).takeIf { it.isNotBlank() && !money }).plus(meta()).plus(shortDay(dateOf(at))).joinToString(" · ")
 
 @Composable
 fun SearchScreen(back: () -> Unit, go: (String) -> Unit) {
@@ -65,10 +65,10 @@ fun SearchScreen(back: () -> Unit, go: (String) -> Unit) {
         if (live.isBlank()) "On this phone only" else "${hits.size} found",
         tools = { ToolButton(Ic.Back, "Back", back) },
     ) {
-        item { Field("Search", q, { q = it }, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), hint = "Merchant, bank, or ask: food last month") }
+        item { Field("Search", q, { q = it }, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), hint = "Merchant, message text, or ask: food last month") }
         items(answers.size) { AnswerCard(answers[it], go) }
         if (hits.isEmpty() && answers.isEmpty()) {
-            item { Quiet(if (live.isBlank()) "Type a merchant, bank or note" else "Nothing found") }
+            item { Quiet(if (live.isBlank()) "Type a merchant, bank or words from a message" else "Nothing found") }
         }
         items(hits, key = { it.id }) { i ->
             Column {

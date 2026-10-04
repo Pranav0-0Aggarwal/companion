@@ -29,6 +29,7 @@ data class Profile(
     val cal: Long? = null,
     val gtasks: Boolean = false,
     val since: String? = null,
+    @ColumnInfo(defaultValue = "365") val keep: Int = 365,
 ) {
     val name get() = call.ifBlank { first }
     val vips get() = vip.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
@@ -69,6 +70,8 @@ data class Item(
     val tpl: String? = null,
     val model: String? = null,
     val mprob: Float? = null,
+    val body: String? = null,
+    val tags: String? = null,
 )
 
 @Fts4(contentEntity = Item::class)
@@ -79,6 +82,7 @@ data class ItemFts(
     val note: String,
     val bank: String?,
     val category: String?,
+    val body: String?,
 )
 
 @Entity(
@@ -128,7 +132,7 @@ data class TemplateRule(val hash: String, val task: String, val label: String, v
 
 data class RuleRow(val hash: String, val task: String, val label: String, val count: Int, val title: String?)
 
-data class ExportRow(val sender: String?, val title: String, val note: String, val task: String, val model: String?, val prob: Float?, val chosen: String)
+data class ExportRow(val sender: String?, val title: String, val note: String, val body: String?, val task: String, val model: String?, val prob: Float?, val chosen: String)
 
 @Entity(tableName = "tasks", indices = [Index("done"), Index("remindAt")])
 data class Task(

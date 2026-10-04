@@ -49,6 +49,9 @@ interface Dao {
     @Query("DELETE FROM items WHERE kind = 'Otp' AND expires <= :now")
     suspend fun sweep(now: Long): Int
 
+    @Query("UPDATE items SET body = NULL WHERE body IS NOT NULL AND at < :before")
+    suspend fun blank(before: Long): Int
+
     @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit', 'CardSpend') ORDER BY at DESC LIMIT 3000")
     fun money(): Flow<List<Item>>
 
@@ -58,7 +61,7 @@ interface Dao {
     @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' ORDER BY due IS NULL, due, at DESC")
     suspend fun billsNow(): List<Item>
 
-    @Query("SELECT * FROM items WHERE state = 'ask' ORDER BY at DESC")
+    @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' ORDER BY at DESC")
     fun asks(): Flow<List<Item>>
 
     @Query(
@@ -116,7 +119,7 @@ interface Dao {
     fun corrections(since: Long): Flow<Int>
 
     @Query(
-        "SELECT (SELECT sender FROM links WHERE itemId = i.id ORDER BY at, id LIMIT 1) AS sender, i.title AS title, i.note AS note, " +
+        "SELECT (SELECT sender FROM links WHERE itemId = i.id ORDER BY at, id LIMIT 1) AS sender, i.title AS title, i.note AS note, i.body AS body, " +
             "c.task AS task, c.model AS model, c.modelProb AS prob, c.chosen AS chosen " +
             "FROM corrections c JOIN items i ON i.id = c.itemId ORDER BY c.at, c.id",
     )

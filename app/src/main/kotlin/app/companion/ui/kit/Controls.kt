@@ -3,6 +3,7 @@ package app.companion.ui.kit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +61,22 @@ fun Chip(text: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -
     ) {
         Text(text, style = Ty.ui(12).copy(color = if (on) p.ink else p.ink2, fontSize = 12.5.sp), maxLines = 1)
     }
+}
+
+@Composable
+fun Tag(text: String, modifier: Modifier = Modifier) {
+    val p = pal
+    Text(
+        text.uppercase(),
+        modifier.border(1.dp, p.rule, RoundedCornerShape(3.dp)).padding(horizontal = 5.dp, vertical = 1.dp),
+        style = Ty.mono(9, FontWeight.Bold).copy(color = p.ink2, letterSpacing = 0.8.sp),
+        maxLines = 1,
+    )
+}
+
+@Composable
+fun Tags(tags: List<String>, modifier: Modifier = Modifier) {
+    if (tags.isNotEmpty()) Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) { tags.take(4).forEach { Tag(it) } }
 }
 
 @Composable

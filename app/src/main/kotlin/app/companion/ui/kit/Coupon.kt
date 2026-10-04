@@ -104,7 +104,7 @@ fun Coupon(
 }
 
 @Composable
-fun Stamp(text: String, modifier: Modifier = Modifier, ok: Boolean = false, thump: Boolean = false) {
+fun Stamp(text: String, modifier: Modifier = Modifier, ok: Boolean = false, thump: Boolean = false, size: Int = 11) {
     val p = pal
     val c = if (ok) p.settled else p.stamp
     val on = animationsOn()
@@ -119,7 +119,7 @@ fun Stamp(text: String, modifier: Modifier = Modifier, ok: Boolean = false, thum
             rotationZ = if (on) -14f + 8f * k.value else -6f
         }.border(1.dp, c, RoundedCornerShape(3.dp)).padding(2.dp).border(2.dp, c, RoundedCornerShape(3.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
-        Text(text, style = Ty.mono(11, FontWeight.ExtraBold).copy(color = c, letterSpacing = 0.12.sp), maxLines = 1)
+        Text(text, style = Ty.mono(size, FontWeight.ExtraBold).copy(color = c, letterSpacing = 0.12.sp), maxLines = 1)
     }
 }
 

@@ -1,6 +1,7 @@
 package app.companion.data
 
 import androidx.room.withTransaction
+import app.companion.core.Body
 import app.companion.core.Calibration
 import app.companion.core.Event
 import app.companion.core.Fingerprint
@@ -67,6 +68,13 @@ class Repo(private val db: Db) {
 
     suspend fun sweep(now: Long = System.currentTimeMillis()) = d.sweep(now)
 
+    suspend fun retain(now: Long = System.currentTimeMillis()) = d.blank(Body.since(profileNow().keep, now))
+
+    suspend fun keep(days: Int) {
+        edit { it.copy(keep = days) }
+        retain()
+    }
+
     fun corrections(since: Long) = d.corrections(since)
 
     suspend fun exportRows() = d.exportRows()
@@ -92,7 +100,7 @@ class Repo(private val db: Db) {
     private suspend fun mark(id: Long, label: String, src: String?) = db.withTransaction {
         val i = d.item(id) ?: return@withTransaction
         correct(i, Calibration.TYPE, label, src ?: src(i))
-        d.retype(id, if (label == "alert") Kind.Alert.name else Kind.Promo.name)
+        d.retype(id, if (label == "alert") Kind.Alert.name else Kind.Spam.name)
     }
 
     private suspend fun settle(i: Item) {
@@ -164,7 +172,7 @@ class Repo(private val db: Db) {
             return null
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val item = Items.of(e, raw, v, learned).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob)
+        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob)
         val fp = item.fp()
         val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
         if (twin != null) {
@@ -173,6 +181,8 @@ class Repo(private val db: Db) {
                 last4 = twin.last4 ?: item.last4,
                 bank = twin.bank ?: item.bank,
                 merchant = twin.merchant ?: item.merchant,
+                body = twin.body ?: item.body,
+                tags = twin.tags ?: item.tags,
             )
             if (merged != twin) d.update(merged)
             return Added(merged, false)

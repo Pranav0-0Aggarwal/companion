@@ -25,6 +25,7 @@ import app.companion.data.Profile
 import app.companion.data.State
 import app.companion.data.Tally
 import app.companion.data.money
+import app.companion.data.tagList
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.Voice
@@ -80,7 +81,7 @@ fun InboxScreen(go: (String) -> Unit) {
     val tally by remember { repo.tally(today().toEpochDay()) }.collectAsStateWithLifecycle(emptyList<Tally>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
     var seg by remember { mutableStateOf(InboxSeg.All) }
-    val shown = items.filter { seg == InboxSeg.All || it.src in seg.src }
+    val shown = items.filter { seg == InboxSeg.All || it.src in seg.src || (seg == InboxSeg.Alerts && it.kind == "Spam") }
     val asks = items.count { it.state == State.ASK }
     val checks = items.count { it.state == State.CHECK }
     val sub = listOfNotNull(
@@ -101,9 +102,10 @@ fun InboxScreen(go: (String) -> Unit) {
                 PassLine(
                     i.title,
                     listOfNotNull(srcWord(i.src), stamped(i.at), i.takeIf { it.paise > 0 }?.let { money(it.paise, it.currency) }, i.note.take(80).ifBlank { null }).joinToString(" · "),
-                    trailing = { InboxStamp(i.state) },
+                    tags = i.tagList,
+                    trailing = { if (i.kind == "Spam") Stamp("SPAM") else InboxStamp(i.state) },
                     actions = when {
-                        i.kind == "Promo" -> {
+                        i.kind == "Promo" || i.kind == "Spam" -> {
                             { Btn("Not spam") { scope.launch { repo.notSpam(i.id) } } }
                         }
                         i.state == State.ASK || i.state == State.CHECK -> {

@@ -48,9 +48,9 @@ class RulesTest {
     }
 
     @Test
-    fun `a learned promo or spam folds an unsure notice`() {
+    fun `a learned promo or spam settles an unsure notice`() {
         assertEquals(Event.Promo, Rules.apply(notice, mapOf("type" to "promo")).first.event)
-        assertEquals(Event.Promo, Rules.apply(notice, mapOf("type" to "spam")).first.event)
+        assertEquals(Event.Spam, Rules.apply(notice, mapOf("type" to "spam")).first.event)
     }
 
     @Test
@@ -87,6 +87,14 @@ class RulesTest {
         val (v, c) = Rules.apply(notice, mapOf("category" to "shopping"))
         assertSame(notice, v)
         assertNull(c)
+    }
+
+    @Test
+    fun `a rule keeps the tags and category of the verdict`() {
+        val u = Verdict.Unsure(Event.Unknown, 0.4f, Guess("promo", 0.93f), listOf("spam"), Guess("food", 0.99f))
+        val (w, _) = Rules.apply(u, mapOf("type" to "promo"))
+        assertEquals(listOf("spam"), w.tags)
+        assertEquals(Guess("food", 0.99f), w.cat)
     }
 
     @Test

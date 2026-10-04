@@ -10,7 +10,8 @@ object Rules {
         var hit = false
         rules[Calibration.TYPE]?.let { t ->
             val over = when (t) {
-                "promo", "spam" -> Event.Promo
+                "promo" -> Event.Promo
+                "spam" -> Event.Spam
                 "alert" -> Event.Alert
                 else -> null
             }
@@ -22,7 +23,7 @@ object Rules {
             }
         }
         val cat = rules[Calibration.CATEGORY]?.takeIf { e is Event.Move }
-        val out = if ((hit || cat != null) && !(v is Verdict.Sure && e == v.event)) Verdict.Sure(e, 1f, v.guess) else v
+        val out = if ((hit || cat != null) && !(v is Verdict.Sure && e == v.event)) Verdict.Sure(e, 1f, v.guess, v.tags, v.cat) else v
         return out to cat
     }
 }

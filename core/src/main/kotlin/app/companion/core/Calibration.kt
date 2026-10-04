@@ -1,11 +1,24 @@
 package app.companion.core
 
+import kotlin.math.exp
+
 class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
-    class Task(val temperature: Float, val labels: List<String>, val sure: Map<String, Float>)
+    class Task(val temperature: Float, val labels: List<String>, val sure: Map<String, Float>, val act: String = SOFTMAX)
+
+    class Pick(val label: String, val prob: Float, val sure: Boolean, val tags: List<String>)
+
+    fun act(task: String) = tasks[task]?.act ?: SOFTMAX
 
     fun probs(task: String, logits: FloatArray): FloatArray {
         val t = tasks[task]?.temperature ?: 1f
-        return Decide.softmax(FloatArray(logits.size) { logits[it] / t })
+        val x = FloatArray(logits.size) { logits[it] / t }
+        return if (act(task) == SIGMOID) FloatArray(x.size) { 1f / (1f + exp(-x[it])) } else Decide.softmax(x)
+    }
+
+    fun pick(task: String, probs: Map<String, Float>): Pick? {
+        val top = probs.maxByOrNull { it.value } ?: return null
+        val tags = if (act(task) == SIGMOID) probs.entries.filter { it.key != top.key && it.value >= TAG }.sortedByDescending { it.value }.map { it.key } else emptyList()
+        return Pick(top.key, top.value, sure(task, top.key, top.value), tags)
     }
 
     fun bar(task: String, label: String) = tasks[task]?.sure?.get(label.lowercase()) ?: BAR
@@ -18,7 +31,10 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
     companion object {
         const val TYPE = "type"
         const val CATEGORY = "category"
+        const val SOFTMAX = "softmax"
+        const val SIGMOID = "sigmoid"
         const val BAR = 0.97f
+        const val TAG = 0.5f
         val DEFAULT = Calibration()
 
         fun fromJson(text: String): Calibration {
@@ -35,7 +51,9 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
                     (l as String).lowercase() to bar
                 } ?: emptyMap()
                 require(labels.isEmpty() || labels.containsAll(sure.keys))
-                (k as String) to Task(temp, labels, sure)
+                val act = (t["act"] as? String) ?: SOFTMAX
+                require(act == SOFTMAX || act == SIGMOID)
+                (k as String) to Task(temp, labels, sure, act)
             }
             return Calibration(tasks)
         }

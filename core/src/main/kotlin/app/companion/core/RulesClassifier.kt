@@ -27,6 +27,7 @@ class RulesClassifier(private val zone: ZoneId = ZoneId.systemDefault(), private
             is Event.Travel -> 0.6f
             Event.Alert -> 0.65f
             Event.Promo -> if (Misc.promoSender(r.sender) && offer.containsMatchIn(t) && !moved.containsMatchIn(t)) 0.975f else 0.8f
+            Event.Spam -> 0.6f
             Event.Personal -> 0.6f
             Event.Unknown -> 0.4f
         }

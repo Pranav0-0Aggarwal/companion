@@ -3,6 +3,7 @@ package app.companion.ai
 import app.companion.core.Query
 import app.companion.data.Item
 import app.companion.data.Repo
+import app.companion.data.cardPay
 import app.companion.data.dueDate
 import app.companion.ui.dateOf
 import app.companion.ui.shortDay
@@ -29,7 +30,7 @@ object DrillBox {
 }
 
 object Answers {
-    private fun spend(i: Item) = i.kind == "Debit" || i.kind == "CardSpend"
+    private fun spend(i: Item) = (i.kind == "Debit" || i.kind == "CardSpend") && !i.cardPay
 
     private fun guide(a: LocalDate, b: LocalDate) = if (a == b) shortDay(a) else "${shortDay(a)} to ${shortDay(b)}"
 

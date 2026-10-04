@@ -8,12 +8,12 @@ import com.google.ai.edge.litert.CompiledModel
 import com.google.ai.edge.litert.Environment
 
 class DecideRunner(private val model: CompiledModel, private val env: Environment, override val accel: String) : Runner {
-    fun logits(x: DecideInput): FloatArray {
-        val ins = model.createInputBuffers()
-        val outs = model.createOutputBuffers()
+    fun logits(x: DecideInput, sig: String? = null): FloatArray {
+        val ins = if (sig == null) model.createInputBuffers() else model.createInputBuffers(sig)
+        val outs = if (sig == null) model.createOutputBuffers() else model.createOutputBuffers(sig)
         ins[0].writeInt(x.ids)
         if (ins.size > 1) ins[1].writeInt(x.mask)
-        model.run(ins, outs)
+        if (sig == null) model.run(ins, outs) else model.run(ins, outs, sig)
         return outs[0].readFloat().also {
             ins.forEach(AutoCloseable::close)
             outs.forEach(AutoCloseable::close)

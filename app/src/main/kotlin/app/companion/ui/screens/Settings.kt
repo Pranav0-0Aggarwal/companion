@@ -65,6 +65,8 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "ai") { AiSettings() }
             item(key = "learn") { LearnSettings() }
+            item(key = "privacy") { Section("Privacy") }
+            item(key = "privacy-row") { Group { KeepRow(p.keep) { d -> scope.launch { repo.keep(d) } } } }
             item(key = "lock") { Section("Lock") }
             item(key = "lock-row") { Group { LockRow(p.lock) { v -> save { it.copy(lock = v) } } } }
             item(key = "wipe") { Section("Data") }

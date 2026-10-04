@@ -27,9 +27,11 @@ import app.companion.core.Cycle
 import app.companion.data.Item
 import app.companion.data.Link
 import app.companion.data.Profile
+import app.companion.data.cardPay
 import app.companion.data.credit
 import app.companion.data.dueDate
 import app.companion.data.money
+import app.companion.data.tagList
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.Voice
@@ -87,7 +89,9 @@ fun Item.head() = if (money) "${amt(paise, currency)} · $title" else title
 
 fun Item.picks() = if (money) listOfNotNull(category, "bills", "other").distinct().take(3) else listOf("file")
 
-fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit }.sumOf { it.paise }
+fun Item.stamp() = if (cardPay) "CARD PAYMENT" else null
+
+fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit && !it.cardPay }.sumOf { it.paise }
 
 @Composable
 fun rememberLinks(items: List<Item>): Links {
@@ -200,7 +204,7 @@ fun TodayLines(items: List<Item>, links: Links) {
             LedgerRow(
                 clock(i.at), i.title, i.srcLine(links),
                 if (i.credit) "" else plain(i.paise), if (i.credit) plain(i.paise) else "",
-                printing = fresh,
+                printing = fresh, tags = i.tagList, stamp = i.stamp(),
             )
         }
         LedgerTotal("Today", plain(items.tot(false)), plain(items.tot(true)))

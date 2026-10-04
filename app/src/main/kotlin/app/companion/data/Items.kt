@@ -1,9 +1,12 @@
 package app.companion.data
 
+import app.companion.core.Body
+import app.companion.core.CardPay
 import app.companion.core.Category
 import app.companion.core.Event
 import app.companion.core.Fingerprint
 import app.companion.core.Group
+import app.companion.core.Labels
 import app.companion.core.Raw
 import app.companion.core.Stage
 import app.companion.core.Suggest
@@ -16,6 +19,8 @@ val Item.credit get() = kind == "Credit"
 val Item.money get() = kind == "Debit" || kind == "Credit" || kind == "CardSpend"
 val Item.bill get() = kind == "Bill" || kind == "Statement"
 val Item.dueDate: LocalDate? get() = due?.let(LocalDate::ofEpochDay)
+val Item.tagList get() = tags?.split(',')?.filter { it.isNotEmpty() }.orEmpty()
+val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)
 
 fun Item.cal(): Suggestion.Cal? {
     val s = start ?: return null
@@ -44,14 +49,18 @@ fun Fingerprint.kinds() = when (group) {
 object Items {
     private val stage = mapOf(Stage.Placed to "placed", Stage.Shipped to "shipped", Stage.Out to "out for delivery", Stage.Delivered to "delivered")
 
-    fun of(e: Event, r: Raw, v: Verdict, learned: String?): Item {
+    fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE): Item {
         val unsure = v is Verdict.Unsure
-        val base = Item(kind = e.kind.name, at = r.at, src = r.source.name, title = "", state = if (unsure) State.ASK else State.SETTLED, conf = v.confidence)
+        val base = Item(
+            kind = e.kind.name, at = r.at, src = r.source.name, title = "", state = if (unsure) State.ASK else State.SETTLED, conf = v.confidence,
+            body = Body.keep(e, v.tags, r.body, r.at, since), tags = v.tags.joinToString(",").ifEmpty { null },
+        )
         return when (e) {
             is Event.Otp -> base.copy(title = e.service ?: "Code", code = e.code, expires = e.expiresAt, note = e.purpose.orEmpty())
             is Event.Move -> {
                 val credit = e is Event.Credit
-                val cat = learned ?: Category.of(e).label
+                val named = Category.of(e.merchant, credit)
+                val cat = learned ?: v.cat?.takeIf { named == Category.Other }?.let { Labels.category(it.label) }?.label ?: Category.of(e).label
                 base.copy(
                     title = e.merchant ?: e.bank?.let { "$it ${if (credit) "credit" else "debit"}" } ?: if (credit) "Credit" else "Debit",
                     paise = e.paise, currency = e.currency, last4 = e.last4, bank = e.bank, merchant = e.merchant,
@@ -84,7 +93,7 @@ object Items {
                     state = State.CHECK, start = c?.start, end = c?.end,
                 )
             }
-            Event.Unknown, Event.Alert -> base.copy(title = r.title.ifBlank { r.sender }, note = r.body.take(160))
+            Event.Unknown, Event.Alert, Event.Spam -> base.copy(title = r.title.ifBlank { r.sender }, note = r.body.take(160))
             Event.Promo -> base.copy(title = r.sender)
         }
     }

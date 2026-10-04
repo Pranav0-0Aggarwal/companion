@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.ai.Active
 import app.companion.ai.Dl
 import app.companion.ai.Have
 import app.companion.ai.Manifest as Pins
@@ -56,6 +57,7 @@ fun AiSettings() {
             Pins.all.associate { f -> f.file to Models.have(c, f).let { h -> h to if (h == Have.No) Dl.partial(c, f) else f.bytes } }
         }
     }
+    val kind by produceState("", s.mode, s.cur) { value = withContext(Dispatchers.IO) { Active.label(c) } }
     val run = s.mode == Mode.Running
     val busy = run || s.mode == Mode.Waiting
     val total = remember { Dl.total }
@@ -83,7 +85,9 @@ fun AiSettings() {
             PassLine(f.name, if (on) "$text · loaded · ${live?.accel} · about ${live?.mb} MB" else text)
             Rule()
         }
-        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Decide unloads after 30 s idle, Needle and Smart extraction after 60 s.")
+        PassLine("Message classifier", if (live?.name?.startsWith("ModernBERT") == true) "$kind · loaded · ${live?.accel} · about ${live?.mb} MB" else kind)
+        Rule()
+        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Classifier unloads after 30 s idle, Needle and Smart extraction after 60 s.")
         Rule()
         Column(Modifier.padding(16.dp)) {
             if (missing || busy) {

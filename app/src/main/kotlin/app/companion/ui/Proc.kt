@@ -12,8 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.ai.Job
-import app.companion.ai.Manifest as Pins
-import app.companion.ai.Models
+import app.companion.ai.Active
 import app.companion.ai.Processing
 import app.companion.ai.Run
 import app.companion.data.Profile
@@ -102,7 +101,7 @@ fun rememberBanner(first: Boolean, count: Int?): Pair<Boolean, () -> Unit> {
     val changed by Processing.modelChanged.collectAsStateWithLifecycle()
     val run by Processing.state.collectAsStateWithLifecycle()
     var later by remember { mutableStateOf(Proc.later(c)) }
-    val sha by produceState<String?>(null, changed, mode) { value = withContext(Dispatchers.IO) { Models.sha(c, Pins.decide) } }
+    val sha by produceState<String?>(null, changed, mode) { value = withContext(Dispatchers.IO) { Active.sha(c) } }
     val now = sha
     return (changed && !first && (count ?: 0) > 0 && run == null && now != null && now != later) to {
         if (now != null) {

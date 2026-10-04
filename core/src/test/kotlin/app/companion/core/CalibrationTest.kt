@@ -83,7 +83,7 @@ class CalibrationTest {
     @Test
     fun `bad files are rejected`() {
         val bad = listOf(
-            """{"version":2,"tasks":{}}""",
+            """{"version":3,"tasks":{}}""",
             """{"tasks":{}}""",
             """{"version":1,"tasks":{"type":{"temperature":0,"labels":[],"sure":{}}}}""",
             """{"version":1,"tasks":{"type":{"temperature":-1,"labels":[],"sure":{}}}}""",

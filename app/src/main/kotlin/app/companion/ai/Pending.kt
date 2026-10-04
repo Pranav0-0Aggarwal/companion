@@ -58,7 +58,7 @@ class Pending(
     private val queue = LinkedHashMap<Long, Todo>()
     private val claimed = LinkedHashSet<Long>()
 
-    private fun model() = listOf(Models.base(app, Manifest.decide), File(Models.custom(app), Manifest.decide.file)).any { it.isFile }
+    private fun model() = Active.bert(app) != null || listOf(Models.base(app, Manifest.decide), File(Models.custom(app), Manifest.decide.file)).any { it.isFile }
 
     suspend fun submit(id: Long, raw: Raw, state: String) {
         if (!model()) return

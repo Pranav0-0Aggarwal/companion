@@ -4,7 +4,7 @@ A private, on-device Android companion that reads SMS, app notifications and Gma
 
 ## Modules
 
-- `:core` pure Kotlin/JVM. Extraction, dedup, classifier slot, date and time slots, suggestions, query planner and validator, SentencePiece tokenizer, Decide input builder, calibration, template hashing and learned-rule logic. Tested without the Android SDK.
+- `:core` pure Kotlin/JVM. Extraction, dedup, classifier slot, date and time slots, suggestions, query planner and validator, SentencePiece tokenizer, byte-level BPE tokenizer, Decide and ModernBERT input builders, calibration, template hashing and learned-rule logic. Tested without the Android SDK.
 - `:app` Android app: Compose UI, encrypted Room database, ingest, widget, tiles, reminders, calendar.
 
 ## Build
@@ -75,7 +75,7 @@ Transport rules are unchanged: HTTPS only, from `https://github.com/Pranav0-0Agg
 
 ### Private models with adb
 
-Files in `files/models/custom/` win over the downloaded base files. List each file's SHA-256 in `custom.json` next to them; a file whose hash does not match is ignored and the base file is used. Only the six manifest names are accepted, and Settings shows them as custom.
+Files in `files/models/custom/` win over the downloaded base files. List each file's SHA-256 in `custom.json` next to them; a file whose hash does not match is ignored and the base file is used. Only the six manifest names and the private ModernBERT files below are accepted, and Settings shows them as custom.
 
 ```
 echo '{"decide.tflite": "<sha256>", "needle3.cact": "<sha256>"}' > custom.json
@@ -85,9 +85,49 @@ adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/l
 
 `run-as` only works on a debuggable build (`assembleDebug`).
 
+### Private ModernBERT classifier
+
+An optional backend replaces Decide for message type and category. Its weights are fine-tuned on private messages, so they are never bundled, downloaded or published: they reach the phone only through `files/models/custom/`, like the other private models.
+
+| File | Role |
+| --- | --- |
+| `model_spec.json` | `"arch": "modernbert-classifier"`, template, buckets, pad id, per task file, labels and signatures |
+| `type.tflite` | int8 LiteRT classifier, 9 labels: otp, expense, income, bill, delivery, alert, personal, promo, spam |
+| `category.tflite` | int8 LiteRT classifier, 10 labels: food, groceries, shopping, transport, travel, bills, entertainment, health, transfer, other |
+| `tokenizer.json` | the public `answerdotai/ModernBERT-large` tokenizer |
+| `calibration.json` | version 2 (same shape as version 1 plus `"model"`), optional |
+| `custom.json` | file name to SHA-256 for every file above except `model_spec.json` |
+
+```
+{ "arch": "modernbert-classifier", "model": "modernbert-large-sms-v1",
+  "template": "{sender}: {text}", "max_len": 128, "buckets": [32, 64, 128], "pad_id": 50283,
+  "cls_id": 50281, "sep_id": 50282, "tokenizer": "tokenizer.json",
+  "inputs": ["input_ids", "attention_mask"],
+  "tasks": {
+    "type":     { "file": "type.tflite",     "labels": ["otp", "expense", ...], "signatures": { "32": "serving_default_32", "64": "...", "128": "..." } },
+    "category": { "file": "category.tflite", "labels": ["food", "groceries", ...], "signatures": { "...": "..." } } } }
+```
+
+Only `arch`, `buckets` and `tasks.type` are required. `template` defaults to `{sender}: {text}`, `max_len` to the largest bucket, `tokenizer` to `tokenizer.json`, `inputs` to `["input_ids", "attention_mask"]` (a list that starts with the mask swaps the two buffers), and `pad_id`, `cls_id` and `sep_id` to the ids of `[PAD]`, `[CLS]` and `[SEP]` in the tokenizer. `signatures` is optional per task and maps a bucket to a LiteRT signature key. A spec without a `category` task never runs one.
+
+```
+echo '{"type.tflite": "<sha256>", "category.tflite": "<sha256>", "tokenizer.json": "<sha256>", "calibration.json": "<sha256>"}' > custom.json
+adb push model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /data/local/tmp/
+adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cd /data/local/tmp && cp model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /data/data/app.companion/files/models/custom/'
+adb shell rm /data/local/tmp/model_spec.json /data/local/tmp/type.tflite /data/local/tmp/category.tflite /data/local/tmp/tokenizer.json /data/local/tmp/calibration.json /data/local/tmp/custom.json
+```
+
+If `custom.json` already lists `decide.tflite` or `needle3.cact`, keep those entries in the same file. `run-as` only works on a debuggable build.
+
+ModernBERT is used for classification (live refine, import, reprocess) only when `model_spec.json` has the right `arch` and every file it names (the tokenizer and each task file) is listed in `custom.json` with a matching SHA-256. Otherwise the app keeps the GLiNER Decide path, and removing `model_spec.json` switches back. Settings, On-device AI shows "Message classifier: ModernBERT (custom)" or "GLiNER (base)". The processing key is a hash of the model file hashes and the active custom calibration hash, so swapping a model or its calibration shows the reprocess banner, as does switching backend.
+
+The input is `"{sender}: {text}"` (codes redacted as for Decide), byte-level BPE encoded with the pre-tokenizer regex, merge ranks and added tokens from `tokenizer.json`, then `[CLS]`, up to 126 ids, `[SEP]`, padded to the smallest bucket that fits. `:core` tests compare the ids of 215 synthetic messages with the Hugging Face `tokenizers` output for the `tokenizer.json` of `answerdotai/ModernBERT-large` at revision `45bb4654a4d5aaff24dd11d4781fa46d39bf8c13` (`tools/bert/vectors.py` regenerates them) and check its SHA-256. `type.tflite` loads on demand and `category.tflite` only when the type is expense, never both at once: the Governor's one-model rule applies, each unloads after 30 s idle, and inference runs at background thread priority on the same NPU, GPU, CPU order as Decide. A load per message type is paid when type and category alternate, so a reprocess with many expense messages is slower than with Decide.
+
+The calibration applies only if it is listed in `custom.json`, its labels equal the spec's, and its `model` equals the spec's `model` (when the spec has one); otherwise temperature 1 and a 0.97 bar apply. The model's label is Sure only when `softmax(logits / temperature)` reaches that label's `sure` bar.
+
 ## Calibration
 
-`calibration.json` is checked against its pinned SHA-256 (`Manifest.calibration`) like the other model files, and loaded only when it matches. If it is missing, unverified, malformed or its labels do not match the model, the app uses temperature 1 and a bar of 0.97 for every label.
+`calibration.json` (version 1, or version 2 with a `"model"` name for a private model) is checked against its pinned SHA-256 (`Manifest.calibration`) like the other model files, and loaded only when it matches. If it is missing, unverified, malformed or its labels do not match the model, the app uses temperature 1 and a bar of 0.97 for every label.
 
 ```
 { "version": 1,

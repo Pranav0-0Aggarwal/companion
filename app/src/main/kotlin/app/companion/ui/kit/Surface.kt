@@ -7,8 +7,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -195,6 +193,7 @@ fun PassLine(
     lead: ImageVector? = null,
     tone: Tone = Tone.Accent,
     lines: Int = 2,
+    fill: Boolean = false,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -216,12 +215,14 @@ fun PassLine(
             }
         }
         if (actions != null) {
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = actions,
-            )
+            if (fill) {
+                Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
+            } else {
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) { actions() }
+            }
         }
     }
 }

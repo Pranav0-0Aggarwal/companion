@@ -51,7 +51,7 @@ import app.companion.ui.pal
 private val PillShape = RoundedCornerShape(50)
 
 @Composable
-fun Btn(text: String, modifier: Modifier = Modifier, go: Boolean = false, enabled: Boolean = true, icon: ImageVector? = null, onClick: () -> Unit) {
+fun Btn(text: String, modifier: Modifier = Modifier, go: Boolean = false, enabled: Boolean = true, icon: ImageVector? = null, dense: Boolean = false, onClick: () -> Unit) {
     val p = pal
     val src = remember { MutableInteractionSource() }
     val bg = if (go) p.accent else p.accentBox
@@ -60,12 +60,12 @@ fun Btn(text: String, modifier: Modifier = Modifier, go: Boolean = false, enable
         modifier.minimumInteractiveComponentSize().press(src, if (go) 0.94f else 0.97f).graphicsLayer { alpha = if (enabled) 1f else 0.4f }
             .heightIn(min = 40.dp).clip(PillShape).background(bg)
             .clickable(src, androidx.compose.material3.ripple(), enabled = enabled, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = if (dense) 10.dp else 18.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         if (icon != null) Icon(icon, null, Modifier.padding(end = 8.dp).size(18.dp), tint = fg)
-        Text(text, style = Ty.ui(14).copy(color = fg), maxLines = 1)
+        Text(text, style = Ty.ui(14).copy(color = fg), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

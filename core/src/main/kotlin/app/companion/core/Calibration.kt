@@ -2,7 +2,7 @@ package app.companion.core
 
 import kotlin.math.exp
 
-class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
+class Calibration(private val tasks: Map<String, Task> = emptyMap(), val model: String? = null) {
     class Task(val temperature: Float, val labels: List<String>, val sure: Map<String, Float>, val act: String = SOFTMAX)
 
     class Pick(val label: String, val prob: Float, val sure: Boolean, val tags: List<String>)
@@ -40,7 +40,7 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
 
         fun fromJson(text: String): Calibration {
             val m = Json.obj(text)
-            require((m["version"] as? Number)?.toInt() == 1)
+            require((m["version"] as? Number)?.toInt() in 1..2)
             val tasks = (m["tasks"] as Map<*, *>).entries.associate { (k, v) ->
                 val t = v as Map<*, *>
                 val temp = (t["temperature"] as Number).toFloat()
@@ -56,7 +56,7 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap()) {
                 require(act == SOFTMAX || act == SIGMOID)
                 (k as String) to Task(temp, labels, sure, act)
             }
-            return Calibration(tasks)
+            return Calibration(tasks, m["model"] as? String)
         }
     }
 }

@@ -2,7 +2,6 @@ package app.companion.ui.screens
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -46,11 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.companion.data.Profile
-import app.companion.ingest.SmsImport
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.Voice
-import app.companion.ui.has
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Group
 import app.companion.ui.kit.Ic
@@ -126,7 +123,6 @@ fun OnboardingScreen() {
                 } else if (ready) {
                     scope.launch {
                         repo.edit { it.withAbout(about).copy(sms = src.sms, notif = src.notif, mail = src.mail, wa = src.wa, ig = src.ig, lock = src.lock, done = true) }
-                        if (src.sms && c.has(Manifest.permission.READ_SMS) && c.has(Manifest.permission.RECEIVE_SMS)) SmsImport.enqueue(c)
                     }
                 }
             }

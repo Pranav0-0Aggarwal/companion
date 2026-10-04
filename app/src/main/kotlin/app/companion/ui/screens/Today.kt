@@ -48,6 +48,7 @@ fun TodayScreen(go: (String) -> Unit) {
             ToolButton(Ic.Settings, "Settings") { go("settings") }
         },
     ) {
+        item(key = "proc", contentType = "proc") { ProcessSlot() }
         item(key = "ask", contentType = "ask") { AskPill(Modifier.padding(bottom = 4.dp)) }
         itemsIndexed(live, key = { _, o -> "o${o.id}" }, contentType = { _, _ -> "code" }) { _, o ->
             app.companion.ui.kit.CodeCard(o, { scope.launch { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))

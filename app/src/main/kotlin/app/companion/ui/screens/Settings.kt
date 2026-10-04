@@ -14,9 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.companion.core.Source
 import app.companion.data.Profile
-import app.companion.ingest.SmsImport
 import app.companion.sl
 import app.companion.ui.Recent
 import app.companion.ui.Ty
@@ -52,10 +50,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "sources") { Section("Sources") }
             item(key = "sources-list") {
                 Group {
-                    Sources(p::on, { s, v ->
-                        save { it.toggled(s, v) }
-                        if (s == Source.Sms && v && !p.imported) SmsImport.enqueue(c)
-                    }, sync = true)
+                    Sources(p::on, { s, v -> save { it.toggled(s, v) } }, sync = true)
                 }
             }
             item(key = "vip") { Section("Important contacts") }
@@ -64,6 +59,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "reads-list") { Group { Reads() } }
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "ai") { AiSettings() }
+            item(key = "proc") { ProcessingSection() }
             item(key = "learn") { LearnSettings() }
             item(key = "privacy") { Section("Privacy") }
             item(key = "privacy-row") {

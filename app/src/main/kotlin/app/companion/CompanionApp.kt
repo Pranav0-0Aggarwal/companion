@@ -10,6 +10,7 @@ import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
 import app.companion.ai.NeedlePlanner
 import app.companion.ai.Processing
+import app.companion.ui.Proc
 import app.companion.core.Classifier
 import app.companion.core.DecideClassifier
 import app.companion.core.Planner
@@ -55,6 +56,7 @@ class CompanionApp : Application() {
         if (Process.isIsolated()) return
         Live.boot(this)
         Processing.boot(this)
+        Proc.watch(this)
         Export.sweep(this)
     }
 

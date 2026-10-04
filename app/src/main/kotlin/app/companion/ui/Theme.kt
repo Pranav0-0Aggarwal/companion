@@ -1,10 +1,13 @@
 package app.companion.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -12,43 +15,48 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.companion.ui.kit.LocalMotion
 
 @Immutable
 class Pal(
     val dark: Boolean,
-    val cover: Color,
-    val cover2: Color,
-    val coverInk: Color,
-    val coverMute: Color,
-    val page: Color,
+    val bg: Color,
     val card: Color,
-    val rule: Color,
-    val ruleSoft: Color,
+    val raised: Color,
     val ink: Color,
     val ink2: Color,
-    val stamp: Color,
-    val settled: Color,
-    val foil: Color,
-    val foil2: Color,
-    val chip: Color,
+    val ink3: Color,
+    val line: Color,
     val accent: Color,
+    val onAccent: Color,
+    val accentBox: Color,
+    val onAccentBox: Color,
+    val red: Color,
+    val redBox: Color,
+    val green: Color,
+    val greenBox: Color,
+    val amber: Color,
+    val bar: Color,
 )
 
 val Light = Pal(
     dark = false,
-    cover = Color(0xFF1F3A68), cover2 = Color(0xFF2A4A80), coverInk = Color(0xFFE8EEF8), coverMute = Color(0xFFA9B8D2),
-    page = Color(0xFFFAFAF7), card = Color.White, rule = Color(0xFF9CC7D6), ruleSoft = Color(0xFFD7E9EF),
-    ink = Color(0xFF2A2A2A), ink2 = Color(0xFF5E6470), stamp = Color(0xFFB3261E), settled = Color(0xFF2E6B4F),
-    foil = Color(0xFFD9B95F), foil2 = Color(0xFFE9D28A), chip = Color(0xFFDCE5F3), accent = Color(0xFF1F3A68),
+    bg = Color(0xFFF4F5F7), card = Color.White, raised = Color(0xFFF0F1F4),
+    ink = Color(0xFF111317), ink2 = Color(0xFF5D626B), ink3 = Color(0xFF8A8F98), line = Color(0xFFE6E8EC),
+    accent = Color(0xFF2A62DB), onAccent = Color.White, accentBox = Color(0xFFE4ECFD), onAccentBox = Color(0xFF1846B0),
+    red = Color(0xFFC0302A), redBox = Color(0xFFFCE9E7), green = Color(0xFF17784A), greenBox = Color(0xFFE2F3EA), amber = Color(0xFFB25E00),
+    bar = Color(0xF2FFFFFF),
 )
 
 val Night = Pal(
     dark = true,
-    cover = Color(0xFF0C1424), cover2 = Color(0xFF18233A), coverInk = Color(0xFFE8EEF8), coverMute = Color(0xFF8FA0BC),
-    page = Color(0xFF10192B), card = Color(0xFF16223A), rule = Color(0xFF36557A), ruleSoft = Color(0xFF1D2B44),
-    ink = Color(0xFFDCE3EE), ink2 = Color(0xFF8FA0BC), stamp = Color(0xFFE5675F), settled = Color(0xFF7FD1A8),
-    foil = Color(0xFFD9B95F), foil2 = Color(0xFFE9D28A), chip = Color(0xFF22355A), accent = Color(0xFFB7C9EA),
+    bg = Color.Black, card = Color(0xFF17171A), raised = Color(0xFF232327),
+    ink = Color(0xFFF2F3F5), ink2 = Color(0xFFA3A8B0), ink3 = Color(0xFF6E737B), line = Color(0xFF2A2B30),
+    accent = Color(0xFF7EA6FF), onAccent = Color(0xFF0B1A3A), accentBox = Color(0xFF1D2A47), onAccentBox = Color(0xFFC9D8FF),
+    red = Color(0xFFFF6B61), redBox = Color(0xFF3A1614), green = Color(0xFF4CC38A), greenBox = Color(0xFF10301F), amber = Color(0xFFFFB547),
+    bar = Color(0xF21E1E22),
 )
 
 val LocalPal = staticCompositionLocalOf { Light }
@@ -57,30 +65,34 @@ val pal: Pal
     @Composable @ReadOnlyComposable get() = LocalPal.current
 
 object Ty {
-    fun mono(size: Int, weight: FontWeight = FontWeight.Medium) =
-        TextStyle(fontFamily = FontFamily.Monospace, fontSize = size.sp, fontWeight = weight, fontFeatureSettings = "tnum")
-
     fun ui(size: Int, weight: FontWeight = FontWeight.SemiBold) =
-        TextStyle(fontFamily = FontFamily.SansSerif, fontSize = size.sp, fontWeight = weight)
+        TextStyle(fontFamily = FontFamily.Default, fontSize = size.sp, fontWeight = weight)
+
+    fun mono(size: Int, weight: FontWeight = FontWeight.Medium) =
+        TextStyle(fontFamily = FontFamily.Default, fontSize = size.sp, fontWeight = weight, fontFeatureSettings = "tnum, lnum")
 }
+
+private val shapes = Shapes(
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(28.dp),
+)
 
 @Composable
 fun CompanionTheme(content: @Composable () -> Unit) {
     val p = if (isSystemInDarkTheme()) Night else Light
-    val scheme = if (p.dark) {
-        darkColorScheme(
-            primary = p.accent, onPrimary = p.cover, background = p.page, onBackground = p.ink, surface = p.card,
-            onSurface = p.ink, surfaceVariant = p.card, onSurfaceVariant = p.ink2, outline = p.rule, error = p.stamp,
-            surfaceContainer = p.card, surfaceContainerHigh = p.card, surfaceContainerLow = p.page,
-        )
-    } else {
-        lightColorScheme(
-            primary = p.accent, onPrimary = Color.White, background = p.page, onBackground = p.ink, surface = p.card,
-            onSurface = p.ink, surfaceVariant = p.card, onSurfaceVariant = p.ink2, outline = p.rule, error = p.stamp,
-            surfaceContainer = p.card, surfaceContainerHigh = p.card, surfaceContainerLow = p.page,
-        )
-    }
-    androidx.compose.runtime.CompositionLocalProvider(LocalPal provides p) {
-        MaterialTheme(colorScheme = scheme, content = content)
+    val base = if (p.dark) darkColorScheme() else lightColorScheme()
+    val scheme = base.copy(
+        primary = p.accent, onPrimary = p.onAccent, primaryContainer = p.accentBox, onPrimaryContainer = p.onAccentBox,
+        secondary = p.accent, onSecondary = p.onAccent, secondaryContainer = p.accentBox, onSecondaryContainer = p.onAccentBox,
+        background = p.bg, onBackground = p.ink, surface = p.card, onSurface = p.ink, surfaceVariant = p.raised, onSurfaceVariant = p.ink2,
+        surfaceContainerLowest = p.card, surfaceContainerLow = p.card, surfaceContainer = p.card, surfaceContainerHigh = p.card,
+        surfaceContainerHighest = p.raised, surfaceBright = p.card, surfaceDim = p.bg,
+        outline = p.ink3, outlineVariant = p.line, error = p.red, onError = p.onAccent, errorContainer = p.redBox, onErrorContainer = p.red,
+        scrim = Color.Black,
+    )
+    CompositionLocalProvider(LocalPal provides p, LocalMotion provides animationsOn()) {
+        MaterialTheme(colorScheme = scheme, shapes = shapes, content = content)
     }
 }

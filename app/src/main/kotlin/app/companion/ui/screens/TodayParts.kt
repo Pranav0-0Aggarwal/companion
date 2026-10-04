@@ -1,25 +1,17 @@
 package app.companion.ui.screens
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,40 +23,41 @@ import app.companion.data.cardPay
 import app.companion.data.credit
 import app.companion.data.dueDate
 import app.companion.data.money
-import app.companion.data.tagList
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.Voice
-import app.companion.ui.clock
-import app.companion.ui.codeText
-import app.companion.ui.copy
 import app.companion.ui.dateOf
+import app.companion.ui.dayLabel
 import app.companion.ui.daysTo
 import app.companion.ui.inDays
 import app.companion.ui.kit.Btn
-import app.companion.ui.kit.Coupon
-import app.companion.ui.kit.LedgerHead
-import app.companion.ui.kit.LedgerRow
-import app.companion.ui.kit.LedgerTotal
+import app.companion.ui.kit.Ic
+import app.companion.ui.kit.Ink
 import app.companion.ui.kit.PassLine
-import app.companion.ui.kit.Stamp
-import app.companion.ui.left
+import app.companion.ui.kit.Roll
+import app.companion.ui.kit.StateStamp
+import app.companion.ui.kit.SwipeAccept
+import app.companion.ui.kit.Tone
+import app.companion.ui.kit.motion
+import app.companion.ui.kit.rememberHaptic
 import app.companion.ui.pal
-import app.companion.ui.plain
 import app.companion.ui.rememberNow
 import app.companion.ui.shortDay
 import java.time.LocalDate
+import java.time.LocalTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import app.companion.ui.money as amt
 
-private const val CRED = "com.dreamplug.androidapp"
+const val CRED = "com.dreamplug.androidapp"
 private val names = mapOf("Sms" to "SMS", "Notif" to "app", "Mail" to "mail", "Wa" to "WhatsApp", "Ig" to "Instagram")
 
 typealias Links = Map<Long, List<Link>>
 
 class Day(
     val name: String,
+    val hello: String,
     val sub: String,
     val today: LocalDate,
     val otps: List<Item>,
@@ -115,98 +108,100 @@ fun rememberDay(): Day {
         (bills.filter { b -> b.dueDate?.let { daysTo(it, day) <= 7 } == true } + asks).distinctBy { it.id }
     }
     val printed = remember(money, day) { money.filter { dateOf(it.at) == day }.reversed() }
-    val links = rememberLinks(need.take(3) + asks.take(1) + printed)
+    val links = rememberLinks(need.take(5) + printed)
     val payday = prof.payDay?.let { "payday ${inDays(daysTo(Cycle.payday(it, day), day))}" }
-    val sub = listOfNotNull(Voice.greet(prof.name, need.size), payday).joinToString(" · ")
-    return Day(prof.name, sub, day, otps, asks, need, bills, printed, links)
+    val sub = listOfNotNull(dayLabel(day), Voice.need(need.size).cap(), payday).joinToString(" · ")
+    val hour = LocalTime.now(app.companion.ui.zone()).hour
+    return Day(prof.name, Voice.hello(prof.name, hour), sub, day, otps, asks, need, bills, printed, links)
 }
 
 @Composable
-fun Quiet(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier.padding(horizontal = 20.dp, vertical = 6.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = pal.ink2))
+fun NeedRow(i: Item, d: Day, onPaid: () -> Unit, onFile: (String) -> Unit) {
+    if (i.bill) BillNeed(i, d.today, onPaid) else AskNeed(i, d.links, onFile)
 }
 
+private val Item.bill get() = kind == "Bill" || kind == "Statement"
+
 @Composable
-fun Otps(items: List<Item>) {
-    val ctx = LocalContext.current
-    val repo = ctx.sl.repo
+private fun rememberSettle(act: () -> Unit): Pair<Boolean, () -> Unit> {
     val scope = rememberCoroutineScope()
-    val now by rememberNow()
-    var copied by remember { mutableLongStateOf(-1L) }
-    val scroll = rememberScrollState()
-    val live = items.filter { (it.expires ?: 0) > now }
-    if (live.isEmpty()) return
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val w = if (live.size <= 2) (maxWidth - 32.dp - 10.dp * (live.size - 1)) / live.size else 176.dp
-        Row(
-            Modifier.horizontalScroll(scroll).padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            live.forEach { o ->
-                val end = o.expires ?: 0
-                Column {
-                    Coupon(
-                        service = o.title,
-                        code = codeText(o.code.orEmpty()),
-                        meta = if (copied == o.id) "copied" else "${o.note.ifBlank { "code" }} · tap to copy",
-                        timeLeft = "${left(end - now)} LEFT",
-                        remaining = (end - now).toFloat() / (end - o.at).coerceAtLeast(1),
-                        modifier = Modifier.width(w),
-                    ) {
-                        copy(ctx, o.code.orEmpty())
-                        copied = o.id
-                    }
-                    Text(
-                        "Not an OTP",
-                        Modifier.padding(top = 6.dp, start = 4.dp).clickable(role = Role.Button) { scope.launch { repo.notOtp(o.id) } },
-                        style = Ty.mono(11).copy(color = pal.ink2),
-                    )
-                }
+    val haptic = rememberHaptic()
+    val on = motion()
+    var done by remember { mutableStateOf(false) }
+    return done to {
+        if (!done) {
+            done = true
+            haptic(HapticFeedbackType.Confirm)
+            scope.launch {
+                delay(if (on) 560 else 120)
+                act()
             }
         }
     }
 }
 
 @Composable
-fun AskLine(i: Item, links: Links, file: (String) -> Unit) {
-    PassLine(i.head(), i.srcLine(links), trailing = { Stamp("ASK", thump = true) }, actions = {
-        i.picks().forEach { c -> Btn(c.cap()) { file(c) } }
-    })
+fun AskNeed(i: Item, links: Links, file: (String) -> Unit) {
+    var pick by remember { mutableStateOf<String?>(null) }
+    val (done, settle) = rememberSettle { pick?.let(file) }
+    val choose = { c: String ->
+        pick = c
+        settle()
+    }
+    val first = i.picks().first()
+    SwipeAccept("File as ${first.cap()}", { choose(first) }, enabled = !done) {
+        PassLine(
+            i.head(), i.srcLine(links), lead = Ic.of(i.category), tone = Tone.Accent,
+            trailing = { StateStamp(if (done) "SETTLED" else "ASK", if (done) Ink.Green else Ink.Red) },
+            actions = { if (!done) i.picks().forEachIndexed { k, c -> Btn(c.cap(), go = k == 0) { choose(c) } } },
+        )
+    }
 }
 
 @Composable
-fun BillLine(i: Item, today: LocalDate, pay: () -> Unit) {
+fun BillNeed(i: Item, today: LocalDate, pay: () -> Unit) {
     val ctx = LocalContext.current
     val cred = remember { ctx.packageManager.getLaunchIntentForPackage(CRED) }
     val due = i.dueDate
+    val days = due?.let { daysTo(it, today) }
+    val (done, settle) = rememberSettle(pay)
     val sub = listOfNotNull(
         i.paise.takeIf { it > 0 }?.let { amt(it, i.currency) },
         i.minPaise?.let { "min ${amt(it, i.currency)}" },
-        due?.let { inDays(daysTo(it, today)) },
+        days?.let { inDays(it) },
     ).joinToString(" · ")
-    PassLine(i.title, sub, trailing = { if (due != null) Stamp("DUE ${shortDay(due).uppercase()}") }, actions = {
-        if (cred != null) Btn("Pay with CRED", go = true) { ctx.startActivity(cred) }
-        Btn("Mark paid", onClick = pay)
-    })
+    PassLine(
+        i.title, sub, lead = Ic.Bolt, tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent,
+        trailing = {
+            val label = when {
+                done -> "PAID"
+                days != null && days < 0 -> "OVERDUE"
+                due != null -> "DUE ${shortDay(due).uppercase()}"
+                else -> "DUE"
+            }
+            StateStamp(label, if (done) Ink.Green else Ink.Red)
+        },
+        actions = {
+            if (!done) {
+                Btn("Mark paid", go = true, onClick = settle)
+                if (cred != null) Btn("Pay with CRED") { ctx.startActivity(cred) }
+            }
+        },
+    )
 }
 
 @Composable
-fun TodayLines(items: List<Item>, links: Links) {
-    val repo = LocalContext.current.sl.repo
-    if (items.isEmpty()) {
-        Quiet("Nothing printed yet today")
-        return
-    }
-    Column {
-        LedgerHead("TIME")
-        items.forEach { i ->
-            val fresh = repo.fresh[i.id]?.let { System.currentTimeMillis() - it < 30_000 } == true
-            LedgerRow(
-                clock(i.at), i.title, i.srcLine(links),
-                if (i.credit) "" else plain(i.paise), if (i.credit) plain(i.paise) else "",
-                printing = fresh, tags = i.tagList, stamp = i.stamp(),
-            )
-        }
-        LedgerTotal("Today", plain(items.tot(false)), plain(items.tot(true)))
+fun SpendHead(items: List<Item>, modifier: Modifier = Modifier) {
+    val p = pal
+    val spent = items.tot(false)
+    val inn = items.tot(true)
+    val n = items.count { !it.credit && !it.cardPay }
+    Column(modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Roll(amt(spent, "INR"), Ty.mono(40, FontWeight.Bold).copy(color = p.ink))
+        val parts = listOfNotNull(
+            if (n == 0) "No payments yet" else "$n payment${if (n == 1) "" else "s"}",
+            if (inn > 0) "${amt(inn, "INR")} in" else null,
+        )
+        Text(parts.joinToString(" · "), Modifier.padding(top = 4.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
     }
 }

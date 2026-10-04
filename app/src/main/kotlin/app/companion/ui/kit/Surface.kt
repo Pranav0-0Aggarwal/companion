@@ -1,5 +1,10 @@
 package app.companion.ui.kit
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,89 +18,66 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import app.companion.ui.Pal
 import app.companion.ui.Ty
+import app.companion.ui.animationsOn
 import app.companion.ui.pal
 
-fun Modifier.cloth(p: Pal): Modifier = drawBehind {
-    drawRect(p.cover)
-    val step = 3.dp.toPx()
-    val light = Color.White.copy(alpha = 0.035f)
-    val dark = Color.Black.copy(alpha = 0.08f)
-    var y = 0f
-    while (y < size.height) {
-        drawLine(light, Offset(0f, y), Offset(size.width, y), 1f)
-        y += step
-    }
-    var x = 0f
-    while (x < size.width) {
-        drawLine(dark, Offset(x, 0f), Offset(x, size.height), 1f)
-        x += step
-    }
-}
+val CardShape = RoundedCornerShape(26.dp)
 
-@Stable
-class Collapse(private val max: Float, private val min: Float) {
-    var h by mutableFloatStateOf(max)
-    val t get() = ((max - h) / (max - min)).coerceIn(0f, 1f)
+fun Modifier.lift(p: Pal, shape: Shape = CardShape): Modifier =
+    if (p.dark) this else shadow(10.dp, shape, ambientColor = Color.Black.copy(alpha = 0.05f), spotColor = Color.Black.copy(alpha = 0.10f))
 
-    val conn = object : NestedScrollConnection {
-        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (available.y >= 0f || h <= min) return Offset.Zero
-            val d = maxOf(available.y, min - h)
-            h += d
-            return Offset(0f, d)
-        }
-
-        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (available.y <= 0f || h >= max) return Offset.Zero
-            val d = minOf(available.y, max - h)
-            h += d
-            return Offset(0f, d)
-        }
-    }
+fun Modifier.part(p: Pal, first: Boolean, last: Boolean): Modifier {
+    val r = 26.dp
+    val s = RoundedCornerShape(if (first) r else 0.dp, if (first) r else 0.dp, if (last) r else 0.dp, if (last) r else 0.dp)
+    return padding(horizontal = 16.dp).fillMaxWidth().clip(s).background(p.card)
 }
 
 @Composable
 fun ToolButton(icon: ImageVector, desc: String, onClick: () -> Unit) {
-    val p = pal
     Box(
-        Modifier.size(44.dp).background(Color.White.copy(alpha = 0.14f), CircleShape).clickable(role = Role.Button, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = desc, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, desc, Modifier.size(22.dp), tint = p.coverInk)
+        Icon(icon, desc, Modifier.size(24.dp), tint = pal.ink)
     }
 }
 
@@ -104,63 +86,93 @@ fun Screen(
     title: String,
     sub: String,
     modifier: Modifier = Modifier,
+    bar: String = title,
+    back: (() -> Unit)? = null,
+    tall: Boolean = true,
+    nav: Boolean = true,
+    state: LazyListState = rememberLazyListState(),
     tools: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
     val p = pal
-    val d = LocalDensity.current
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val maxH = with(d) { (top + 196.dp).toPx() }
-    val minH = with(d) { (top + 64.dp).toPx() }
-    val c = remember(maxH, minH) { Collapse(maxH, minH) }
-    Column(modifier.fillMaxSize().background(p.page).nestedScroll(c.conn)) {
-        Box(Modifier.fillMaxWidth().height(with(d) { c.h.toDp() }).cloth(p)) {
-            Row(
-                Modifier.align(Alignment.TopEnd).padding(top = top + lerp(6.dp, 10.dp, c.t), end = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                content = tools,
-            )
-            Column(Modifier.align(Alignment.BottomStart).padding(start = 22.dp, bottom = 18.dp, end = 22.dp)) {
-                Text(
-                    title,
-                    style = Ty.ui(0, FontWeight.ExtraBold).copy(
-                        fontSize = (40f - 16f * c.t).sp,
-                        color = p.foil,
-                        letterSpacing = (-0.02).sp,
-                        shadow = Shadow(Color.Black.copy(alpha = 0.45f), Offset(0f, -1f), 0f),
-                    ),
-                )
-                if (c.t < 0.6f) {
-                    Text(
-                        sub,
-                        Modifier.padding(top = 6.dp).graphicsLayer { alpha = 1f - c.t * 1.6f },
-                        style = Ty.ui(14, FontWeight.Medium).copy(color = p.coverMute),
-                    )
-                }
-            }
+    val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val head = (LocalConfiguration.current.screenHeightDp * if (tall) 0.30f else 0.22f).dp.coerceIn(150.dp, 300.dp)
+    val span = with(LocalDensity.current) { (head - 56.dp).toPx() }
+    val t = remember(state, span) {
+        derivedStateOf { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / span).coerceIn(0f, 1f) }
+    }
+    Box(modifier.fillMaxSize().background(p.bg)) {
+        LazyColumn(Modifier.fillMaxSize(), state, PaddingValues(bottom = bottom + if (nav) 112.dp else 32.dp)) {
+            item(key = "head", contentType = "head") { Head(title, sub, top, head, t) }
+            content()
         }
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 112.dp), content = content)
+        Row(
+            Modifier.fillMaxWidth().drawBehind { drawRect(p.bg.copy(alpha = t.value)) }.padding(top = top).height(56.dp).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (back != null) ToolButton(Ic.Back, "Back", back)
+            Text(
+                bar,
+                Modifier.weight(1f).padding(start = if (back == null) 20.dp else 4.dp).graphicsLayer { alpha = ((t.value - 0.55f) / 0.45f).coerceIn(0f, 1f) }
+                    .clearAndSetSemantics {},
+                style = Ty.ui(20, FontWeight.Bold).copy(color = p.ink),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            tools()
+        }
+    }
+}
+
+@Composable
+private fun Head(title: String, sub: String, top: Dp, head: Dp, t: State<Float>) {
+    val p = pal
+    Column(
+        Modifier.fillMaxWidth().heightIn(min = top + head).padding(start = 24.dp, end = 24.dp, top = top + 56.dp, bottom = 22.dp)
+            .graphicsLayer { alpha = 1f - t.value },
+        verticalArrangement = Arrangement.Bottom,
+    ) {
+        Text(title, Modifier.semantics { heading() }, style = Ty.ui(32, FontWeight.Bold).copy(color = p.ink, lineHeight = 38.sp, letterSpacing = (-0.4).sp))
+        if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 10.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2, lineHeight = 20.sp))
     }
 }
 
 @Composable
 fun Section(title: String, action: String? = null, onAction: () -> Unit = {}) {
     val p = pal
-    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.Bottom) {
-        Text(title, Modifier.weight(1f), style = Ty.ui(15, FontWeight.Bold).copy(color = p.ink))
-        if (action != null) {
-            Text(action, Modifier.clickable(role = Role.Button, onClick = onAction), style = Ty.ui(13).copy(color = p.accent))
-        }
+    Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 12.dp, top = 20.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f).padding(vertical = 12.dp).semantics { heading() }, style = Ty.ui(14).copy(color = p.ink2))
+        if (action != null) TextBtn(action, onClick = onAction)
     }
 }
 
 @Composable
-fun Group(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun Group(modifier: Modifier = Modifier, raised: Boolean = false, content: @Composable () -> Unit) {
     val p = pal
     Column(
-        modifier.padding(horizontal = 12.dp).fillMaxWidth()
-            .background(p.card, RoundedCornerShape(22.dp)),
+        modifier.padding(horizontal = 16.dp).fillMaxWidth().let { if (raised) it.lift(p) else it }.clip(CardShape).background(p.card),
     ) { content() }
+}
+
+@Composable
+fun Lead(icon: ImageVector, tone: Tone = Tone.Accent) {
+    val p = pal
+    val (bg, fg) = tone.colors(p)
+    Box(Modifier.size(40.dp).background(bg, CircleShape), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(20.dp), tint = fg)
+    }
+}
+
+enum class Tone {
+    Accent, Red, Green, Plain;
+
+    fun colors(p: Pal) = when (this) {
+        Accent -> p.accentBox to p.onAccentBox
+        Red -> p.redBox to p.red
+        Green -> p.greenBox to p.green
+        Plain -> p.raised to p.ink2
+    }
 }
 
 @Composable
@@ -169,24 +181,78 @@ fun PassLine(
     sub: String,
     modifier: Modifier = Modifier,
     tags: List<String> = emptyList(),
+    lead: ImageVector? = null,
+    tone: Tone = Tone.Accent,
+    onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val p = pal
-    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
+        Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (lead != null) {
+                Lead(lead, tone)
+                Box(Modifier.size(14.dp))
+            }
             Column(Modifier.weight(1f)) {
-                Text(title, style = Ty.ui(14).copy(color = p.ink))
-                Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(12).copy(color = p.ink2))
+                Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Tags(tags, Modifier.padding(top = 6.dp))
             }
-            if (trailing != null) trailing()
+            if (trailing != null) {
+                Box(Modifier.padding(start = 12.dp)) { trailing() }
+            }
         }
-        if (actions != null) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
+        if (actions != null) {
+            FlowActions(Modifier.padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp), actions)
+        }
     }
 }
 
 @Composable
-fun Rule() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(pal.ruleSoft))
+private fun FlowActions(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Row(content = content) }
+}
+
+@Composable
+fun Rule(start: Dp = 18.dp) {
+    Box(Modifier.fillMaxWidth().padding(start = start, end = 18.dp).height(1.dp).background(pal.line))
+}
+
+internal fun LazyListScope.empty(icon: ImageVector, title: String, body: String, action: (@Composable () -> Unit)? = null) {
+    item(key = "empty", contentType = "empty") { Empty(icon, title, body, action = action) }
+}
+
+@Composable
+fun Empty(icon: ImageVector, title: String, body: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
+    val p = pal
+    Column(modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(72.dp).background(p.card, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, null, Modifier.size(30.dp), tint = p.ink2)
+        }
+        Text(title, Modifier.padding(top = 18.dp).semantics { heading() }, style = Ty.ui(18, FontWeight.Bold).copy(color = p.ink))
+        Text(body, Modifier.padding(top = 6.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2, lineHeight = 20.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center))
+        if (action != null) Box(Modifier.padding(top = 16.dp)) { action() }
+    }
+}
+
+@Composable
+fun Skel(modifier: Modifier = Modifier, lines: Int = 3) {
+    val p = pal
+    val on = animationsOn()
+    val a = if (on) {
+        rememberInfiniteTransition(label = "skel").animateFloat(0.45f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "a")
+    } else {
+        null
+    }
+    Column(modifier.padding(18.dp).graphicsLayer { alpha = a?.value ?: 0.7f }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.fillMaxWidth(0.4f).height(14.dp).background(p.raised, RoundedCornerShape(7.dp)))
+        Box(Modifier.fillMaxWidth(0.6f).height(34.dp).background(p.raised, RoundedCornerShape(10.dp)))
+        repeat(lines) { Box(Modifier.fillMaxWidth(if (it % 2 == 0) 0.9f else 0.7f).height(12.dp).background(p.raised, RoundedCornerShape(6.dp))) }
+    }
+}
+
+@Composable
+fun Quiet(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier.padding(horizontal = 28.dp, vertical = 8.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = pal.ink2))
 }

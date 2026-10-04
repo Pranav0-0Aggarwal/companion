@@ -1,17 +1,17 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -73,7 +73,7 @@ fun LearnSettings() {
                 }
             },
         )
-        note?.let { Text(it, Modifier.padding(start = 16.dp, bottom = 12.dp), style = Ty.mono(11).copy(color = pal.ink2)) }
+        note?.let { Text(it, Modifier.padding(start = 16.dp, bottom = 12.dp), style = Ty.ui(13, androidx.compose.ui.text.font.FontWeight.Normal).copy(color = pal.ink2)) }
     }
     Section("Learned rules")
     Group {

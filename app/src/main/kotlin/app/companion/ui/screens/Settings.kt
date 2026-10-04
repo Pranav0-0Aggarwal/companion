@@ -1,30 +1,31 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Source
-import app.companion.ingest.SmsImport
 import app.companion.data.Profile
+import app.companion.ingest.SmsImport
 import app.companion.sl
+import app.companion.ui.Recent
 import app.companion.ui.Ty
-import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Group
 import app.companion.ui.kit.Ic
+import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Section
-import app.companion.ui.kit.ToolButton
+import app.companion.ui.kit.Tone
 import app.companion.ui.pal
 import app.companion.ui.rememberTasksLink
 import kotlinx.coroutines.launch
@@ -45,10 +46,9 @@ fun SettingsScreen(back: () -> Unit) {
     val tasks = rememberTasksLink {}
     var wipe by remember { mutableStateOf(false) }
     val save: ((Profile) -> Profile) -> Unit = { f -> scope.launch { repo.edit(f) } }
-    Screen("Settings", "Everything stays on this phone", tools = { ToolButton(Ic.Back, "Back", back) }) {
+    Screen("Settings", "Everything stays on this phone", back = back, nav = false, tall = false) {
         profile?.let { p ->
-            item(key = "profile") { Section("Profile") }
-            item(key = "profile-form") { ProfileForm(p) { a -> save { it.withAbout(a) } } }
+            item(key = "profile") { ProfileCard(p) { a -> save { it.withAbout(a) } } }
             item(key = "sources") { Section("Sources") }
             item(key = "sources-list") {
                 Group {
@@ -66,24 +66,38 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "ai") { AiSettings() }
             item(key = "learn") { LearnSettings() }
             item(key = "privacy") { Section("Privacy") }
-            item(key = "privacy-row") { Group { KeepRow(p.keep) { d -> scope.launch { repo.keep(d) } } } }
-            item(key = "lock") { Section("Lock") }
-            item(key = "lock-row") { Group { LockRow(p.lock) { v -> save { it.copy(lock = v) } } } }
+            item(key = "privacy-row") {
+                Group {
+                    KeepRow(p.keep) { d -> scope.launch { repo.keep(d) } }
+                    LockRow(p.lock) { v -> save { it.copy(lock = v) } }
+                }
+            }
             item(key = "wipe") { Section("Data") }
-            item(key = "wipe-btn") { Btn("Wipe all data", Modifier.padding(horizontal = 20.dp), go = true) { wipe = true } }
+            item(key = "wipe-row") {
+                Group { PassLine("Wipe all data", "Deletes every item, card and setting on this phone", lead = Ic.Trash, tone = Tone.Red, onClick = { wipe = true }) }
+            }
         }
     }
     if (wipe) {
-        PassConfirm("Wipe all data?", "Every item, card and setting on this phone is deleted. This can't be undone.", "Wipe", { c.sl.wipe() }, { wipe = false })
+        PassConfirm(
+            "Wipe all data?",
+            "Every item, card and setting on this phone is deleted. This can't be undone.",
+            "Wipe",
+            {
+                Recent.clear(c)
+                c.sl.wipe()
+            },
+            { wipe = false },
+        )
     }
 }
 
 @Composable
 private fun Reads() {
     val p = pal
-    Column(Modifier.padding(16.dp)) {
+    Column(Modifier.padding(18.dp)) {
         reads.forEachIndexed { i, line ->
-            Text(line, Modifier.padding(top = if (i == 0) 0.dp else 8.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+            Text(line, Modifier.padding(top = if (i == 0) 0.dp else 8.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))
         }
     }
 }

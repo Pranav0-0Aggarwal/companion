@@ -1,5 +1,7 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.Manifest
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -9,13 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -103,17 +103,17 @@ fun NextUp(go: (String) -> Unit) {
             PassLine(
                 title = n.title,
                 sub = Voice.addr(p.name, if (mins < 60) "in ${mins.coerceAtLeast(0)} min" else "at ${clock(n.remindAt ?: now)}"),
-                trailing = { if (mins < 60) Stamp("SOON") },
+                trailing = { if (mins < 60) Stamp("SOON", ink = app.companion.ui.kit.Ink.Amber) },
                 actions = { Btn("Done") { scope.launch { Plan.finish(c, n.id) } } },
             )
             Rule()
         }
         events.forEach { e ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (e.allDay) "all day" else clock(e.start), Modifier.width(64.dp), style = Ty.mono(12).copy(color = pal.ink2))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (e.allDay) "all day" else clock(e.start), Modifier.width(64.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = pal.ink2))
                 Column {
-                    Text(e.title, style = Ty.ui(14).copy(color = pal.ink))
-                    if (e.place.isNotBlank()) Text(e.place, style = Ty.mono(10).copy(color = pal.ink2))
+                    Text(e.title, style = Ty.ui(16, FontWeight.Medium).copy(color = pal.ink))
+                    if (e.place.isNotBlank()) Text(e.place, style = Ty.ui(13, FontWeight.Normal).copy(color = pal.ink2))
                 }
             }
         }
@@ -160,12 +160,12 @@ fun PlanSettings(modifier: Modifier = Modifier, onTasks: (Boolean) -> Unit) {
             }
             choices.forEach { ch ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { scope.launch { repo.edit { it.copy(cal = ch.id) } } }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    Modifier.fillMaxWidth().clickable { scope.launch { repo.edit { it.copy(cal = ch.id) } } }.padding(horizontal = 18.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(ch.name, style = Ty.ui(14).copy(color = pal.ink))
-                        Text(ch.account, style = Ty.mono(10).copy(color = pal.ink2))
+                        Text(ch.name, style = Ty.ui(16, FontWeight.Medium).copy(color = pal.ink))
+                        Text(ch.account, style = Ty.ui(13, FontWeight.Normal).copy(color = pal.ink2))
                     }
                     if (p.cal == ch.id) Stamp("USED", ok = true)
                 }

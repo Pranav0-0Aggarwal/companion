@@ -1,59 +1,76 @@
 package app.companion.ui.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import app.companion.data.bill
+import androidx.compose.ui.unit.dp
 import app.companion.sl
-import app.companion.ui.Secure
-import app.companion.ui.Voice
-import app.companion.ui.kit.Group
+import app.companion.ui.clock
 import app.companion.ui.kit.Ic
-import app.companion.ui.kit.Rule
+import app.companion.ui.kit.MoneyRow
+import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Section
 import app.companion.ui.kit.ToolButton
+import app.companion.ui.kit.Tone
+import app.companion.ui.kit.part
+import app.companion.ui.pal
+import app.companion.ui.rememberNow
+import app.companion.data.credit
+import app.companion.data.tagList
 import kotlinx.coroutines.launch
+import app.companion.ui.money as amt
 
 @Composable
 fun TodayScreen(go: (String) -> Unit) {
-    Secure()
+    val p = pal
     val repo = LocalContext.current.sl.repo
     val scope = rememberCoroutineScope()
+    val ask = LocalAsk.current
     val d = rememberDay()
+    val now = rememberNow(1000, active = d.otps.isNotEmpty())
+    val live by remember(d.otps) { derivedStateOf(structuralEqualityPolicy()) { d.otps.filter { (it.expires ?: 0) > now.value } } }
+    val need = d.need.take(5)
     Screen(
-        "Today",
+        d.hello,
         d.sub,
+        bar = "Today",
         tools = {
-            ToolButton(Ic.Search, "Search") { go("search") }
-            ToolButton(Ic.More, "Settings") { go("settings") }
+            ToolButton(Ic.Search, "Search or ask") { ask(AskReq(null)) }
+            ToolButton(Ic.Settings, "Settings") { go("settings") }
         },
     ) {
-        item { Otps(d.otps) }
-        item {
-            Section("Needs you", if (d.need.isEmpty()) null else "All ${d.need.size}") {
-                go(if (d.asks.isEmpty()) "bills" else "inbox")
+        item(key = "ask", contentType = "ask") { AskPill(Modifier.padding(bottom = 4.dp)) }
+        itemsIndexed(live, key = { _, o -> "o${o.id}" }, contentType = { _, _ -> "code" }) { _, o ->
+            app.companion.ui.kit.CodeCard(o, { scope.launch { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
+        }
+        item(key = "needh") { Section("Needs you", if (d.need.size > need.size) "See all ${d.need.size}" else null) { go(if (d.asks.isEmpty()) "bills" else "inbox") } }
+        if (need.isEmpty()) {
+            item(key = "clear") { PassLine("All clear", "Nothing needs you right now", Modifier.part(p, true, true).animateItem(), lead = Ic.Check, tone = Tone.Green) }
+        }
+        itemsIndexed(need, key = { _, i -> "n${i.id}" }, contentType = { _, _ -> "need" }) { k, i ->
+            Box(Modifier.animateItem().part(p, k == 0, k == need.lastIndex)) {
+                NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> scope.launch { repo.file(i.id, c) } }
             }
         }
-        item {
-            if (d.need.isEmpty()) {
-                Quiet(Voice.addr(d.name, "nothing needs you right now"))
-            } else {
-                Group {
-                    d.need.take(3).forEachIndexed { k, i ->
-                        if (k > 0) Rule()
-                        if (i.bill) {
-                            BillLine(i, d.today) { scope.launch { repo.pay(i.id) } }
-                        } else {
-                            AskLine(i, d.links) { c -> scope.launch { repo.file(i.id, c) } }
-                        }
-                    }
-                }
-            }
+        item(key = "spendh") { Section("Spent today", "Ledger") { go("ledger") } }
+        item(key = "spend") { Box(Modifier.part(p, true, d.printed.isEmpty())) { SpendHead(d.printed) } }
+        itemsIndexed(d.printed, key = { _, i -> "t${i.id}" }, contentType = { _, _ -> "txn" }) { k, i ->
+            MoneyRow(
+                i.title, i.srcLine(d.links), amt(i.paise, i.currency), i.credit,
+                Modifier.animateItem().part(p, false, k == d.printed.lastIndex),
+                time = clock(i.at), stamp = i.stamp(), tags = i.tagList,
+            )
         }
-        item { Suggested() }
-        item { NextUp(go) }
-        item { Section("Printed today", "Ledger") { go("ledger") } }
-        item { TodayLines(d.printed, d.links) }
+        item(key = "sugg") { Suggested() }
+        item(key = "next") { NextUp(go) }
     }
 }

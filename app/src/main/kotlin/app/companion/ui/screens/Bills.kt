@@ -25,6 +25,8 @@ import app.companion.ui.daysTo
 import app.companion.ui.inDays
 import app.companion.ui.inr
 import app.companion.ui.kit.Btn
+import app.companion.ui.kit.Ic
+import app.companion.ui.kit.ToolButton
 import app.companion.ui.kit.Group
 import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Rule
@@ -59,7 +61,7 @@ fun BillsScreen(go: (String) -> Unit) {
     val day = remember { today() }
     val soon = bills.filter { b -> b.dueDate?.let { daysTo(it, day) <= 30 } == true }
     val sub = if (bills.isEmpty()) "Nothing due" else "${soon.size} due · ${inr(soon.sumOf { it.paise })} in the next 30 days"
-    Screen("Bills", sub) {
+    Screen("Bills", sub, tools = { ToolButton(Ic.Plan, "Plan") { go("plan") } }) {
         if (bills.isEmpty()) {
             emptyPage("No bills due", Voice.addr(profile.name, "nothing is waiting to be paid"))
         } else {
@@ -101,6 +103,7 @@ private fun BillLine(b: Item, day: LocalDate, cred: Intent?, onPay: () -> Unit, 
         actions = {
             Btn("Mark paid", go = true, onClick = onPay)
             if (cred != null) Btn("Pay with CRED") { onCred(cred) }
+            if (due != null) RemindBtn(b.title, due)
         },
     )
 }

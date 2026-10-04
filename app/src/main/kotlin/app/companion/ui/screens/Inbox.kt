@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
+import app.companion.data.cal
 import app.companion.data.Profile
 import app.companion.data.State
 import app.companion.data.Tally
@@ -134,4 +135,5 @@ private fun RowScope.Acts(i: Item, onFile: (String) -> Unit, onDone: () -> Unit)
         i.money -> cats(i).forEachIndexed { n, cat -> Btn(cat.replaceFirstChar(Char::uppercase), go = n == 0) { onFile(cat) } }
         else -> Btn("File", go = true, onClick = onDone)
     }
+    i.cal()?.let { CalBtn(it) }
 }

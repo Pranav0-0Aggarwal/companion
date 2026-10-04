@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Source
+import app.companion.ingest.SmsImport
 import app.companion.data.Profile
 import app.companion.sl
 import app.companion.ui.Ty
@@ -25,6 +26,7 @@ import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Section
 import app.companion.ui.kit.ToolButton
 import app.companion.ui.pal
+import app.companion.ui.rememberTasksLink
 import kotlinx.coroutines.launch
 
 private val reads = listOf(
@@ -40,6 +42,7 @@ fun SettingsScreen(back: () -> Unit) {
     val repo = c.sl.repo
     val scope = rememberCoroutineScope()
     val profile by repo.profile.collectAsStateWithLifecycle<Profile?>(null)
+    val tasks = rememberTasksLink {}
     var wipe by remember { mutableStateOf(false) }
     val save: ((Profile) -> Profile) -> Unit = { f -> scope.launch { repo.edit(f) } }
     Screen("Settings", "Everything stays on this phone", tools = { ToolButton(Ic.Back, "Back", back) }) {
@@ -51,7 +54,7 @@ fun SettingsScreen(back: () -> Unit) {
                 Group {
                     Sources(p::on, { s, v ->
                         save { it.toggled(s, v) }
-                        if (s == Source.Sms && v && !p.imported) queueImport(c)
+                        if (s == Source.Sms && v && !p.imported) SmsImport.enqueue(c)
                     }, sync = true)
                 }
             }
@@ -59,6 +62,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "vip-form") { VipForm(p) { v -> save { it.copy(vip = v) } } }
             item(key = "reads") { Section("What Gmail reads") }
             item(key = "reads-list") { Group { Reads() } }
+            item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "lock") { Section("Lock") }
             item(key = "lock-row") { Group { LockRow(p.lock) { v -> save { it.copy(lock = v) } } } }
             item(key = "wipe") { Section("Data") }

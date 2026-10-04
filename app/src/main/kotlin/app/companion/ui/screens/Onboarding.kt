@@ -1,5 +1,7 @@
 package app.companion.ui.screens
 
+import app.companion.ingest.SmsImport
+import app.companion.ui.rememberGmailLink
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -96,7 +98,7 @@ fun OnboardingScreen() {
                 } else if (ready) {
                     scope.launch {
                         repo.edit { it.withAbout(about).copy(sms = src.sms, notif = src.notif, mail = src.mail, wa = src.wa, ig = src.ig, lock = src.lock, done = true) }
-                        if (src.sms && c.has(Manifest.permission.READ_SMS) && c.has(Manifest.permission.RECEIVE_SMS)) queueImport(c)
+                        if (src.sms && c.has(Manifest.permission.READ_SMS) && c.has(Manifest.permission.RECEIVE_SMS)) SmsImport.enqueue(c)
                     }
                 }
             }

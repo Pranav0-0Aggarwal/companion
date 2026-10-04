@@ -1,5 +1,7 @@
 package app.companion.ui.screens
 
+import app.companion.ingest.SmsImport
+import app.companion.ui.rememberGmailLink
 import android.Manifest
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -85,7 +87,7 @@ private fun GmailSource(on: Boolean, set: (Boolean) -> Unit, sync: Boolean) {
         }
     } else {
         var failed by remember { mutableStateOf(false) }
-        val link = gmailLink { ok ->
+        val link = rememberGmailLink { ok ->
             failed = !ok
             if (ok) set(true)
         }

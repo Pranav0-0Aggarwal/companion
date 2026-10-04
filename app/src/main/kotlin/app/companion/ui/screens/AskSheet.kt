@@ -259,7 +259,7 @@ internal fun Input(q: String, set: (String) -> Unit, go: () -> Unit, listen: (()
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
-            if (q.isEmpty()) Text("Ask about your money", style = Ty.ui(20, FontWeight.Normal).copy(color = p.ink3))
+            if (q.isEmpty()) Text("Ask about your money", style = Ty.ui(20, FontWeight.Normal).copy(color = p.ink2))
             BasicTextField(
                 q, set, modifier.fillMaxWidth().semantics { contentDescription = "Question" },
                 textStyle = Ty.ui(20, FontWeight.Medium).copy(color = p.ink),

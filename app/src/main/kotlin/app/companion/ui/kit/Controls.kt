@@ -160,7 +160,7 @@ fun Field(
                     maxLines = 1,
                 )
                 Box(Modifier.padding(top = 26.dp, bottom = 10.dp)) {
-                    if (value.isEmpty() && focused && hint.isNotEmpty()) Text(hint, style = Ty.ui(16, FontWeight.Normal).copy(color = p.ink3))
+                    if (value.isEmpty() && focused && hint.isNotEmpty()) Text(hint, style = Ty.ui(16, FontWeight.Normal).copy(color = p.ink2))
                     inner()
                 }
             }

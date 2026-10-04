@@ -29,7 +29,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.companion.ai.Answer
@@ -80,14 +83,20 @@ fun AnswerCard(first: Answer, go: (String) -> Unit, modifier: Modifier = Modifie
     }
     Group(modifier.padding(bottom = 12.dp), raised = true) {
         Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 8.dp)) {
-            Text("UNDERSTOOD AS", style = Ty.ui(11, FontWeight.Bold).copy(color = p.ink2, letterSpacing = 1.sp))
             Row(
-                Modifier.padding(top = 8.dp).heightIn(min = 40.dp).clip(RoundedCornerShape(20.dp)).background(p.accentBox)
+                Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(20.dp)).background(p.accentBox)
                     .clickable(role = Role.Button, onClickLabel = if (editing) "Close edit" else "Edit what was understood") { editing = !editing }
                     .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(a.says, Modifier.weight(1f, fill = false), style = Ty.ui(14).copy(color = p.onAccentBox))
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Normal)) { append("Understood as ") }
+                        append(a.says)
+                    },
+                    Modifier.weight(1f, fill = false),
+                    style = Ty.ui(14).copy(color = p.onAccentBox),
+                )
                 Icon(if (editing) Ic.Close else Ic.Edit, null, Modifier.padding(start = 8.dp).size(16.dp), tint = p.onAccentBox)
             }
             AnimatedVisibility(editing, enter = expandVertically(Motion.soft()) + fadeIn(), exit = shrinkVertically(Motion.soft()) + fadeOut()) {

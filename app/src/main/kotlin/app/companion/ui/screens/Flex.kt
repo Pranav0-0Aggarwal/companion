@@ -112,7 +112,7 @@ private fun Glance(d: Day, modifier: Modifier) {
         if (o != null) CodeCard(o, { scope.launch { repo.notOtp(o.id) } }, big = true)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Spent today", Modifier.weight(1f)) {
-                Roll(amt(d.printed.tot(false), "INR"), Ty.mono(if (o == null) 34 else 24, FontWeight.Bold).copy(color = p.ink))
+                Roll(amt(d.printed.tot(false), "INR"), Ty.mono(if (o == null) 40 else 28, FontWeight.Bold).copy(color = p.ink))
                 Text("${d.printed.count { it.paise > 0 }} payments", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
             }
             Tile("Next bill", Modifier.weight(1f)) {
@@ -120,7 +120,7 @@ private fun Glance(d: Day, modifier: Modifier) {
                     Text("None due", style = Ty.ui(if (o == null) 24 else 18, FontWeight.Bold).copy(color = p.ink))
                     Text("All paid up", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
                 } else {
-                    Text(if (bill.paise > 0) amt(bill.paise, bill.currency) else bill.title, style = Ty.mono(if (o == null) 34 else 24, FontWeight.Bold).copy(color = p.ink), maxLines = 1)
+                    Text(if (bill.paise > 0) amt(bill.paise, bill.currency) else bill.title, style = Ty.mono(if (o == null) 40 else 28, FontWeight.Bold).copy(color = p.ink), maxLines = 1)
                     Text("${bill.merchant ?: bill.title} · ${inDays(daysTo(bill.dueDate!!, d.today))}", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
                 }
             }
@@ -143,21 +143,22 @@ private fun Controls(d: Day, go: (String) -> Unit, modifier: Modifier) {
     val repo = LocalContext.current.sl.repo
     val scope = rememberCoroutineScope()
     val i = d.need.firstOrNull()
-    Column(
-        modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).verticalScroll(rememberScrollState()).padding(top = 24.dp, bottom = 16.dp),
-    ) {
+    Column(modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(top = 20.dp, bottom = 12.dp)) {
         AskPill()
         Section(if (d.need.isEmpty()) "Needs you" else "Needs you · ${d.need.size}", if (d.need.size > 1) "See all" else null) { go(if (d.asks.isEmpty()) "bills" else "inbox") }
-        Box(Modifier.part(p, true, true)) {
-            if (i == null) {
-                PassLine("All clear", "Nothing needs you right now", lead = Ic.Check, tone = Tone.Green)
-            } else {
-                androidx.compose.runtime.key(i.id) {
-                    NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> scope.launch { repo.file(i.id, c) } }
+        Box(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+            Box(Modifier.part(p, true, true)) {
+                if (i == null) {
+                    PassLine("All clear", "Nothing needs you right now", lead = Ic.Check, tone = Tone.Green, lines = 1)
+                } else {
+                    androidx.compose.runtime.key(i.id) {
+                        NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> scope.launch { repo.file(i.id, c) } }
+                    }
                 }
             }
         }
-        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp).clip(CardShape).background(p.card).padding(6.dp)) {
+        Box(Modifier.weight(0.001f))
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp).clip(CardShape).background(p.card).padding(4.dp)) {
             Dest(Ic.Ledger, "Ledger", Modifier.weight(1f)) { go("ledger") }
             Dest(Ic.Cards, "Cards", Modifier.weight(1f)) { go("cards") }
             Dest(Ic.Bills, "Bills", Modifier.weight(1f)) { go("bills") }
@@ -170,11 +171,11 @@ private fun Controls(d: Day, go: (String) -> Unit, modifier: Modifier) {
 internal fun Dest(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
     val p = pal
     Column(
-        modifier.heightIn(min = 64.dp).clip(CardShape).clickable(role = Role.Button, onClick = onClick).padding(vertical = 10.dp),
+        modifier.heightIn(min = 56.dp).clip(CardShape).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(icon, null, Modifier.size(22.dp), tint = p.ink)
-        Text(label, Modifier.padding(top = 4.dp), style = Ty.ui(12).copy(color = p.ink2))
+        Text(label, Modifier.padding(top = 4.dp), style = Ty.ui(12).copy(color = p.ink2), maxLines = 1, softWrap = false)
     }
 }

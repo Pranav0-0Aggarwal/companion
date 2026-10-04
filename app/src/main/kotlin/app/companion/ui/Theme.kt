@@ -47,7 +47,7 @@ val Light = Pal(
     ink = Color(0xFF111317), ink2 = Color(0xFF5D626B), ink3 = Color(0xFF8A8F98), line = Color(0xFFE6E8EC),
     accent = Color(0xFF2A62DB), onAccent = Color.White, accentBox = Color(0xFFE4ECFD), onAccentBox = Color(0xFF1846B0),
     red = Color(0xFFC0302A), redBox = Color(0xFFFCE9E7), green = Color(0xFF17784A), greenBox = Color(0xFFE2F3EA), amber = Color(0xFFB25E00),
-    bar = Color(0xF2FFFFFF),
+    bar = Color.White,
 )
 
 val Night = Pal(
@@ -56,7 +56,7 @@ val Night = Pal(
     ink = Color(0xFFF2F3F5), ink2 = Color(0xFFA3A8B0), ink3 = Color(0xFF6E737B), line = Color(0xFF2A2B30),
     accent = Color(0xFF7EA6FF), onAccent = Color(0xFF0B1A3A), accentBox = Color(0xFF1D2A47), onAccentBox = Color(0xFFC9D8FF),
     red = Color(0xFFFF6B61), redBox = Color(0xFF3A1614), green = Color(0xFF4CC38A), greenBox = Color(0xFF10301F), amber = Color(0xFFFFB547),
-    bar = Color(0xF21E1E22),
+    bar = Color(0xFF1E1E22),
 )
 
 val LocalPal = staticCompositionLocalOf { Light }

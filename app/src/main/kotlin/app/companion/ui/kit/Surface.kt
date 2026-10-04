@@ -7,6 +7,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -192,6 +194,7 @@ fun PassLine(
     tags: List<String> = emptyList(),
     lead: ImageVector? = null,
     tone: Tone = Tone.Accent,
+    lines: Int = 2,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -204,8 +207,8 @@ fun PassLine(
                 Box(Modifier.size(14.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = lines, overflow = TextOverflow.Ellipsis)
+                if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2), maxLines = lines, overflow = TextOverflow.Ellipsis)
                 Tags(tags, Modifier.padding(top = 6.dp))
             }
             if (trailing != null) {
@@ -213,14 +216,14 @@ fun PassLine(
             }
         }
         if (actions != null) {
-            FlowActions(Modifier.padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp), actions)
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions,
+            )
         }
     }
-}
-
-@Composable
-private fun FlowActions(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }
 
 @Composable

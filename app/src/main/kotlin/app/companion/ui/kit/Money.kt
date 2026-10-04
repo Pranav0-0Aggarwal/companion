@@ -85,26 +85,30 @@ fun Pace(cur: List<Long>, typ: List<Long>, days: Int, label: String, modifier: M
     val on = motion()
     val k = remember { Animatable(if (on) 0f else 1f) }
     LaunchedEffect(Unit) { k.animateTo(1f, tween(700, easing = FastOutSlowInEasing)) }
-    val top = maxOf(typ.maxOrNull() ?: 0L, cur.maxOrNull() ?: 0L, 1L).toFloat()
+    val n = maxOf(cur.size, minOf(7, days)).coerceAtLeast(2)
+    val base = typ.take(n)
+    val top = maxOf(base.maxOrNull() ?: 0L, cur.maxOrNull() ?: 0L, 1L) * 1.12f
     Box(
-        modifier.fillMaxWidth().height(64.dp).semantics { contentDescription = label }.drawWithCache {
-            val w = size.width
-            val h = size.height - 6.dp.toPx()
-            fun pt(i: Int, v: Long) = Offset(w * i / (days - 1).coerceAtLeast(1), 3.dp.toPx() + h * (1f - v / top))
-            val t = Path().apply { typ.forEachIndexed { i, v -> if (i == 0) moveTo(pt(i, v).x, pt(i, v).y) else lineTo(pt(i, v).x, pt(i, v).y) } }
-            val c = Path().apply { cur.forEachIndexed { i, v -> if (i == 0) moveTo(pt(i, v).x, pt(i, v).y) else lineTo(pt(i, v).x, pt(i, v).y) } }
+        modifier.fillMaxWidth().height(88.dp).semantics { contentDescription = label }.drawWithCache {
+            val w = size.width - 6.dp.toPx()
+            val h = size.height - 8.dp.toPx()
+            fun pt(i: Int, v: Long) = Offset(3.dp.toPx() + w * i / (n - 1), 4.dp.toPx() + h * (1f - v / top))
+            fun line(l: List<Long>) = Path().apply { l.forEachIndexed { i, v -> pt(i, v).let { o -> if (i == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) } } }
+            val t = line(base)
+            val c = line(cur)
             val m = PathMeasure().apply { setPath(c, false) }
             val seg = Path()
-            val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
-            val thin = Stroke(1.5.dp.toPx(), pathEffect = dash)
-            val bold = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round)
+            val thin = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())))
+            val bold = Stroke(3.dp.toPx(), cap = StrokeCap.Round)
             val end = cur.lastIndex.takeIf { it >= 0 }?.let { pt(it, cur[it]) }
+            val mark = cur.lastIndex.takeIf { it in base.indices }?.let { pt(it, base[it]) }
             onDrawBehind {
-                drawPath(t, p.line, style = thin)
+                drawPath(t, p.ink2, style = thin)
+                mark?.let { drawCircle(p.ink2, 3.dp.toPx(), it) }
                 seg.reset()
                 m.getSegment(0f, m.length * k.value, seg, true)
                 drawPath(seg, p.accent, style = bold)
-                if (end != null && k.value > 0.98f) drawCircle(p.accent, 4.dp.toPx(), end)
+                if (end != null && k.value > 0.98f) drawCircle(p.accent, 5.dp.toPx(), end)
             }
         },
     )

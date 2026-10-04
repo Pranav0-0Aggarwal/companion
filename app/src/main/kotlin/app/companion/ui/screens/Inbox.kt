@@ -169,7 +169,7 @@ internal fun Entry(i: Item, a: Acts) {
                 val (t, ink) = when {
                     i.kind == "Spam" -> "SPAM" to Ink.Quiet
                     settled || !i.open -> "SETTLED" to Ink.Green
-                    i.state == State.CHECK -> "CHECK" to Ink.Amber
+                    i.state == State.CHECK -> "CHECK" to Ink.Quiet
                     else -> "ASK" to Ink.Red
                 }
                 StateStamp(t, ink)

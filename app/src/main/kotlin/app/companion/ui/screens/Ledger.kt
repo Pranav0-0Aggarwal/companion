@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -218,7 +221,13 @@ internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, modif
             val word = if (pace.delta >= 0) "above" else "below"
             val line = "${inr(kotlin.math.abs(pace.delta))} $word a typical month by day ${pace.day}"
             Pace(pace.cur, pace.typ, pace.days, line, Modifier.padding(top = 14.dp))
-            Text(line, Modifier.padding(top = 6.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp, 3.dp).background(p.accent, RoundedCornerShape(2.dp)))
+                Text("This month", Modifier.padding(start = 6.dp, end = 14.dp), style = Ty.ui(12, FontWeight.Medium).copy(color = p.ink2))
+                Box(Modifier.size(10.dp, 2.dp).background(p.ink2, RoundedCornerShape(1.dp)))
+                Text("Typical month", Modifier.padding(start = 6.dp), style = Ty.ui(12, FontWeight.Medium).copy(color = p.ink2))
+            }
+            Text(line, Modifier.padding(top = 6.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink))
         }
         if (budget != null) {
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {

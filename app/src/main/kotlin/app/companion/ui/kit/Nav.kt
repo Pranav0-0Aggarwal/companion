@@ -45,7 +45,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.companion.ui.Ty
 import app.companion.ui.pal
 
@@ -62,6 +64,8 @@ private val PillShape = RoundedCornerShape(32.dp)
 @Composable
 fun FloatNav(route: String?, modifier: Modifier = Modifier, onGo: (String) -> Unit, onAsk: (Rect?) -> Unit) {
     val p = pal
+    val fs = LocalDensity.current.fontScale
+    val label = (11f * minOf(fs, 1.3f) / fs).sp
     val sel = Tab.entries.indexOfFirst { it.route == route }.coerceAtLeast(0)
     val slots = remember { arrayOfNulls<Rect>(Tab.entries.size) }
     val row = remember { arrayOfNulls<LayoutCoordinates>(1) }
@@ -107,13 +111,13 @@ fun FloatNav(route: String?, modifier: Modifier = Modifier, onGo: (String) -> Un
                     }, contentAlignment = Alignment.Center) {
                         Icon(t.icon, null, Modifier.size(22.dp), tint = c)
                     }
-                    Text(t.label, style = Ty.ui(11, if (on) FontWeight.Bold else FontWeight.SemiBold).copy(color = if (on) p.accent else p.ink2), maxLines = 1)
+                    Text(t.label, style = Ty.ui(11, if (on) FontWeight.Bold else FontWeight.SemiBold).copy(color = if (on) p.accent else p.ink2, fontSize = label), maxLines = 1, softWrap = false)
                 }
             }
         }
         val src = remember { MutableInteractionSource() }
         Box(
-            Modifier.size(64.dp).press(src, 0.92f).shadow(12.dp, CircleShape, ambientColor = p.accent.copy(alpha = 0.3f), spotColor = p.accent.copy(alpha = 0.4f))
+            Modifier.size(64.dp).press(src, 0.92f).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.16f))
                 .clip(CircleShape).background(p.accent).onGloballyPositioned { askAt[0] = it.boundsInRoot() }
                 .clickable(src, ripple(), role = Role.Button, onClickLabel = "Ask Companion") { onAsk(askAt[0]) },
             contentAlignment = Alignment.Center,

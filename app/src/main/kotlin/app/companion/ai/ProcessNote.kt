@@ -63,7 +63,7 @@ object Note {
     fun paused(c: Context, r: Run) = post(
         c, END,
         builder(c)
-            .setContentTitle("Paused · ${word(r.job).lowercase()}")
+            .setContentTitle("Paused · ${r.reason ?: word(r.job).lowercase()}")
             .setContentText("${r.done} of ${r.total}")
             .addAction(act(c, "Resume", RESUME, 3))
             .addAction(act(c, "Cancel", CANCEL, 2))
@@ -74,6 +74,8 @@ object Note {
         c, END,
         builder(c).setContentTitle(if (job == Job.Import) "Import finished" else "Reprocessing finished").setContentText(text).setAutoCancel(true).build(),
     )
+
+    fun resumed(c: Context) = c.getSystemService(NotificationManager::class.java).cancel(END)
 
     fun clear(c: Context) {
         val m = c.getSystemService(NotificationManager::class.java)

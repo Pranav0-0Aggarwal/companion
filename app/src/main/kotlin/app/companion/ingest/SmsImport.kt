@@ -5,18 +5,14 @@ import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
 import android.provider.Telephony
-import app.companion.ai.Job
-import app.companion.ai.Processing
 import app.companion.ui.has
 
-class Sms(val id: Long, val from: String, val body: String, val at: Long)
+class Sms(val id: Long, val from: String, val body: String, val at: Long, val sent: Long)
 
 object SmsImport {
     private val uri = Telephony.Sms.Inbox.CONTENT_URI
 
     fun can(c: Context) = c.has(Manifest.permission.READ_SMS)
-
-    fun enqueue(c: Context) = Processing.start(c, Job.Import, false)
 
     private fun args(sel: String, vararg a: String) = Bundle().apply {
         putString(ContentResolver.QUERY_ARG_SQL_SELECTION, sel)
@@ -34,9 +30,9 @@ object SmsImport {
             putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${Telephony.Sms._ID} DESC")
             putInt(ContentResolver.QUERY_ARG_LIMIT, n)
         }
-        val cols = arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE)
+        val cols = arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.DATE_SENT)
         return c.contentResolver.query(uri, cols, q, null)?.use { r ->
-            buildList { while (r.moveToNext()) add(Sms(r.getLong(0), r.getString(1).orEmpty(), r.getString(2).orEmpty(), r.getLong(3))) }
+            buildList { while (r.moveToNext()) add(Sms(r.getLong(0), r.getString(1).orEmpty(), r.getString(2).orEmpty(), r.getLong(3), r.getLong(4))) }
         }.orEmpty()
     }
 

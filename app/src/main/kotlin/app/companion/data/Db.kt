@@ -6,7 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class],
+    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Fold::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class],
     version = 4,
     exportSchema = false,
 )
@@ -47,6 +47,8 @@ val Migrate2to3 = object : Migration(2, 3) {
 val Migrate3to4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `profile` ADD COLUMN `model` TEXT")
-        db.execSQL("CREATE TABLE IF NOT EXISTS `marks` (`job` TEXT NOT NULL, `pos` INTEGER NOT NULL, `cap` INTEGER NOT NULL, `done` INTEGER NOT NULL, `total` INTEGER NOT NULL, `moved` INTEGER NOT NULL, `ask` INTEGER NOT NULL, `skip` INTEGER NOT NULL, `sha` TEXT, `battery` INTEGER NOT NULL, `paused` INTEGER NOT NULL, PRIMARY KEY(`job`))")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `marks` (`job` TEXT NOT NULL, `pos` INTEGER NOT NULL, `cap` INTEGER NOT NULL, `done` INTEGER NOT NULL, `total` INTEGER NOT NULL, `moved` INTEGER NOT NULL, `ask` INTEGER NOT NULL, `skip` INTEGER NOT NULL, `sha` TEXT, `battery` INTEGER NOT NULL, `paused` INTEGER NOT NULL, `why` TEXT, PRIMARY KEY(`job`))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_links_src_sender_at` ON `links` (`src`, `sender`, `at`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `folds` (`sender` TEXT NOT NULL, `at` INTEGER NOT NULL, PRIMARY KEY(`sender`, `at`))")
     }
 }

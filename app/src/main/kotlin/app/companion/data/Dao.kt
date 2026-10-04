@@ -2,9 +2,11 @@ package app.companion.data
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
+import app.companion.core.Refile
 import app.companion.core.Rules
 import kotlinx.coroutines.flow.Flow
 
@@ -36,6 +38,21 @@ interface Dao {
 
     @Insert
     suspend fun link(l: Link)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun fold(f: Fold)
+
+    @Query("DELETE FROM folds")
+    suspend fun unfold()
+
+    @Query("SELECT COALESCE(MAX(id), 0) FROM links")
+    suspend fun topLink(): Long
+
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM links WHERE src = 'Sms' AND sender = :sender AND id <= :cap AND (at BETWEEN :lo1 AND :hi1 OR at BETWEEN :lo2 AND :hi2)) " +
+            "OR EXISTS(SELECT 1 FROM folds WHERE sender = :sender AND (at BETWEEN :lo1 AND :hi1 OR at BETWEEN :lo2 AND :hi2))",
+    )
+    suspend fun seen(sender: String, lo1: Long, hi1: Long, lo2: Long, hi2: Long, cap: Long): Boolean
 
     @Query("SELECT * FROM links WHERE itemId IN (:ids) ORDER BY at")
     fun links(ids: List<Long>): Flow<List<Link>>
@@ -152,8 +169,11 @@ interface Dao {
     @Query("UPDATE marks SET pos = :pos, done = :done, total = :total, moved = :moved, ask = :ask, skip = :skip WHERE job = :job")
     suspend fun step(job: String, pos: Long, done: Int, total: Int, moved: Int, ask: Int, skip: Int)
 
-    @Query("UPDATE marks SET paused = :paused WHERE job = :job")
+    @Query("UPDATE marks SET paused = :paused, why = NULL WHERE job = :job")
     suspend fun setPaused(job: String, paused: Boolean)
+
+    @Query("UPDATE marks SET why = :why WHERE job = :job")
+    suspend fun setWhy(job: String, why: String)
 
     @Query("DELETE FROM marks WHERE job = :job")
     suspend fun dropMark(job: String)
@@ -161,10 +181,10 @@ interface Dao {
     @Query("SELECT COALESCE(MAX(id), 0) FROM items")
     suspend fun top(): Long
 
-    @Query("SELECT COUNT(*) FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND (body IS NOT NULL OR src = 'Sms')")
+    @Query("SELECT COUNT(*) FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND src IN (${Refile.SOURCES}) AND (body IS NOT NULL OR src = 'Sms')")
     suspend fun stale(after: Long, cap: Long): Int
 
-    @Query("SELECT * FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND (body IS NOT NULL OR src = 'Sms') ORDER BY id LIMIT :n")
+    @Query("SELECT * FROM items WHERE id > :after AND id <= :cap AND kind != 'Otp' AND src IN (${Refile.SOURCES}) AND (body IS NOT NULL OR src = 'Sms') ORDER BY id LIMIT :n")
     suspend fun staleBatch(after: Long, cap: Long, n: Int): List<Item>
 
     @Query("SELECT DISTINCT itemId FROM corrections WHERE itemId IN (:ids)")

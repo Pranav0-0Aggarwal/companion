@@ -91,7 +91,7 @@ data class ItemFts(
 @Entity(
     tableName = "links",
     foreignKeys = [ForeignKey(Item::class, ["id"], ["itemId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("itemId")],
+    indices = [Index("itemId"), Index("src", "sender", "at")],
 )
 data class Link(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -100,6 +100,9 @@ data class Link(
     val sender: String,
     val at: Long,
 )
+
+@Entity(tableName = "folds", primaryKeys = ["sender", "at"])
+data class Fold(val sender: String, val at: Long)
 
 @Entity(tableName = "cards")
 data class Card(
@@ -165,7 +168,10 @@ data class Mark(
     val sha: String?,
     val battery: Boolean,
     val paused: Boolean,
+    val why: String? = null,
 ) {
+    val held get() = paused || why != null
+
     fun progress() = Progress(pos, cap, done, total, moved, ask, skip, sha)
 }
 

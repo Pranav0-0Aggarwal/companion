@@ -219,7 +219,7 @@ fun ProcessingSection() {
     }
     val resub = when {
         k == null -> "Counting"
-        k > 0 -> "${k.n()} messages. Corrections and learned rules are kept."
+        k > 0 -> "${k.n()} SMS and chats. Corrections and learned rules are kept."
         else -> "Nothing to reprocess yet"
     }
     Section("Processing")

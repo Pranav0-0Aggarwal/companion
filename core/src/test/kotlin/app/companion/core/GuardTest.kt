@@ -2,7 +2,9 @@ package app.companion.core
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class GuardTest {
     private fun v(thermal: Int = 0, saver: Boolean = false, charging: Boolean = true, pct: Int = 80) = Vitals(thermal, saver, charging, pct)
@@ -48,8 +50,44 @@ class GuardTest {
     @Test
     fun `reasons are the strings the screen shows`() {
         assertEquals(
-            listOf("Phone is warm", "Battery saver on", "Battery below 20%", "Waiting for charger"),
-            listOf(Guard.WARM, Guard.SAVER, Guard.LOW, Guard.CHARGER),
+            listOf("Phone is warm", "Battery saver on", "Battery below 20%", "Waiting for charger and idle", "Resuming…"),
+            listOf(Guard.WARM, Guard.SAVER, Guard.LOW, Guard.CHARGER, Guard.RESUMING),
         )
+    }
+
+    @Test
+    fun `a restored run says what it is waiting for`() {
+        assertEquals(Guard.RESUMING, Guard.waiting(true))
+        assertEquals(Guard.CHARGER, Guard.waiting(false))
+    }
+
+    @Test
+    fun `a fresh run on battery needs nothing`() {
+        assertTrue(Guard.wait(null, true).free)
+        assertEquals(Wait(true, true, false, 0L), Guard.wait(null, false))
+    }
+
+    @Test
+    fun `a paused run waits for what the guard saw`() {
+        assertEquals(Wait(false, false, true, Guard.RECHECK), Guard.wait(Guard.LOW, true))
+        assertEquals(Wait(true, false, false, Guard.RECHECK), Guard.wait(Guard.SAVER, true))
+        assertEquals(Wait(false, false, false, Guard.RECHECK), Guard.wait(Guard.WARM, true))
+    }
+
+    @Test
+    fun `a charger only run keeps charging and idle through every pause`() {
+        listOf(Guard.WARM, Guard.SAVER, Guard.LOW).forEach {
+            val w = Guard.wait(it, false)
+            assertTrue(w.charging && w.idle, it)
+            assertEquals(Guard.RECHECK, w.delay, it)
+        }
+    }
+
+    @Test
+    fun `every pause rechecks later so a satisfied constraint cannot spin`() {
+        listOf(Guard.WARM, Guard.SAVER, Guard.LOW).forEach {
+            assertFalse(Guard.wait(it, true).free, it)
+            assertEquals(15 * 60_000L, Guard.wait(it, true).delay, it)
+        }
     }
 }

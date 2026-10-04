@@ -1,6 +1,5 @@
 package app.companion.ai
 
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -30,8 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class ProcessWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
@@ -50,35 +47,16 @@ class ProcessWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     }
 }
 
-private class Watch(private val c: Context) : AutoCloseable {
-    private val pm = c.getSystemService(PowerManager::class.java)
-    val vitals = MutableStateFlow(read())
-    private val thermal = PowerManager.OnThermalStatusChangedListener { vitals.value = read() }
-    private val power = object : BroadcastReceiver() {
-        override fun onReceive(ctx: Context, i: Intent) {
-            vitals.value = read()
-        }
-    }
-
-    init {
-        pm.addThermalStatusListener({ it.run() }, thermal)
-        val f = IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply { addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED) }
-        c.registerReceiver(power, f, Context.RECEIVER_NOT_EXPORTED)
-    }
-
-    private fun read(): Vitals {
-        val b = c.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val level = b?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = b?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
-        val plugged = (b?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-        return Vitals(pm.currentThermalStatus, pm.isPowerSaveMode, plugged, if (level < 0 || scale <= 0) 100 else level * 100 / scale)
-    }
-
-    override fun close() {
-        pm.removeThermalStatusListener(thermal)
-        c.unregisterReceiver(power)
-    }
+private fun vitals(c: Context): Vitals {
+    val pm = c.getSystemService(PowerManager::class.java)
+    val b = c.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    val level = b?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+    val scale = b?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
+    val plugged = (b?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+    return Vitals(pm.currentThermalStatus, pm.isPowerSaveMode, plugged, if (level < 0 || scale <= 0) 100 else level * 100 / scale)
 }
+
+private class Hold(val why: String) : Exception()
 
 private class Engine(private val c: Context, private val job: Job, private val token: Long, private val fore: suspend (ForegroundInfo) -> Unit) {
     private val sl = c.sl
@@ -92,26 +70,32 @@ private class Engine(private val c: Context, private val job: Job, private val t
         if (m == null || m.paused) return Result.success()
         cur = m.progress()
         battery = m.battery
-        val watch = Watch(c)
         try {
-            show(null)
+            Guard.hold(vitals(c))?.let { return park(it) }
+            Note.resumed(c)
+            show()
             val ready = sl.gov.hold {
                 if (job == Job.Reprocess && !sl.scorer.warm()) return@hold false
-                if (job == Job.Reprocess) reprocess(watch) else import(watch)
+                if (job == Job.Reprocess) reprocess() else import()
                 true
             }
             if (!ready) return halted()
             finish()
             return Result.success()
+        } catch (h: Hold) {
+            return park(h.why)
         } catch (e: CancellationException) {
-            Processing.publish(Run(job, cur.done, cur.total, null, true, if (battery) null else Guard.CHARGER), token)
+            Processing.publish(Processing.idle(job, cur, battery), token)
             throw e
         } catch (_: Exception) {
             Processing.publish(null, token)
             return Result.failure()
-        } finally {
-            watch.close()
         }
+    }
+
+    private suspend fun park(why: String): Result {
+        Processing.park(c, job, cur, battery, why, token)
+        return Result.success()
     }
 
     private suspend fun halted(): Result {
@@ -121,32 +105,29 @@ private class Engine(private val c: Context, private val job: Job, private val t
         return Result.failure()
     }
 
-    private suspend fun show(why: String?) {
+    private suspend fun show() {
         if (!Processing.mine(token)) return
-        val r = Run(job, cur.done, cur.total, if (why == null) pace.eta(Batch.left(cur)) else null, why != null, why)
+        val r = Run(job, cur.done, cur.total, pace.eta(Batch.left(cur)), false, null)
         Processing.publish(r, token)
         fore(Note.info(c, r))
     }
 
-    private suspend fun gate(watch: Watch): Long {
-        if (Guard.hold(watch.vitals.value) != null) {
-            show(Guard.hold(watch.vitals.value))
-            watch.vitals.first { Guard.hold(it) == null }
-            show(null)
-        }
+    private suspend fun gate(): Long {
+        val v = vitals(c)
+        Guard.hold(v)?.let { throw Hold(it) }
         val t = SystemClock.elapsedRealtime()
-        Guard.nap(watch.vitals.value).takeIf { it > 0 }?.let { delay(it) }
+        Guard.nap(v).takeIf { it > 0 }?.let { delay(it) }
         return t
     }
 
     private suspend fun lap(t: Long, n: Int) {
         pace.add(n, SystemClock.elapsedRealtime() - t)
-        show(null)
+        show()
     }
 
-    private suspend fun reprocess(watch: Watch) {
+    private suspend fun reprocess() {
         while (Batch.left(cur) > 0) {
-            val t = gate(watch)
+            val t = gate()
             val rows = repo.stale(cur.pos, cur.cap, Batch.size(Batch.left(cur)))
             if (rows.isEmpty()) break
             val frozen = repo.frozen(rows)
@@ -178,16 +159,16 @@ private class Engine(private val c: Context, private val job: Job, private val t
         return if (Refile.usable(v)) raw to v else null
     }
 
-    private suspend fun import(watch: Watch) {
+    private suspend fun import() {
         val p0 = repo.profileNow()
         if (!p0.imported && p0.sms && SmsImport.can(c)) {
             sl.scorer.warm()
             while (Batch.left(cur) > 0) {
-                val t = gate(watch)
+                val t = gate()
                 val rows = SmsImport.page(c, cur.pos, Batch.size(Batch.left(cur)))
                 if (rows.isEmpty()) break
                 val p = repo.profileNow()
-                val out = rows.map {
+                val out = rows.filterNot { repo.seen(it.from, it.sent, it.at, cur.cap) }.map {
                     currentCoroutineContext().ensureActive()
                     Raw(Source.Sms, it.from, "", it.body, it.at).let { r -> r to sl.classifier.classify(r) }
                 }
@@ -203,11 +184,14 @@ private class Engine(private val c: Context, private val job: Job, private val t
                 }
                 lap(t, rows.size)
             }
-            repo.edit { it.copy(imported = true) }
+            repo.atomic {
+                repo.edit { it.copy(imported = true) }
+                repo.unfold()
+            }
         }
         val p = repo.profileNow()
         if (p.mail && sl.gmail.enabled) {
-            gate(watch)
+            gate()
             val n = soft { sl.gmail.token(c)?.let { sl.gmail.sync(it) } } ?: 0
             cur = cur.copy(done = cur.done + n, total = cur.total + n)
             repo.step(job.name, cur)
@@ -230,7 +214,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
             repo.dropMark(job.name)
         }
         Live.refresh(c)
-        Processing.publish(null, token)
+        Processing.settle(c, job)
         Note.done(c, job, text)
         Processing.verify(c)
     }

@@ -99,4 +99,12 @@ class RefileTest {
         assertEquals("Read 4210 messages, 612 new, 9 need you", Refile.imported(4210, 612, 9))
         assertEquals("Read 1 message, 0 new", Refile.imported(1, 0, 0))
     }
+
+    @Test
+    fun `reprocess reads only sms and chats`() {
+        val named = Source.entries.filter { "'${it.name}'" in Refile.SOURCES }
+        assertEquals(listOf(Source.Sms, Source.Wa, Source.Ig), named)
+        assertFalse(Source.Notif in named)
+        assertFalse(Source.Mail in named)
+    }
 }

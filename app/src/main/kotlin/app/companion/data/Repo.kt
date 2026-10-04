@@ -12,7 +12,9 @@ import app.companion.core.Rules
 import app.companion.core.Progress
 import app.companion.core.Raw
 import app.companion.core.Refile
+import app.companion.core.Source
 import app.companion.core.Template
+import app.companion.core.Twin
 import app.companion.core.Types
 import app.companion.core.Verdict
 import app.companion.core.Worth
@@ -159,7 +161,7 @@ class Repo(private val db: Db) {
 
     suspend fun purgeTask(id: Long) = d.purgeTask(id)
 
-    suspend fun add(raw: Raw, verdict: Verdict, p: Profile): Added? {
+    suspend fun add(raw: Raw, verdict: Verdict, p: Profile, live: Boolean = false): Added? {
         val tpl = Template.of(raw)
         val (v, learnedCat) = ruled(tpl, verdict)
         val e = v.event
@@ -173,6 +175,7 @@ class Repo(private val db: Db) {
         }
         if (folded != null) {
             d.count(day, folded)
+            if (live && !p.imported && raw.source == Source.Sms) d.fold(Fold(raw.sender, raw.at))
             return null
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
@@ -210,6 +213,17 @@ class Repo(private val db: Db) {
     suspend fun setPaused(job: String, paused: Boolean) = d.setPaused(job, paused)
 
     suspend fun top() = d.top()
+
+    suspend fun topLink() = d.topLink()
+
+    suspend fun unfold() = d.unfold()
+
+    suspend fun seen(sender: String, sent: Long, date: Long, cap: Long): Boolean {
+        val (a, b) = Twin.spans(sent, date)
+        return d.seen(sender, a.first, a.last, b.first, b.last, cap)
+    }
+
+    suspend fun setWhy(job: String, why: String) = d.setWhy(job, why)
 
     suspend fun stale(after: Long, cap: Long) = d.stale(after, cap)
 

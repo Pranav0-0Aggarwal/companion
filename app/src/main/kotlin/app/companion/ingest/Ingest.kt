@@ -17,7 +17,7 @@ class Ingest(private val app: Context, private val repo: Repo, private val clf: 
         if (key != null && !first(key)) return
         val p = repo.profileNow()
         if (!p.on(raw.source)) return
-        val added = repo.add(raw, clf.classify(raw), p) ?: return
+        val added = repo.add(raw, clf.classify(raw), p, true) ?: return
         if (refresh && (added.fresh || added.item.kind == "Otp")) Live.refresh(app)
     }
 

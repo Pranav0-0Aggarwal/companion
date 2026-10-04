@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
@@ -14,9 +15,11 @@ import app.companion.core.Progress
 import app.companion.data.mark
 import app.companion.ingest.SmsImport
 import app.companion.sl
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,14 +85,19 @@ object Processing {
 
     internal suspend fun again(c: Context) = gate.withLock {
         val repo = c.sl.repo
-        Job.entries.firstNotNullOfOrNull { j -> repo.mark(j.name)?.takeIf { it.paused } }?.let { go(c, Job.valueOf(it.job), it.battery) }
+        Job.entries.firstNotNullOfOrNull { j -> repo.mark(j.name)?.takeIf { it.held } }?.let { go(c, Job.valueOf(it.job), it.battery) }
     }
 
     internal suspend fun halt(c: Context) = gate.withLock {
         val r = run.value ?: return@withLock
+        val repo = c.sl.repo
         token.incrementAndGet()
         WorkManager.getInstance(c).cancelUniqueWork(NAME)
-        c.sl.repo.setPaused(r.job.name, true)
+        repo.setPaused(r.job.name, true)
+        if (repo.mark(r.job.name) == null) {
+            run.value = null
+            return@withLock
+        }
         val paused = r.copy(etaSec = null, paused = true, reason = null)
         run.value = paused
         Note.paused(c, paused)
@@ -101,6 +109,31 @@ object Processing {
         Job.entries.forEach { c.sl.repo.setPaused(it.name, false) }
         run.value = null
         Note.clear(c)
+    }
+
+    internal suspend fun park(c: Context, job: Job, p: Progress, battery: Boolean, why: String, t: Long) = gate.withLock {
+        if (!mine(t)) return@withLock
+        val repo = c.sl.repo
+        if (repo.mark(job.name) == null) return@withLock
+        val r = Run(job, p.done, p.total, null, true, why)
+        repo.setWhy(job.name, why)
+        run.value = r
+        WorkManager.getInstance(c).enqueueUniqueWork(NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request(job, battery, why))
+        Note.paused(c, r)
+    }
+
+    internal suspend fun settle(c: Context, job: Job) = withContext(NonCancellable) {
+        gate.withLock { if (run.value?.job == job && c.sl.repo.mark(job.name) == null) run.value = null }
+    }
+
+    internal fun idle(job: Job, p: Progress, battery: Boolean) = Run(job, p.done, p.total, null, !battery, Guard.waiting(battery))
+
+    private fun request(job: Job, battery: Boolean, why: String?): OneTimeWorkRequest {
+        val w = Guard.wait(why, battery)
+        val b = OneTimeWorkRequestBuilder<ProcessWork>().setInputData(workDataOf(JOB to job.name)).addTag(job.name)
+        if (w.free) return b.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build()
+        val cons = Constraints.Builder().setRequiresCharging(w.charging).setRequiresDeviceIdle(w.idle).setRequiresBatteryNotLow(w.notLow).build()
+        return b.setInitialDelay(w.delay, TimeUnit.MILLISECONDS).setConstraints(cons).build()
     }
 
     internal suspend fun verify(c: Context) {
@@ -135,13 +168,7 @@ object Processing {
         repo.putMark(p.mark(job.name, battery))
         run.value = Run(job, p.done, p.total, null, !battery, if (battery) null else Guard.CHARGER)
         Note.clear(c)
-        val req = OneTimeWorkRequestBuilder<ProcessWork>().setInputData(workDataOf(JOB to job.name)).addTag(job.name)
-        if (battery) {
-            req.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-        } else {
-            req.setConstraints(Constraints.Builder().setRequiresCharging(true).setRequiresDeviceIdle(true).build())
-        }
-        WorkManager.getInstance(c).enqueueUniqueWork(NAME, ExistingWorkPolicy.REPLACE, req.build())
+        WorkManager.getInstance(c).enqueueUniqueWork(NAME, ExistingWorkPolicy.REPLACE, request(job, battery, null))
     }
 
     private suspend fun mail(c: Context) = c.sl.gmail.enabled && c.sl.repo.profileNow().mail
@@ -150,7 +177,7 @@ object Processing {
         val repo = c.sl.repo
         val sha = if (job == Job.Reprocess) Models.sha(c, Manifest.decide) else null
         val p = Batch.resume(repo.mark(job.name)?.progress(), sha)
-            ?: if (job == Job.Reprocess) Batch.start(0, repo.top(), sha) else Batch.start(Long.MAX_VALUE, 0, null)
+            ?: if (job == Job.Reprocess) Batch.start(0, repo.top(), sha) else Batch.start(Long.MAX_VALUE, repo.topLink(), null)
         val left = when {
             job == Job.Reprocess -> if (sha == null) 0 else repo.stale(p.pos, p.cap)
             repo.profileNow().let { it.imported || !it.sms } -> 0
@@ -163,7 +190,8 @@ object Processing {
         val repo = c.sl.repo
         val infos = withContext(Dispatchers.IO) { WorkManager.getInstance(c).getWorkInfosForUniqueWork(NAME).get() }
         val live = infos.firstOrNull { !it.state.isFinished }?.tags?.firstNotNullOfOrNull { t -> Job.entries.firstOrNull { it.name == t } }
-        val m = live?.let { repo.mark(it.name) } ?: Job.entries.firstNotNullOfOrNull { j -> repo.mark(j.name)?.takeIf { it.paused } } ?: return
-        if (run.value == null) run.value = Run(Job.valueOf(m.job), m.done, m.total, null, true, if (m.paused || m.battery) null else Guard.CHARGER)
+        val m = live?.let { repo.mark(it.name) } ?: Job.entries.firstNotNullOfOrNull { j -> repo.mark(j.name)?.takeIf { it.held } } ?: return
+        val job = Job.valueOf(m.job)
+        if (run.value == null) run.value = if (m.held) Run(job, m.done, m.total, null, true, m.why) else idle(job, m.progress(), m.battery)
     }
 }

@@ -27,7 +27,7 @@ class FetchTest {
 
     private class Served(val seen: MutableList<Pair<String, Long>> = mutableListOf())
 
-    private fun net(log: Served = Served(), route: (String, Long, ByteArray) -> Reply) = Net { u, from ->
+    private fun net(log: Served = Served(), route: (String, Long, ByteArray) -> Reply) = Net { u, from, _ ->
         log.seen.add(u to from)
         route(u, from, data)
     }

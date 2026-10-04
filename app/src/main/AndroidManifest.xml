@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
 
     <queries>
         <package android:name="com.dreamplug.androidapp" />
@@ -103,6 +104,15 @@
             android:name=".ai.NeedleService"
             android:exported="false"
             android:isolatedProcess="true" />
+
+        <service
+            android:name=".ai.ModelJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <receiver
+            android:name=".ai.ModelCancel"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

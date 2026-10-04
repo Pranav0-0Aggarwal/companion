@@ -7,6 +7,7 @@ import android.os.Process
 import androidx.work.WorkManager
 import app.companion.ai.DecideScorer
 import app.companion.ai.Governor
+import app.companion.ai.ModelJobs
 import app.companion.ai.NeedlePlanner
 import app.companion.core.Classifier
 import app.companion.core.DecideClassifier
@@ -37,6 +38,7 @@ class Services(val app: Application) {
     fun wipe() {
         runBlocking(Dispatchers.IO) { repo.allTasks().forEach { Alarms.cancel(app, it.id) } }
         WorkManager.getInstance(app).cancelAllWork()
+        ModelJobs.kill(app)
         app.getSystemService(NotificationManager::class.java).cancelAll()
         db.close()
         Vault.wipe(app)

@@ -54,6 +54,7 @@ object PrivateImport {
 
     private suspend fun done(c: Context, lines: List<Line>) {
         c.sl.gov.release()
+        Xnn.prune(c)
         Processing.verify(c)
         st.update { Imp(lines = lines, rev = it.rev + 1) }
     }
@@ -77,9 +78,10 @@ object PrivateImport {
     private fun work(c: Context, uris: List<Uri>, stage: File): List<Line> {
         stage.deleteRecursively()
         stage.mkdirs()
-        val picks = uris.map { meta(c, it) }
-        val names = picks.map { it.name }
-        val room = Pf.room(names, picks.map { it.size }, stage.usableSpace)
+        val all = uris.map { meta(c, it) }
+        val names = all.map { it.name }
+        val picks = all.filterNot { Pf.skip(it.name) }
+        val room = Pf.room(picks.map { it.name }, picks.map { it.size }, stage.usableSpace)
         if (room.isNotEmpty()) return room
         val total = picks.sumOf { maxOf(it.size, 0) }
         var read = 0L

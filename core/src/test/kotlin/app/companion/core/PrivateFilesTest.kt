@@ -90,4 +90,31 @@ class PrivateFilesTest {
         assertEquals(listOf("big.gguf"), bad(PrivateFiles.room(listOf("big.gguf"), listOf(3 * gb), 10 * gb)))
         assertEquals(listOf("Storage"), bad(PrivateFiles.room(listOf("a"), listOf(gb), gb)))
     }
+
+    @Test
+    fun companionFilesAreIgnoredNotRejected() {
+        val ok = PrivateFiles.allowed(base, spec)
+        val l = PrivateFiles.screen(listOf("model_spec.json", "TOKENIZER.md", "tokenizer.mbpe", "tokenizer_vectors.json", "SHA256SUMS", "type.tflite", "custom.json"), ok)
+        assertTrue(bad(l).isEmpty())
+        assertTrue(PrivateFiles.commit(l))
+        assertEquals(listOf("ignored, not copied"), l.filter { it.name == "SHA256SUMS" }.map { it.note })
+        assertEquals(setOf("TOKENIZER.md", "tokenizer.mbpe", "tokenizer_vectors.json", "SHA256SUMS"), PrivateFiles.IGNORED)
+        assertTrue(listOf("TOKENIZER.md", "tokenizer.mbpe", "tokenizer_vectors.json", "SHA256SUMS").all(PrivateFiles::skip))
+        assertFalse(PrivateFiles.skip("custom.json"))
+        assertFalse(PrivateFiles.skip(null))
+        assertFalse(PrivateFiles.skip("../SHA256SUMS"))
+    }
+
+    @Test
+    fun ignoredNamesMayRepeatButStillNeedAPlainName() {
+        val l = PrivateFiles.screen(listOf("SHA256SUMS", "SHA256SUMS", "custom.json", "a/SHA256SUMS", "tokenizer.mbpe/../x"), PrivateFiles.allowed(base, null))
+        assertEquals(listOf("a/SHA256SUMS", "tokenizer.mbpe/../x"), bad(l))
+    }
+
+    @Test
+    fun theSpecNamesTheCalibrationAndTokenizerFiles() {
+        val s = """{"arch":"modernbert-classifier","buckets":[64],"tokenizer":{"json":"tok.json"},"calibration":"cal.json","tasks":{"type":{"file":"type.tflite","labels":["a"]}}}"""
+        val ok = PrivateFiles.allowed(emptySet(), s)
+        assertEquals(setOf("model_spec.json", "custom.json", "tok.json", "type.tflite", "cal.json"), ok)
+    }
 }

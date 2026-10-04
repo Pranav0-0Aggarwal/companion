@@ -10,6 +10,7 @@ import app.companion.core.Redact
 import app.companion.core.Scored
 import app.companion.core.Scorer
 import app.companion.core.SpTokenizer
+import app.companion.core.Weights
 import kotlinx.coroutines.runBlocking
 
 class DecideScorer(private val app: Application, private val gov: Governor) : Scorer {
@@ -29,12 +30,16 @@ class DecideScorer(private val app: Application, private val gov: Governor) : Sc
         return runCatching { Models.loadCalibration(app).takeIf { it.model == null && it.fits(Calibration.TYPE, spec.labels(Calibration.TYPE)) && (!spec.has(Calibration.CATEGORY) || it.fits(Calibration.CATEGORY, spec.labels(Calibration.CATEGORY))) } }.getOrNull() ?: Calibration.DEFAULT
     }
 
+    private fun open(path: String): () -> DecideRunner = {
+        DecideRunner.open(app, path, Models.sha(app, Manifest.decide)?.let { Xnn.path(app, Weights.decide(it)) })
+    }
+
     fun warm(): Boolean {
         val model = Models.file(app, Manifest.decide) ?: return false
         if (assets() == null) return false
         val path = model.path
         return try {
-            runBlocking { gov.run(Manifest.decide, { DecideRunner.open(app, path) }) { true } }
+            runBlocking { gov.run(Manifest.decide, open(path)) { true } }
         } catch (_: Exception) {
             false
         }
@@ -48,7 +53,7 @@ class DecideScorer(private val app: Application, private val gov: Governor) : Sc
         val path = model.path
         return try {
             runBlocking {
-                gov.run(Manifest.decide, { DecideRunner.open(app, path) }) { r ->
+                gov.run(Manifest.decide, open(path)) { r ->
                     fun probs(task: String): Map<String, Float>? = runCatching {
                         val input = Decide.build(spec, task, raw.sender.trim(), body, tok)
                         val p = cal.probs(task, r.logits(input, spec.signature(task, input.bucket)))

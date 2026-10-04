@@ -143,6 +143,7 @@ object Processing {
 
     internal fun boot(app: Application) {
         scope.launch {
+            launch { Xnn.prune(app) }
             launch {
                 combine(app.sl.repo.profile.map { it.model }.distinctUntilChanged(), Dl.state.map { it.mode }.distinctUntilChanged()) { _, _ -> }.collect { verify(app) }
             }
@@ -150,7 +151,8 @@ object Processing {
         }
     }
 
-    private suspend fun go(c: Context, job: Job, battery: Boolean) {
+    private suspend fun go(c: Context, job: Job, want: Boolean) {
+        val battery = want && Active.bert(c) == null
         if (run.value?.paused == false) return
         val repo = c.sl.repo
         val p = plan(c, job)

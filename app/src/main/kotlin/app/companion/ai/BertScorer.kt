@@ -7,9 +7,11 @@ import app.companion.core.BertPlan
 import app.companion.core.Bpe
 import app.companion.core.Calibration
 import app.companion.core.DecideInput
+import app.companion.core.Guard
 import app.companion.core.Raw
 import app.companion.core.Scored
 import app.companion.core.Scorer
+import app.companion.core.Weights
 import java.io.File
 import kotlinx.coroutines.runBlocking
 
@@ -32,6 +34,7 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
             Loaded(plan, Bpe.fromJson(File(d, plan.spec.tokenizer).readText()), specs)
         }.getOrNull()
         cache = key to l
+        Xnn.prune(app)
         return l
     }
 
@@ -45,15 +48,24 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         }
     }
 
-    private fun path(s: Spec) = File(Models.custom(app), s.file).path
+    private fun open(l: Loaded, task: String): () -> DecideRunner = {
+        val f = l.plan.spec.file(task)
+        val cache = Xnn.path(app, Weights.bert(task, l.plan.shas.getValue(f)))
+        DecideRunner.open(app, File(Models.custom(app), f).path, cache, Guard.threads(vitals(app)), false)
+    }
+
+    private fun run(r: DecideRunner, l: Loaded, task: String, x: DecideInput): FloatArray {
+        val sig = l.plan.spec.signature(task, x.bucket)
+        return if (sig?.named == true) r.named(x, sig) else r.logits(if (l.plan.spec.maskFirst) DecideInput(x.mask, x.ids) else x, sig?.name)
+    }
 
     fun calibration(): Calibration = Active.bert(app)?.let { Active.calibration(app, it.spec).first } ?: Calibration.DEFAULT
 
     fun warm(): Boolean {
-        val s = loaded()?.specs?.get(Calibration.TYPE) ?: return false
-        val p = path(s)
+        val l = loaded() ?: return false
+        val s = l.specs[Calibration.TYPE] ?: return false
         return try {
-            low { runBlocking { gov.run(s, { DecideRunner.open(app, p) }) { true } } }
+            low { runBlocking { gov.run(s, open(l, Calibration.TYPE)) { true } } }
         } catch (_: Exception) {
             false
         }
@@ -61,11 +73,8 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
 
     private fun logits(l: Loaded, task: String, x: DecideInput): FloatArray? {
         val s = l.specs[task] ?: return null
-        val p = path(s)
-        val sig = l.plan.spec.signature(task, x.bucket)
-        val y = if (l.plan.spec.maskFirst) DecideInput(x.mask, x.ids) else x
         return try {
-            runBlocking { gov.run(s, { DecideRunner.open(app, p) }) { it.logits(y, sig) } }
+            runBlocking { gov.run(s, open(l, task)) { run(it, l, task, x) } }
         } catch (_: Exception) {
             null
         }
@@ -73,16 +82,8 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
 
     private fun batch(l: Loaded, task: String, xs: List<DecideInput>): List<FloatArray?> {
         val s = l.specs[task] ?: return xs.map { null }
-        val p = path(s)
         return try {
-            runBlocking {
-                gov.run(s, { DecideRunner.open(app, p) }) { r ->
-                    xs.map { x ->
-                        val sig = l.plan.spec.signature(task, x.bucket)
-                        runCatching { r.logits(if (l.plan.spec.maskFirst) DecideInput(x.mask, x.ids) else x, sig) }.getOrNull()
-                    }
-                }
-            }
+            runBlocking { gov.run(s, open(l, task)) { r -> xs.map { x -> runCatching { run(r, l, task, x) }.getOrNull() } } }
         } catch (_: Exception) {
             xs.map { null }
         }

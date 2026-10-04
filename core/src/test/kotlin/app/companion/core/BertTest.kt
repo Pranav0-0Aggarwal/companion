@@ -38,12 +38,73 @@ class BertTest {
         assertEquals(128, spec.maxLen)
         assertEquals(listOf("tokenizer.json", "type.tflite", "category.tflite"), spec.files)
         assertEquals(types, spec.labels("type"))
-        assertEquals("t64", spec.signature("type", 64))
+        assertEquals("t64", spec.signature("type", 64)?.name)
+        assertFalse(spec.signature("type", 64)!!.named)
         assertNull(spec.signature("category", 64))
         assertEquals("category.tflite", spec.file("category"))
         assertEquals("modernbert-large-sms-v1", spec.model)
         assertFalse(spec.maskFirst)
         assertTrue(BertSpec.fromJson(specJson().replace("\"input_ids\",\"attention_mask\"", "\"attention_mask\",\"input_ids\"")).maskFirst)
+    }
+
+    private fun sig(b: Int, extra: String = "") =
+        """"s$b":{"bucket":$b,"inputs":{"input_ids":[1,$b],"attention_mask":[1,$b]},"dtype":"int32","output":"logits","output_shape":[1,9],"output_dtype":"float32"$extra}"""
+
+    private fun realJson(sigs: String = listOf(64, 96, 128).joinToString(",") { sig(it) }, tok: String = """{"json":"tok.json","compact":"x.mbpe","unk_id":50280}""", cal: String = "\"cal.json\"") =
+        """{"arch":"modernbert-classifier","version":1,"template":"{sender}: {text}","max_len":128,"buckets":[64,96,128],"pad_id":50283,"cls_id":50281,"sep_id":50282,"truncation":"right",
+        "tasks":{"type":{"file":"type.tflite","labels":${q(types)},"signatures":{$sigs}},"category":{"file":"category.tflite","labels":${q(cats)},"signatures":{$sigs}}},
+        "calibration":$cal,"sha256":{"a":"b"},"model":"m","expected":{"x":1},"runtime":{"y":2},"provenance":{},"quantization":{},"tokenizer_extra":1,"tokenizer":$tok,"bucket_rule":"r"}"""
+
+    @Test
+    fun `spec reads the named signature map and ignores the other blocks`() {
+        val s = BertSpec.fromJson(realJson())
+        assertEquals(listOf(64, 96, 128), s.buckets)
+        assertEquals("tok.json", s.tokenizer)
+        assertEquals("cal.json", s.calibration)
+        assertEquals(listOf("tok.json", "type.tflite", "category.tflite"), s.files)
+        val g = s.signature("category", 96)!!
+        assertEquals("s96", g.name)
+        assertEquals("input_ids", g.ids)
+        assertEquals("attention_mask", g.mask)
+        assertEquals("logits", g.out)
+        assertTrue(g.named)
+        assertNull(s.signature("type", 32))
+        assertEquals("m", s.model)
+        assertEquals(50283, s.pad)
+        assertEquals(50281, s.cls)
+        assertEquals(50282, s.sep)
+    }
+
+    @Test
+    fun `spec finds the mask input by name in any order`() {
+        val s = BertSpec.fromJson(realJson(sigs = sig(64).replace(""""input_ids":[1,64],"attention_mask":[1,64]""", """"attention_mask":[1,64],"input_ids":[1,64]""")))
+        val g = s.signature("type", 64)!!
+        assertEquals("input_ids", g.ids)
+        assertEquals("attention_mask", g.mask)
+    }
+
+    @Test
+    fun `tokenizer and calibration names default and plain string names still work`() {
+        val s = BertSpec.fromJson(realJson(tok = "\"t.json\"", cal = "null"))
+        assertEquals("t.json", s.tokenizer)
+        assertEquals("calibration.json", s.calibration)
+        val d = BertSpec.fromJson(realJson(tok = "{}"))
+        assertEquals("tokenizer.json", d.tokenizer)
+    }
+
+    @Test
+    fun `a signature with a foreign bucket dtype or file name is rejected`() {
+        assertFailsWith<Exception> { BertSpec.fromJson(realJson(sigs = sig(32))) }
+        assertFailsWith<Exception> { BertSpec.fromJson(realJson(sigs = sig(64).replace("int32", "float32"))) }
+        assertFailsWith<Exception> { BertSpec.fromJson(realJson(tok = """{"json":"../tok.json"}""")) }
+        assertFailsWith<Exception> { BertSpec.fromJson(realJson(cal = "\"a/b.json\"")) }
+    }
+
+    @Test
+    fun `the plan lists the named tokenizer and tasks but not the calibration`() {
+        val s = BertSpec.fromJson(realJson()).files
+        val p = BertPlan.of(realJson(), s.associateWith { "%064x".format(it.length) }) { _, _ -> true }!!
+        assertEquals(s.toSet(), p.shas.keys)
     }
 
     @Test
@@ -52,6 +113,7 @@ class BertTest {
         assertEquals("{sender}: {text}", s.template)
         assertEquals(64, s.maxLen)
         assertEquals("tokenizer.json", s.tokenizer)
+        assertEquals("calibration.json", s.calibration)
         assertEquals(listOf("input_ids", "attention_mask"), s.inputs)
         assertNull(s.pad)
         assertFailsWith<Exception> { BertSpec.fromJson(specJson(arch = "gliner")) }
@@ -71,6 +133,22 @@ class BertTest {
             assertTrue(x.mask.take(want.size).all { it == 1 })
             assertEquals(50281, x.ids[0])
             assertEquals(50282, x.ids[want.size - 1])
+        }
+    }
+
+    @Test
+    fun `input equals the reference for the 200 synthetic vectors of the real spec`() {
+        val real = BertSpec.fromJson(realJson())
+        val all = (Json.obj(res("vectors_v2.json"))["vectors"] as List<*>).map { it as Map<*, *> }
+        assertEquals(200, all.size)
+        for (v in all) {
+            val want = ints(v["input_ids"])
+            val x = Bert.build(real, bpe, v["sender"] as String, v["text"] as String)
+            assertEquals(want, x.ids.take(want.size), "ids for ${v["input"]}")
+            assertEquals(listOf(64, 96, 128).first { it >= want.size }, x.bucket)
+            assertEquals(want.size, x.mask.sum())
+            assertTrue(x.mask.take(want.size).all { it == 1 })
+            assertTrue(x.ids.drop(want.size).all { it == 50283 })
         }
     }
 
@@ -275,7 +353,7 @@ class BertTest {
         }
         assertEquals(2, seen.size)
         assertContentEquals(seen[0].second.ids, seen[1].second.ids)
-        assertEquals("t32", spec.signature("type", seen[0].second.bucket))
+        assertEquals("t32", spec.signature("type", seen[0].second.bucket)?.name)
     }
 
     @Test

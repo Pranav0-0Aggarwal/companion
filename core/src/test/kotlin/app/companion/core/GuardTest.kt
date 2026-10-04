@@ -90,4 +90,34 @@ class GuardTest {
             assertEquals(15 * 60_000L, Guard.wait(it, true).delay, it)
         }
     }
+
+    @Test
+    fun `a charge only hold waits for the charger after heat and saver`() {
+        assertEquals(Guard.CHARGER, Guard.hold(v(charging = false), true))
+        assertEquals(Guard.CHARGER, Guard.hold(v(charging = false, pct = 5), true))
+        assertNull(Guard.hold(v(charging = true), true))
+        assertNull(Guard.hold(v(charging = false), false))
+        assertEquals(Guard.WARM, Guard.hold(v(thermal = 2, charging = false), true))
+        assertEquals(Guard.SAVER, Guard.hold(v(saver = true, charging = false), true))
+        assertEquals(Guard.WARM, Guard.hold(v(thermal = 4), true))
+        assertEquals(Guard.WARM, Guard.hold(v(thermal = 2), true))
+        assertNull(Guard.hold(v(thermal = 1), true))
+    }
+
+    @Test
+    fun `two threads on battery and four on the charger`() {
+        assertEquals(2, Guard.threads(v(charging = false)))
+        assertEquals(4, Guard.threads(v(charging = true)))
+    }
+
+    @Test
+    fun `a batch scores whole only when charging and cool else a live burst at most`() {
+        assertEquals(40, Guard.take(v(), 40, true))
+        assertEquals(Guard.LIVE, Guard.take(v(charging = false), 40, true))
+        assertEquals(Guard.LIVE, Guard.take(v(thermal = 2), 40, true))
+        assertEquals(Guard.LIVE, Guard.take(v(saver = true), 40, true))
+        assertEquals(40, Guard.take(v(charging = false), 40, false))
+        assertEquals(1, Guard.take(v(charging = false), 1, true))
+        assertEquals(0, Guard.take(v(charging = false), 0, true))
+    }
 }

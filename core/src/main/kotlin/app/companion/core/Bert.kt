@@ -11,10 +11,15 @@ class BertSpec(
     val cls: Int?,
     val sep: Int?,
     val tokenizer: String,
+    val calibration: String,
     val inputs: List<String>,
     private val tasks: Map<String, Task>,
 ) {
-    class Task(val file: String, val labels: List<String>, val signatures: Map<Int, String>)
+    class Sig(val name: String, val ids: String? = null, val mask: String? = null, val out: String? = null) {
+        val named get() = ids != null && mask != null && out != null
+    }
+
+    class Task(val file: String, val labels: List<String>, val signatures: Map<Int, Sig>)
 
     val maskFirst get() = inputs.size > 1 && inputs[0].contains("mask", ignoreCase = true)
 
@@ -31,6 +36,24 @@ class BertSpec(
     companion object {
         const val ARCH = "modernbert-classifier"
         const val TEMPLATE = "{sender}: {text}"
+        const val CAL = "calibration.json"
+
+        private fun name(v: Any?, key: String? = null): String? =
+            (if (key != null && v is Map<*, *>) v[key] else v) as? String
+
+        private fun sigs(raw: Any?, buckets: List<Int>): Map<Int, Sig> = (raw as? Map<*, *>)?.entries?.associate { (k, v) ->
+            val key = k as String
+            if (v is Map<*, *>) {
+                val b = (v["bucket"] as Number).toInt()
+                require(b in buckets && (v["dtype"] ?: "int32") == "int32")
+                val ins = (v["inputs"] as? Map<*, *>)?.keys?.map { it as String }.orEmpty()
+                val mask = ins.firstOrNull { it.contains("mask", ignoreCase = true) }
+                val ids = ins.firstOrNull { it != mask }
+                b to if (ids != null && mask != null) Sig(key, ids, mask, v["output"] as? String ?: "logits") else Sig(key)
+            } else {
+                key.toInt() to Sig(v as String)
+            }
+        } ?: emptyMap()
 
         @Suppress("UNCHECKED_CAST")
         fun fromJson(text: String): BertSpec {
@@ -41,12 +64,11 @@ class BertSpec(
             val tasks = (m["tasks"] as Map<String, Map<String, Any?>>).mapValues { (_, t) ->
                 val labels = (t["labels"] as List<*>).map { it as String }
                 require(labels.isNotEmpty())
-                val sigs = (t["signatures"] as? Map<*, *>)?.entries?.associate { (b, k) -> (b as String).toInt() to k as String } ?: emptyMap()
-                Task(t["file"] as String, labels, sigs)
+                Task(t["file"] as String, labels, sigs(t["signatures"], buckets))
             }
             require(Calibration.TYPE in tasks)
             fun id(k: String) = (m[k] as? Number)?.toInt()
-            return BertSpec(
+            val spec = BertSpec(
                 model = m["model"] as? String,
                 template = m["template"] as? String ?: TEMPLATE,
                 maxLen = (m["max_len"] as? Number)?.toInt() ?: buckets.last(),
@@ -54,10 +76,13 @@ class BertSpec(
                 pad = id("pad_id"),
                 cls = id("cls_id"),
                 sep = id("sep_id"),
-                tokenizer = m["tokenizer"] as? String ?: "tokenizer.json",
+                tokenizer = name(m["tokenizer"], "json") ?: "tokenizer.json",
+                calibration = name(m["calibration"], "file") ?: CAL,
                 inputs = (m["inputs"] as? List<*>)?.map { it as String } ?: listOf("input_ids", "attention_mask"),
                 tasks = tasks,
             )
+            require((spec.files + spec.calibration).all { PrivateFiles.plain(it) != null })
+            return spec
         }
     }
 }

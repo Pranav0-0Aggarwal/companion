@@ -64,14 +64,15 @@ private class Engine(private val c: Context, private val job: Job, private val t
     private val pace = Pace()
     private lateinit var cur: Progress
     private var battery = false
+    private val strict = Active.bert(c) != null
 
     suspend fun go(): Result {
         val m = repo.mark(job.name)
         if (m == null || m.paused) return Result.success()
         cur = m.progress()
-        battery = m.battery
+        battery = m.battery && !strict
         try {
-            Guard.hold(vitals(c))?.let { return park(it) }
+            Guard.hold(vitals(c), strict)?.let { return park(it) }
             Note.resumed(c)
             show()
             val ready = sl.gov.hold {
@@ -114,7 +115,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
 
     private suspend fun gate(): Long {
         val v = vitals(c)
-        Guard.hold(v)?.let { throw Hold(it) }
+        Guard.hold(v, strict)?.let { throw Hold(it) }
         val t = SystemClock.elapsedRealtime()
         Guard.nap(v).takeIf { it > 0 }?.let { delay(it) }
         return t

@@ -2,6 +2,7 @@ package app.companion.ai
 
 import android.app.Application
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -27,6 +28,7 @@ import app.companion.ingest.SmsImport
 import app.companion.sl
 import app.companion.system.Live
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -80,6 +82,8 @@ class Pending(
         delay(WINDOW)
         val todo = take(id)
         if (todo.isEmpty()) return
+        val now = Guard.take(vitals(app), todo.size, Active.bert(app) != null)
+        if (now < todo.size) later(todo, now)
         var changed = false
         try {
             val p = repo.profileNow()
@@ -115,6 +119,23 @@ class Pending(
         } finally {
             release(todo)
             if (changed) withContext(NonCancellable) { Live.refresh(app) }
+        }
+    }
+
+    private suspend fun later(todo: MutableMap<Long, Todo>, keep: Int) {
+        val rest = todo.entries.drop(keep).associate { it.key to it.value }
+        rest.keys.forEach(todo::remove)
+        release(rest)
+        val req = OneTimeWorkRequestBuilder<RefineWork>()
+            .setInputData(workDataOf(ID to 0L))
+            .setConstraints(Constraints.Builder().setRequiresCharging(true).build())
+            .setInitialDelay(Guard.RECHECK, TimeUnit.MILLISECONDS)
+            .build()
+        try {
+            WorkManager.getInstance(app).enqueueUniqueWork("$NAME:later", ExistingWorkPolicy.KEEP, req).await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
         }
     }
 

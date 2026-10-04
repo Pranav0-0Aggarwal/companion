@@ -11,6 +11,8 @@ object PrivateFiles {
     const val SMALL = 1L shl 20
     const val MARGIN = 16L shl 20
 
+    val IGNORED = setOf("TOKENIZER.md", "tokenizer.mbpe", "tokenizer_vectors.json", "SHA256SUMS")
+
     private val hex = Regex("[0-9a-f]{64}")
 
     fun plain(raw: String?): String? =
@@ -18,8 +20,10 @@ object PrivateFiles {
 
     fun shown(raw: String?): String = (raw ?: "unnamed").filter { it >= ' ' }.take(40)
 
+    fun skip(name: String?) = plain(name)?.let { it in IGNORED } == true
+
     fun allowed(base: Set<String>, spec: String?): Set<String> =
-        base + SPEC + MANIFEST + (spec?.let { runCatching { BertSpec.fromJson(it).files }.getOrNull() }.orEmpty())
+        base + SPEC + MANIFEST + (spec?.let { runCatching { BertSpec.fromJson(it).let { s -> s.files + s.calibration } }.getOrNull() }.orEmpty())
 
     fun screen(raw: List<String?>, ok: Set<String>): List<Line> {
         val seen = HashSet<String>()
@@ -27,6 +31,7 @@ object PrivateFiles {
             val n = plain(r)
             when {
                 n == null -> Line(shown(r), false, "not a plain file name")
+                n in IGNORED -> Line(n, true, "ignored, not copied")
                 n !in ok -> Line(n, false, "not a model file name")
                 !seen.add(n) -> Line(n, false, "picked twice")
                 else -> Line(n, true, "accepted")

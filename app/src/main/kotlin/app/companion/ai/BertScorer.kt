@@ -71,14 +71,43 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         }
     }
 
+    private fun batch(l: Loaded, task: String, xs: List<DecideInput>): List<FloatArray?> {
+        val s = l.specs[task] ?: return xs.map { null }
+        val p = path(s)
+        return try {
+            runBlocking {
+                gov.run(s, { DecideRunner.open(app, p) }) { r ->
+                    xs.map { x ->
+                        val sig = l.plan.spec.signature(task, x.bucket)
+                        runCatching { r.logits(if (l.plan.spec.maskFirst) DecideInput(x.mask, x.ids) else x, sig) }.getOrNull()
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            xs.map { null }
+        }
+    }
+
+    private fun text(raw: Raw) = listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n")
+
     override fun score(raw: Raw): Scored? {
         val l = loaded() ?: return null
         val cal = Active.calibration(app, l.plan.spec).first
-        val text = listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n")
         return try {
-            low { Bert.score(l.plan.spec, cal, l.bpe, raw.sender.trim(), text) { task, x -> logits(l, task, x) } }
+            low { Bert.score(l.plan.spec, cal, l.bpe, raw.sender.trim(), text(raw)) { task, x -> logits(l, task, x) } }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    override fun scoreAll(raws: List<Raw>): List<Scored?> {
+        if (raws.size < 2) return raws.map(::score)
+        val l = loaded() ?: return raws.map { null }
+        val cal = Active.calibration(app, l.plan.spec).first
+        return try {
+            low { Bert.scoreAll(l.plan.spec, cal, l.bpe, raws.map { it.sender.trim() to text(it) }) { task, xs -> batch(l, task, xs) } }
+        } catch (_: Exception) {
+            raws.map { null }
         }
     }
 }

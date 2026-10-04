@@ -28,7 +28,7 @@ object NuxWire {
     const val REPLY = 3
     const val MODEL = "model"
     const val THREADS = "threads"
-    const val PROMPT = "prompt"
+    const val TEXT = "text"
     const val JSON = "json"
     const val MB = "mb"
     const val ERROR = "error"
@@ -57,7 +57,7 @@ class NuxService : Service() {
                     check(handle != 0L)
                     out.putLong(NuxWire.MB, Debug.getPss() / 1024)
                 }
-                NuxWire.RUN -> out.putString(NuxWire.JSON, NuxJni.run(handle, d.getString(NuxWire.PROMPT).orEmpty(), Nux.GRAMMAR, Nux.MAX_TOKENS))
+                NuxWire.RUN -> out.putString(NuxWire.JSON, NuxJni.run(handle, Nux.PREFIX, d.getString(NuxWire.TEXT).orEmpty(), Nux.SUFFIX, Nux.GRAMMAR, Nux.MAX_TOKENS))
             }
         } catch (_: Throwable) {
             out.putString(NuxWire.ERROR, "failed")
@@ -83,9 +83,9 @@ class NuxClient private constructor(private val c: Context, private val link: Li
     override val accel = "CPU"
     override val alive get() = !link.dead
 
-    fun run(prompt: String): String? {
+    fun run(text: String): String? {
         val r = try {
-            ask(to, NuxWire.RUN, Bundle().apply { putString(NuxWire.PROMPT, prompt) }, RUN_SECS)
+            ask(to, NuxWire.RUN, Bundle().apply { putString(NuxWire.TEXT, text) }, RUN_SECS)
         } catch (_: RemoteException) {
             null
         }
@@ -120,15 +120,29 @@ class NuxClient private constructor(private val c: Context, private val link: Li
 }
 
 class NuExtractor(private val c: Context, private val gov: Governor) : Extractor {
+    @Volatile
+    private var failed = false
+
+    val on get() = Chip.nux && !failed
+
     override fun extract(raw: Raw, want: Set<Field>): Map<Field, String> {
         val f = Nux.keep(want)
-        if (f.isEmpty()) return emptyMap()
+        if (f.isEmpty() || !on) return emptyMap()
         val model = Models.file(c, Manifest.nux) ?: return emptyMap()
         val json = try {
-            runBlocking { gov.run(Manifest.nux, { NuxClient.open(c, model) }) { it.run(Nux.prompt(raw.text())) } }
+            runBlocking {
+                gov.run(Manifest.nux, { open(model) }) { it.run(Nux.clip(raw.text())) }
+            }
         } catch (_: Exception) {
             null
         }
         return json?.let(Nux::parse).orEmpty().filterKeys { it in f }
+    }
+
+    private fun open(model: File) = try {
+        NuxClient.open(c, model)
+    } catch (e: Throwable) {
+        failed = true
+        throw e
     }
 }

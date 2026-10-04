@@ -7,7 +7,7 @@ object NuxJni {
 
     external fun load(fd: Int, threads: Int): Long
 
-    external fun run(h: Long, prompt: String, grammar: String, maxTokens: Int): String?
+    external fun run(h: Long, prefix: String, text: String, suffix: String, grammar: String, maxTokens: Int): String?
 
     external fun free(h: Long)
 }

@@ -98,18 +98,32 @@ object Bert {
         return DecideInput(ids, IntArray(size) { if (it < n) 1 else 0 })
     }
 
-    fun score(spec: BertSpec, cal: Calibration, bpe: Bpe, sender: String, text: String, logits: (String, DecideInput) -> FloatArray?): Scored? {
-        val x = build(spec, bpe, sender, text)
+    fun score(spec: BertSpec, cal: Calibration, bpe: Bpe, sender: String, text: String, logits: (String, DecideInput) -> FloatArray?): Scored? =
+        scoreAll(spec, cal, bpe, listOf(sender to text)) { task, xs -> xs.map { logits(task, it) } }.single()
 
-        fun probs(task: String): Map<String, Float>? {
+    fun scoreAll(
+        spec: BertSpec,
+        cal: Calibration,
+        bpe: Bpe,
+        items: List<Pair<String, String>>,
+        logits: (String, List<DecideInput>) -> List<FloatArray?>,
+    ): List<Scored?> {
+        val xs = items.map { (sender, text) -> build(spec, bpe, sender, text) }
+
+        fun probs(task: String, at: List<Int>): Map<Int, Map<String, Float>> {
+            if (at.isEmpty()) return emptyMap()
             val labels = spec.labels(task)
-            val l = logits(task, x)?.takeIf { it.size == labels.size } ?: return null
-            val p = cal.probs(task, l)
-            return labels.mapIndexed { i, name -> name to p[i] }.toMap()
+            val out = logits(task, at.map(xs::get))
+            return at.indices.mapNotNull { k ->
+                val l = out.getOrNull(k)?.takeIf { it.size == labels.size } ?: return@mapNotNull null
+                val p = cal.probs(task, l)
+                at[k] to labels.mapIndexed { i, name -> name to p[i] }.toMap()
+            }.toMap()
         }
 
-        val type = probs(Calibration.TYPE) ?: return null
-        val cat = if (spec.has(Calibration.CATEGORY) && type.maxBy { it.value }.key == EXPENSE) probs(Calibration.CATEGORY) else null
-        return Scored(type, cat)
+        val type = probs(Calibration.TYPE, xs.indices.toList())
+        val more = if (spec.has(Calibration.CATEGORY)) type.filterValues { it.maxBy { e -> e.value }.key == EXPENSE }.keys.sorted() else emptyList()
+        val cat = probs(Calibration.CATEGORY, more)
+        return xs.indices.map { i -> type[i]?.let { Scored(it, cat[i]) } }
     }
 }

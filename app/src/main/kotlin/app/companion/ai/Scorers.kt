@@ -14,4 +14,6 @@ class Scorers(private val app: Application, private val decide: DecideScorer, pr
     fun warm(): Boolean = if (on()) bert.warm() else decide.warm()
 
     override fun score(raw: Raw): Scored? = if (on()) bert.score(raw) else decide.score(raw)
+
+    override fun scoreAll(raws: List<Raw>): List<Scored?> = if (on()) bert.scoreAll(raws) else raws.map(decide::score)
 }

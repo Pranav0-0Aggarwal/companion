@@ -20,6 +20,7 @@ object Manifest {
     val needle = Spec("Needle 3", "needle3.cact", 35335380, "c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38", 60_000)
     val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", 60_000, "models-v2")
     val all = listOf(needle, tokenizer, schema, calibration, decide, nux)
+    val wanted get() = all.filter { it !== nux || Chip.nux }
 }
 
 enum class Have { No, Base, Custom }

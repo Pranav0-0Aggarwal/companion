@@ -6,6 +6,11 @@ class Memo(private val scorer: Scorer) : Scorer {
     private val seen = HashMap<Raw, Scored?>()
 
     override fun score(raw: Raw): Scored? = if (seen.containsKey(raw)) seen[raw] else scorer.score(raw).also { seen[raw] = it }
+
+    fun prime(raws: Collection<Raw>) {
+        val todo = raws.filter { it !in seen }.distinct()
+        if (todo.size > 1) scorer.scoreAll(todo).forEachIndexed { i, s -> seen[todo[i]] = s }
+    }
 }
 
 class Refine(
@@ -15,6 +20,8 @@ class Refine(
     private val scorer: Scorer,
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) {
+    fun prime(raws: Collection<Raw>, memo: Memo) = memo.prime(raws.filter { rules.classify(it) !is Verdict.Sure })
+
     fun run(raw: Raw, x: Extractor = extractor, s: Scorer = scorer): Verdict {
         val base = rules.classify(raw)
         val want = Gaps.of(raw, base.event, zone)

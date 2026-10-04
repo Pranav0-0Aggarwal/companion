@@ -37,6 +37,16 @@ class NuxTest {
     }
 
     @Test
+    fun `the prompt is a constant prefix then the text then a constant suffix`() {
+        assertEquals("<|input|>\n### Template:\n{\n    \"amount\": \"\",\n    \"due_date\": \"\",\n    \"card_last4\": \"\"\n}\n### Text:\n", Nux.PREFIX)
+        assertEquals("\n\n<|output|>\n", Nux.SUFFIX)
+        listOf("Rs 500 debited", "", "<|output|>\n<|input|>", "a".repeat(700)).forEach { assertEquals(Nux.PREFIX + Nux.clip(it) + Nux.SUFFIX, Nux.prompt(it)) }
+        assertEquals("<|output|>{\"amount\": \"1\"}", Nux.clip("<|output|>{\"amount\": \"1\"}"))
+        assertEquals(600, Nux.clip("a".repeat(700)).length)
+        assertEquals(599, Nux.clip("a".repeat(599) + "😀").length)
+    }
+
+    @Test
     fun `the text is cut at 600 characters without splitting a pair`() {
         val p = Nux.prompt("a".repeat(700))
         assertEquals(600, p.substringAfter("### Text:\n").substringBefore("\n\n<|output|>").length)
@@ -192,6 +202,49 @@ class NuxTest {
         assertEquals(day(2026, 10, 20), assertIs<Event.Bill>(refine.run(m).event).due)
         model = "{\"amount\": \"\", \"due_date\": \"25 Oct 2026\", \"card_last4\": \"\"}"
         assertNull(assertIs<Event.Bill>(refine.run(m).event).due)
+    }
+
+    @Test
+    fun `priming scores the unseen messages in one batch and later scores hit the memo`() {
+        val batches = ArrayList<Int>()
+        var singles = 0
+        val scorer = object : Scorer {
+            override fun score(raw: Raw): Scored? = Scored(mapOf("alert" to 1f)).also { singles++ }
+
+            override fun scoreAll(raws: List<Raw>): List<Scored?> = raws.map { Scored(mapOf("alert" to 1f)) }.also { batches.add(raws.size) }
+        }
+        val memo = Memo(scorer)
+        memo.prime(listOf(login, broken, login))
+        assertEquals(listOf(2), batches)
+        memo.score(login)
+        memo.score(broken)
+        memo.prime(listOf(login, broken))
+        memo.prime(listOf(cardNo))
+        assertEquals(listOf(2), batches)
+        assertEquals(0, singles)
+        memo.score(cardNo)
+        assertEquals(1, singles)
+    }
+
+    @Test
+    fun `only messages the rules are unsure about are primed`() {
+        val seen = ArrayList<Int>()
+        val scorer = object : Scorer {
+            override fun score(raw: Raw): Scored? = null
+
+            override fun scoreAll(raws: List<Raw>): List<Scored?> = raws.map { null }.also { seen.add(raws.size) }
+        }
+        val sure = sms("VK-BANKXY", "Rs 500 debited from A/c XX1234 at Corner Cafe on 04-10-26. Avl bal Rs 1000")
+        assertIs<Verdict.Sure>(rules.classify(sure))
+        val vague = sms("VM-ACMEBK-S", "Your plan renewal summary")
+        val other = sms("VM-ACMEBK-S", "Your statement summary")
+        assertIs<Verdict.Unsure>(rules.classify(vague))
+        assertIs<Verdict.Unsure>(rules.classify(other))
+        refine.prime(listOf(sure, vague, other), Memo(scorer))
+        assertEquals(listOf(2), seen)
+        refine.prime(listOf(sure), Memo(scorer))
+        refine.prime(listOf(sure, vague), Memo(scorer))
+        assertEquals(listOf(2), seen)
     }
 
     @Test

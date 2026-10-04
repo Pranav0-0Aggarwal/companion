@@ -86,7 +86,7 @@ object Dl {
     private val gate = ReentrantLock()
     private const val TRIES = 3
 
-    private val pins get() = Manifest.all.filter(Models::pinned)
+    private val pins get() = Manifest.wanted.filter(Models::pinned)
 
     val total get() = pins.sumOf { it.bytes }
 

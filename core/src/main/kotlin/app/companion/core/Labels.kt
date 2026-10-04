@@ -4,6 +4,8 @@ class Scored(val type: Map<String, Float>, val category: Map<String, Float>? = n
 
 fun interface Scorer {
     fun score(raw: Raw): Scored?
+
+    fun scoreAll(raws: List<Raw>): List<Scored?> = raws.map(::score)
 }
 
 object Labels {

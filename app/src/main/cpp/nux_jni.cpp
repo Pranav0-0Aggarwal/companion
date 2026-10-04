@@ -116,12 +116,21 @@ jstring jstr(JNIEnv *e, const std::string &s) {
     return e->NewString((const jchar *)u.data(), (jsize)u.size());
 }
 
-bool gen(H *h, const std::string &p, const std::string &g, int max, std::string &out) {
+bool enc(const llama_vocab *v, const std::string &s, bool add, bool special, std::vector<llama_token> &t) {
+    if (s.empty()) return true;
+    std::vector<llama_token> b(CTX);
+    const int n = llama_tokenize(v, s.data(), (int32_t)s.size(), b.data(), (int32_t)b.size(), add, special);
+    if (n < 0) return false;
+    t.insert(t.end(), b.begin(), b.begin() + n);
+    return t.size() < (size_t)(CTX - 8);
+}
+
+bool gen(H *h, const std::string &pre, const std::string &txt, const std::string &suf, const std::string &g, int max, std::string &out) {
     const llama_vocab *v = llama_model_get_vocab(h->m);
-    std::vector<llama_token> t(CTX);
-    const int n = llama_tokenize(v, p.data(), (int32_t)p.size(), t.data(), (int32_t)t.size(), true, true);
-    if (n <= 0 || n >= CTX - 8) return false;
-    t.resize((size_t)n);
+    std::vector<llama_token> t;
+    if (!enc(v, pre, true, true, t) || !enc(v, txt, false, false, t) || !enc(v, suf, false, true, t)) return false;
+    const int n = (int)t.size();
+    if (n <= 0) return false;
     max = std::max(1, std::min({max, STEPS, CTX - n}));
 
     llama_memory_t mem = llama_get_memory(h->c);
@@ -228,14 +237,16 @@ extern "C" JNIEXPORT jlong JNICALL Java_app_companion_ai_NuxJni_load(JNIEnv *, j
     }
 }
 
-extern "C" JNIEXPORT jstring JNICALL Java_app_companion_ai_NuxJni_run(JNIEnv *e, jobject, jlong hh, jstring prompt, jstring grammar, jint maxTokens) {
+extern "C" JNIEXPORT jstring JNICALL Java_app_companion_ai_NuxJni_run(JNIEnv *e, jobject, jlong hh, jstring prefix, jstring text, jstring suffix, jstring grammar, jint maxTokens) {
     H *h = (H *)(intptr_t)hh;
-    if (!h || !prompt || !grammar) return nullptr;
+    if (!h || !prefix || !text || !suffix || !grammar) return nullptr;
     std::string out;
     try {
-        const std::string p = utf8(e, prompt);
+        const std::string p = utf8(e, prefix);
+        const std::string x = utf8(e, text);
+        const std::string f = utf8(e, suffix);
         const std::string g = utf8(e, grammar);
-        if (p.empty() || g.empty() || !gen(h, p, g, (int)maxTokens, out)) return nullptr;
+        if (p.empty() || g.empty() || !gen(h, p, x, f, g, (int)maxTokens, out)) return nullptr;
     } catch (...) {
         reset(h);
         return nullptr;

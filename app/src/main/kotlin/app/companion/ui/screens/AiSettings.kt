@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.ai.Active
+import app.companion.ai.Chip
 import app.companion.ai.Dl
 import app.companion.ai.Have
 import app.companion.ai.Manifest as Pins
@@ -71,8 +72,8 @@ fun AiSettings() {
     val run = s.mode == Mode.Running
     val busy = run || s.mode == Mode.Waiting
     val total = remember { Dl.total }
-    val got = if (run) s.ready + s.pos else Pins.all.filter(Models::pinned).sumOf { disk[it.file]?.second ?: 0 }
-    val missing = Pins.all.any { Models.pinned(it) && (disk[it.file]?.first ?: Have.No) == Have.No }
+    val got = if (run) s.ready + s.pos else Pins.wanted.filter(Models::pinned).sumOf { disk[it.file]?.second ?: 0 }
+    val missing = Pins.wanted.any { Models.pinned(it) && (disk[it.file]?.first ?: Have.No) == Have.No }
     val resume = !busy && got > 0 && missing
     val cur = Pins.all.indexOfFirst { it.file == s.cur }
     Section("On-device AI")
@@ -81,6 +82,7 @@ fun AiSettings() {
             val h = disk[f.file]?.first ?: Have.No
             val part = disk[f.file]?.second ?: 0
             val text = when {
+                f === Pins.nux && !Chip.nux -> "Not supported on this phone's CPU"
                 !Models.pinned(f) -> "waiting for the pinned checksum"
                 h == Have.Custom -> "custom"
                 h == Have.Base -> "ready"

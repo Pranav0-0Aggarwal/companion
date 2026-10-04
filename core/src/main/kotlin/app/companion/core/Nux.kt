@@ -18,7 +18,10 @@ ws ::= [ \t\n]*
     private val kinds = setOf(Kind.Debit, Kind.Credit, Kind.CardSpend, Kind.Bill, Kind.Statement)
     private val labels = setOf("expense", "income", "bill")
 
-    fun prompt(text: String) = "<|input|>\n### Template:\n$TPL\n### Text:\n${clip(text)}\n\n<|output|>\n"
+    const val PREFIX = "<|input|>\n### Template:\n$TPL\n### Text:\n"
+    const val SUFFIX = "\n\n<|output|>\n"
+
+    fun prompt(text: String) = PREFIX + clip(text) + SUFFIX
 
     fun keep(want: Set<Field>): Set<Field> = want intersect FIELDS
 
@@ -34,5 +37,5 @@ ws ::= [ \t\n]*
         is Verdict.Unsure -> v.guess?.let { it.label in labels && cal.sure(Calibration.TYPE, it.label, it.prob) } == true
     }
 
-    private fun clip(text: String) = text.take(MAX_TEXT).let { if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it }
+    fun clip(text: String) = text.take(MAX_TEXT).let { if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it }
 }

@@ -216,6 +216,49 @@ class BertTest {
     }
 
     @Test
+    fun `a batch runs every type first then category only for the expense items`() {
+        val tops = listOf(1, 5, 1, 0, 1, 8)
+        val ran = ArrayList<Pair<String, Int>>()
+        val out = Bert.scoreAll(spec, cal, bpe, tops.map { "VM-X" to "hello $it" }) { task, xs ->
+            ran.add(task to xs.size)
+            if (task == "type") tops.map { logits(it, types.size) } else xs.map { logits(2, cats.size) }
+        }
+        assertEquals(listOf("type" to 6, "category" to 3), ran)
+        assertEquals(listOf(true, false, true, false, true, false), out.map { it!!.category != null })
+        assertEquals(tops, out.map { s -> s!!.type.maxBy { it.value }.key }.map(types::indexOf))
+    }
+
+    @Test
+    fun `a batch with no expense never loads the category task and an empty batch runs nothing`() {
+        val ran = ArrayList<String>()
+        val out = Bert.scoreAll(spec, cal, bpe, listOf("a" to "b", "c" to "d")) { task, xs -> ran.add(task).let { xs.map { logits(5, types.size) } } }
+        assertEquals(listOf("type"), ran)
+        assertTrue(out.all { it != null && it.category == null })
+        assertEquals(emptyList(), Bert.scoreAll(spec, cal, bpe, emptyList()) { t, _ -> ran.add(t).let { emptyList() } })
+        assertEquals(listOf("type"), ran)
+    }
+
+    @Test
+    fun `a batch keeps a failed item null and its neighbours scored`() {
+        val out = Bert.scoreAll(spec, cal, bpe, listOf("a" to "1", "a" to "2", "a" to "3")) { task, xs ->
+            if (task == "type") listOf(logits(1, types.size), null, FloatArray(3)) else xs.map { null }
+        }
+        assertNotNull(out[0])
+        assertNull(out[0]!!.category)
+        assertNull(out[1])
+        assertNull(out[2])
+    }
+
+    @Test
+    fun `a batch of one matches the single score`() {
+        fun l(task: String) = if (task == "type") logits(1, types.size) else logits(3, cats.size)
+        val one = Bert.score(spec, cal, bpe, "VM-X", "hello") { t, _ -> l(t) }!!
+        val all = Bert.scoreAll(spec, cal, bpe, listOf("VM-X" to "hello")) { t, xs -> xs.map { l(t) } }.single()!!
+        assertEquals(one.type, all.type)
+        assertEquals(one.category, all.category)
+    }
+
+    @Test
     fun `calibrated probabilities reach the scored maps`() {
         val s = Bert.score(spec, cal, bpe, "VM-X", "hello") { task, _ -> if (task == "type") logits(1, types.size) else logits(0, cats.size) }!!
         assertTrue(near(s.type.getValue("expense"), cal.probs("type", logits(1, types.size))[1]))

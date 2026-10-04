@@ -41,7 +41,7 @@ class Pending(
     private val refine: Refine,
     private val gov: Governor,
     private val scorer: Scorer,
-    private val nux: Extractor,
+    private val nux: NuExtractor,
 ) {
     private class Todo(val raw: Raw?, val state: String?)
 
@@ -90,12 +90,15 @@ class Pending(
                 val probe = Probe()
                 for ((i, t) in todo) {
                     currentCoroutineContext().ensureActive()
-                    val raw = soft { t.raw ?: row(i) } ?: continue
-                    out[i] = soft { refine.run(raw, probe, memo) } ?: continue
-                    raws[i] = raw
+                    soft { t.raw ?: row(i) }?.let { raws[i] = it }
+                }
+                soft { refine.prime(raws.values, memo) }
+                for ((i, raw) in raws) {
+                    currentCoroutineContext().ensureActive()
+                    soft { refine.run(raw, probe, memo) }?.let { out[i] = it }
                 }
                 for ((i, raw) in raws) {
-                    if (raw !in probe.asked) continue
+                    if (!nux.on || i !in out || raw !in probe.asked) continue
                     currentCoroutineContext().ensureActive()
                     if (hot()) break
                     soft { refine.run(raw, nux, memo) }?.let { out[i] = it }

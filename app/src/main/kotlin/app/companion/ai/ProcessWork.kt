@@ -12,6 +12,7 @@ import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import app.companion.core.Batch
 import app.companion.core.Guard
+import app.companion.core.Memo
 import app.companion.core.Pace
 import app.companion.core.Progress
 import app.companion.core.Raw
@@ -19,7 +20,6 @@ import app.companion.core.Refile
 import app.companion.core.Source
 import app.companion.core.Verdict
 import app.companion.core.Vitals
-import app.companion.data.Item
 import app.companion.data.State
 import app.companion.ingest.SmsImport
 import app.companion.sl
@@ -133,7 +133,10 @@ private class Engine(private val c: Context, private val job: Job, private val t
             val frozen = repo.frozen(rows)
             val from = repo.senders(rows.map { it.id })
             val p = repo.profileNow()
-            val out = rows.filter { it.id !in frozen }.associate { it.id to read(it, from[it.id]) }
+            val raws = rows.filter { it.id !in frozen }.associate { it.id to Pending.raw(c, it, from[it.id]) }
+            val memo = Memo(sl.scorer)
+            sl.refine.prime(raws.values.filterNotNull(), memo)
+            val out = raws.mapValues { (_, r) -> r?.let { read(it, memo) } }
             cur = repo.atomic {
                 var moved = 0
                 var ask = 0
@@ -149,10 +152,9 @@ private class Engine(private val c: Context, private val job: Job, private val t
         }
     }
 
-    private suspend fun read(i: Item, from: String?): Pair<Raw, Verdict>? {
+    private suspend fun read(raw: Raw, memo: Memo): Pair<Raw, Verdict>? {
         currentCoroutineContext().ensureActive()
-        val raw = Pending.raw(c, i, from) ?: return null
-        val v = sl.refine.run(raw)
+        val v = sl.refine.run(raw, s = memo)
         return if (Refile.usable(v)) raw to v else null
     }
 
@@ -165,9 +167,12 @@ private class Engine(private val c: Context, private val job: Job, private val t
                 val rows = SmsImport.page(c, cur.pos, Batch.size(Batch.left(cur)))
                 if (rows.isEmpty()) break
                 val p = repo.profileNow()
-                val out = rows.filterNot { repo.seen(it.from, it.sent, it.at, cur.cap) }.map {
+                val raws = rows.filterNot { repo.seen(it.from, it.sent, it.at, cur.cap) }.map { Raw(Source.Sms, it.from, "", it.body, it.at) }
+                val memo = Memo(sl.scorer)
+                sl.refine.prime(raws, memo)
+                val out = raws.map {
                     currentCoroutineContext().ensureActive()
-                    Raw(Source.Sms, it.from, "", it.body, it.at).let { r -> r to sl.refine.run(r) }
+                    it to sl.refine.run(it, s = memo)
                 }
                 cur = repo.atomic {
                     var added = 0

@@ -38,9 +38,9 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           export COMPANION_VERSION="${TAG#v}" COMPANION_KEYSTORE="$RUNNER_TEMP/release.jks"
+          trap 'rm -f "$COMPANION_KEYSTORE"' EXIT
           printf '%s' "$KEYSTORE_B64" | base64 -d > "$COMPANION_KEYSTORE"
           ./gradlew --no-daemon :core:test :app:assembleRelease
-          rm -f "$COMPANION_KEYSTORE"
           cp app/build/outputs/apk/release/app-release.apk "companion-$COMPANION_VERSION.apk"
           sha256sum "companion-$COMPANION_VERSION.apk" > "companion-$COMPANION_VERSION.apk.sha256"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "companion-$COMPANION_VERSION.apk" | grep SHA-256

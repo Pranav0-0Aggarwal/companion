@@ -26,7 +26,7 @@ class DecideScorer(private val app: Application, private val gov: Governor) : Sc
 
     fun calibration(): Calibration {
         val spec = assets()?.second ?: return Calibration.DEFAULT
-        return runCatching { Models.loadCalibration(app).takeIf { it.fits(Calibration.TYPE, spec.labels(Calibration.TYPE)) } }.getOrNull() ?: Calibration.DEFAULT
+        return runCatching { Models.loadCalibration(app).takeIf { it.fits(Calibration.TYPE, spec.labels(Calibration.TYPE)) && (!spec.has(Calibration.CATEGORY) || it.fits(Calibration.CATEGORY, spec.labels(Calibration.CATEGORY))) } }.getOrNull() ?: Calibration.DEFAULT
     }
 
     override fun score(raw: Raw): Scored? {

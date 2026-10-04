@@ -77,8 +77,6 @@ class NeedleService : Service() {
     override fun onBind(intent: Intent): IBinder = messenger.binder
 
     override fun onDestroy() {
-        if (handle != 0L) NeedleJni.free(handle)
-        thread.quitSafely()
         Process.killProcess(Process.myPid())
     }
 }

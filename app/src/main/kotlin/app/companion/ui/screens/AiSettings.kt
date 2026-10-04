@@ -35,7 +35,7 @@ fun AiSettings() {
     val live by gov.live.collectAsStateWithLifecycle()
     val job by remember { ModelJobs.watch(c) }.collectAsStateWithLifecycle(null)
     val state = job?.state
-    val have by produceState(emptyMap<String, Have>(), state) {
+    val have by produceState(emptyMap<String, Have>(), state, job?.progress?.getString(ModelWork.FILE)) {
         value = withContext(Dispatchers.IO) { Manifest.all.associate { it.file to Models.have(c, it) } }
     }
     val busy = state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED || state == WorkInfo.State.BLOCKED

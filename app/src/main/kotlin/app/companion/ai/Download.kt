@@ -55,7 +55,7 @@ class ModelWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
         val job = coroutineContext.job
         val fetch = Fetcher(Http)
         for (s in Manifest.all) {
-            if (Models.have(applicationContext, s) != Have.No) continue
+            if (!Models.pinned(s) || Models.have(applicationContext, s) != Have.No) continue
             var shown = -1
             val out = fetch.pull(Manifest.BASE + s.file, s.bytes, s.sha, Models.part(applicationContext, s), Models.base(applicationContext, s), { job.isActive }) { pos ->
                 val pct = (pos * 100 / s.bytes).toInt()

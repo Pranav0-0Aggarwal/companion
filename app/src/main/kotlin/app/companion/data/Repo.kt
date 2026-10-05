@@ -66,6 +66,7 @@ class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, v
 
 class Repo(private val db: Db) {
     private val d = db.dao()
+    val life = Lives(db)
     val fresh = ConcurrentHashMap<Long, Long>()
 
     val profile: Flow<Profile> = d.profile().map { it ?: Profile() }

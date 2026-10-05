@@ -23,7 +23,7 @@ object Vault {
         System.loadLibrary("sqlcipher")
         return Room.databaseBuilder(c, Db::class.java, DB)
             .openHelperFactory(SupportOpenHelperFactory(passphrase(c)))
-            .addMigrations(Migrate1to2, Migrate2to3, Migrate3to4, Migrate4to5, Migrate5to6, Migrate6to7, Migrate7to8)
+            .addMigrations(Migrate1to2, Migrate2to3, Migrate3to4, Migrate4to5, Migrate5to6, Migrate6to7, Migrate7to8, Migrate8to9)
             .build()
     }
 

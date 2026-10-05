@@ -6,12 +6,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Fold::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class, SenderRule::class, Moved::class, Alias::class, Dismissed::class],
-    version = 8,
-    exportSchema = false,
+    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Fold::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class, SenderRule::class, Moved::class, Alias::class, Dismissed::class, MealRow::class, MealItemRow::class, SkuRow::class, WeightRow::class, TripRow::class, TripItemRow::class, DocRow::class, ReplyRow::class],
+    version = 9,
+    exportSchema = true,
 )
 abstract class Db : RoomDatabase() {
     abstract fun dao(): Dao
+
+    abstract fun life(): LifeDao
 }
 
 val Migrate1to2 = object : Migration(1, 2) {
@@ -77,5 +79,28 @@ val Migrate7to8 = object : Migration(7, 8) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `dismissed` (`key` TEXT NOT NULL, PRIMARY KEY(`key`))")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_items_tpl` ON `items` (`tpl`)")
+    }
+}
+
+val Migrate8to9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `kcalGoal` INTEGER")
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `proteinGoal` INTEGER")
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `heightCm` INTEGER")
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `age` INTEGER")
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `sex` TEXT")
+        db.execSQL("ALTER TABLE `profile` ADD COLUMN `activity` TEXT")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `meals` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `day` INTEGER NOT NULL, `slot` TEXT NOT NULL, `at` INTEGER NOT NULL, `src` TEXT NOT NULL, `note` TEXT)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_meals_day` ON `meals` (`day`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `meal_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `meal_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `brand` TEXT, `qty` REAL NOT NULL, `unit` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL, `carbs` REAL, `fat` REAL, `source` TEXT NOT NULL, `conf` REAL NOT NULL, FOREIGN KEY(`meal_id`) REFERENCES `meals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_meal_items_meal_id` ON `meal_items` (`meal_id`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `skus` (`key` TEXT NOT NULL, `brand` TEXT, `name` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL, `carbs` REAL, `fat` REAL, `per` TEXT NOT NULL, `updated` INTEGER NOT NULL, PRIMARY KEY(`key`))")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `weights` (`day` INTEGER NOT NULL, `kg` REAL NOT NULL, `at` INTEGER NOT NULL, PRIMARY KEY(`day`))")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `trips` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `start` INTEGER NOT NULL, `end` INTEGER NOT NULL, `budget` INTEGER, `currency` TEXT, `active` INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `trip_items` (`trip_id` INTEGER NOT NULL, `item_id` INTEGER NOT NULL, `share` REAL NOT NULL, `inr` INTEGER, PRIMARY KEY(`trip_id`, `item_id`), FOREIGN KEY(`trip_id`) REFERENCES `trips`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`item_id`) REFERENCES `items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_trip_items_item_id` ON `trip_items` (`item_id`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `docs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `kind` TEXT NOT NULL, `title` TEXT NOT NULL, `fields` BLOB NOT NULL, `expires` INTEGER, `photo` TEXT, `src` TEXT NOT NULL, `at` INTEGER NOT NULL, `mask` TEXT, `sent` TEXT)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_docs_expires` ON `docs` (`expires`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `replies` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `ref` INTEGER, `slot` TEXT, `text` TEXT NOT NULL)")
     }
 }

@@ -33,6 +33,12 @@ data class Profile(
     val since: String? = null,
     @ColumnInfo(defaultValue = "365") val keep: Int = 365,
     val model: String? = null,
+    val kcalGoal: Int? = null,
+    val proteinGoal: Int? = null,
+    val heightCm: Int? = null,
+    val age: Int? = null,
+    val sex: String? = null,
+    val activity: String? = null,
 ) {
     val name get() = call.ifBlank { first }
     val vips get() = vip.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toSet()

@@ -173,4 +173,9 @@ dependencies {
     implementation(libs.coroutines)
     implementation(libs.play.auth)
     implementation(libs.litert)
+    testImplementation(libs.kotlin.test)
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }

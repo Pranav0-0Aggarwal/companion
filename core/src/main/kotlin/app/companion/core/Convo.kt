@@ -13,6 +13,12 @@ class Convo(val cap: Int = 12) {
 
     fun add(role: Role, text: String) = add(Turn(role, text))
 
+    fun fit(extra: List<Turn>, ok: (List<Turn>) -> Boolean): List<Turn> {
+        var t = turns
+        while (t.isNotEmpty() && !ok(t + extra)) t = t.drop(1).dropWhile { it.role != Role.User }
+        return t + extra
+    }
+
     fun clear() = list.clear()
 }
 

@@ -43,4 +43,25 @@ class ConvoTest {
         c.clear()
         assertEquals(emptyList(), c.turns)
     }
+
+    @Test
+    fun `fit drops the oldest turns until the prompt is small enough and keeps the extra`() {
+        val c = Convo()
+        c.fill(6)
+        val now = listOf(Turn(Role.User, "now"))
+        assertEquals(listOf("t0", "t1", "t2", "t3", "t4", "t5", "now"), c.fit(now) { true }.map { it.text })
+        assertEquals(listOf("t4", "t5", "now"), c.fit(now) { it.size <= 3 }.map { it.text })
+        assertEquals(listOf("now"), c.fit(now) { it.size <= 1 }.map { it.text })
+        assertEquals(listOf("now"), c.fit(now) { false }.map { it.text })
+        assertEquals(6, c.turns.size)
+    }
+
+    @Test
+    fun `fit never starts the history on an assistant turn`() {
+        val c = Convo()
+        c.fill(6)
+        val got = c.fit(listOf(Turn(Role.User, "now"))) { it.size <= 4 }
+        assertEquals(Role.User, got.first().role)
+        assertEquals(listOf("t4", "t5", "now"), got.map { it.text })
+    }
 }

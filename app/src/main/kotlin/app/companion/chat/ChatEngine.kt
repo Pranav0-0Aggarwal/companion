@@ -14,8 +14,10 @@ import app.companion.core.Card
 import app.companion.core.ChatTemplate
 import app.companion.core.Clarify
 import app.companion.core.Convo
+import app.companion.core.Decode
 import app.companion.core.Guard
 import app.companion.core.Json
+import app.companion.core.ObjEnd
 import app.companion.core.Prompt
 import app.companion.core.Registry
 import app.companion.core.Role
@@ -28,14 +30,19 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -71,6 +78,8 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     fun ready() = brain() != null
 
     @Volatile private var shown = false
+
+    @Volatile private var live: ChatClient? = null
 
     private fun show(c: Card) {
         shown = true
@@ -151,44 +160,75 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         send(Out.Done)
     }
 
+    private suspend fun ProducerScope<Out>.abortable(block: suspend () -> Boolean): Boolean {
+        val on = AtomicBoolean(true)
+        val watch = launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                awaitCancellation()
+            } finally {
+                if (on.get()) live?.cancel()
+            }
+        }
+        try {
+            return block()
+        } finally {
+            on.set(false)
+            watch.cancel()
+        }
+    }
+
+    private suspend fun ProducerScope<Out>.generate(b: Brain, turns: List<Turn>, strict: Boolean, bg: Boolean, spoke: StringBuilder): String? {
+        val lead = if (strict) "" else Decode.LEAD
+        val raw = StringBuilder(lead)
+        val say = if (spoke.isEmpty()) SayStream().also { it.feed(lead) } else null
+        val end = ObjEnd().also { it.feed(lead) }
+        val prompt = b.tpl.render(system, turns, lead)
+        val prio = if (bg) Process.THREAD_PRIORITY_BACKGROUND else Process.THREAD_PRIORITY_DEFAULT
+        val ok = abortable {
+            gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
+                live = cl
+                cl.run(prompt, b.tpl.head(system), if (strict) grammar else "", if (strict) MAX_TOKENS else Decode.FREE, threads(), pre(), TEMP, prio) { piece ->
+                    raw.append(piece)
+                    say?.feed(piece)?.takeIf { it.isNotEmpty() }?.let { spoke.append(it); trySend(Out.Say(it)) }
+                    end.feed(piece)
+                    isActive && !end.done()
+                }
+            }
+        }
+        ensureActive()
+        return raw.toString().takeIf { ok }
+    }
+
     private suspend fun ProducerScope<Out>.run(text: String, bg: Boolean) {
         foods.answer(text)?.let { return settle(text, it) }
         val b = brain() ?: return fail("model")
         val first = Turn(Role.User, Prompt.user(text, stamp.format(ZonedDateTime.now(zone))))
         val local = mutableListOf(first)
         var calls = 0
-        var bad = 0
         while (true) {
-            val raw = StringBuilder()
-            val stream = SayStream()
-            val prompt = b.tpl.render(system, hist.turns + local)
-            val ok = try {
-                gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
-                    cl.run(prompt, b.tpl.head(system), grammar, MAX_TOKENS, threads(), pre(), TEMP, if (bg) Process.THREAD_PRIORITY_BACKGROUND else Process.THREAD_PRIORITY_DEFAULT) { piece ->
-                        raw.append(piece)
-                        stream.feed(piece).takeIf { it.isNotEmpty() }?.let { trySend(Out.Say(it)) }
-                        isActive
-                    }
-                }
+            val turns = hist.fit(local) { b.tpl.render(system, it).length <= MAX_PROMPT }
+            val spoke = StringBuilder()
+            val d = try {
+                Decode.run(registry) { strict -> generate(b, turns, strict, bg, spoke) }
             } catch (_: LowMemory) {
                 return fail("memory")
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                false
-            }
-            if (!ok) return fail("model")
-            val out = raw.toString().trim()
-            when (val s = registry.parse(out)) {
+                null
+            } ?: return fail("model")
+            when (val s = d.step) {
                 is Step.Say -> {
+                    val rest = if (s.text.startsWith(spoke.toString())) s.text.substring(spoke.length) else ""
+                    if (rest.isNotEmpty()) send(Out.Say(rest))
                     hist.add(first)
-                    hist.add(Role.Assistant, out)
+                    hist.add(Role.Assistant, d.raw)
                     return send(Out.Done)
                 }
                 is Step.Call -> {
                     if (++calls > MAX_CALLS) return fail("steps")
                     send(Out.Used(s.tool.name))
-                    local += Turn(Role.Assistant, out)
+                    local += Turn(Role.Assistant, d.raw)
                     val r = try {
                         s.tool.run(s.args)
                     } catch (e: CancellationException) {
@@ -207,7 +247,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
                         }
                     }
                 }
-                is Step.Bad -> if (++bad > 1) return fail("format")
+                is Step.Bad -> return fail("format")
             }
         }
     }
@@ -220,6 +260,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     private companion object {
         const val MAX_CALLS = 4
         const val MAX_TOKENS = 384
+        const val MAX_PROMPT = 5200
         const val MAX_RESULT = 1200
         const val MAX_TEXT = 600
         const val TEMP = 0.2f

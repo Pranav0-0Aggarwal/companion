@@ -11,7 +11,7 @@ enum class ChatTemplate {
 
     fun head(system: String) = buildString { block("system", system) }
 
-    fun render(system: String, turns: List<Turn>) = buildString {
+    fun render(system: String, turns: List<Turn>, lead: String = "") = buildString {
         append(head(system))
         for (t in turns) when {
             t.role == Role.User -> block("user", t.text)
@@ -19,7 +19,7 @@ enum class ChatTemplate {
             this@ChatTemplate == Qwen -> block("user", "<tool_response>\n${scrub(t.text)}\n</tool_response>", false)
             else -> block("tool", t.text)
         }
-        append(if (this@ChatTemplate == Qwen) "<|im_start|>assistant\n<think>\n\n</think>\n\n" else "<|im_start|>assistant\n")
+        append(if (this@ChatTemplate == Qwen) "<|im_start|>assistant\n<think>\n\n</think>\n\n" else "<|im_start|>assistant\n").append(lead)
     }
 
     private fun StringBuilder.block(role: String, text: String, clean: Boolean = true) {

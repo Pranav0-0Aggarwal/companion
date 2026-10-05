@@ -29,6 +29,16 @@ class ChatTemplateTest {
     }
 
     @Test
+    fun `the head is the system block and a lead follows the generation prefix`() {
+        for (t in ChatTemplate.entries) {
+            assertEquals("<|im_start|>system\nSYS<|im_end|>\n", t.head("SYS"))
+            assertTrue(t.render("SYS", turns).startsWith(t.head("SYS")))
+            assertEquals(t.render("SYS", turns) + "{\"", t.render("SYS", turns, Decode.LEAD))
+        }
+        assertTrue(ChatTemplate.Qwen.render("S", emptyList(), "{\"").endsWith("</think>\n\n{\""))
+    }
+
+    @Test
     fun `lfm renders chatml with a tool role and no bos`() {
         assertEquals(
             "<|im_start|>system\nSYS<|im_end|>\n" +

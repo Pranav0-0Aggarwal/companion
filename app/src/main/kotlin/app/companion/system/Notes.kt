@@ -17,6 +17,7 @@ import app.companion.ui.has
 object Notes {
     const val OTP = 1
     const val CODE = "code"
+    private const val COPY = 0x434F5059
 
     fun open(c: Context): PendingIntent =
         PendingIntent.getActivity(c, 0, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
@@ -31,7 +32,7 @@ object Notes {
         Intent(c, MainActivity::class.java).setAction(MainActivity.OPEN).putExtra(MainActivity.ROUTE, route).putExtra(MainActivity.ITEM, item)
 
     fun copy(c: Context, code: String): PendingIntent = PendingIntent.getBroadcast(
-        c, 0, Intent(c, CopyReceiver::class.java).putExtra(CODE, code),
+        c, code.hashCode() xor COPY, Intent(c, CopyReceiver::class.java).putExtra(CODE, code),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 

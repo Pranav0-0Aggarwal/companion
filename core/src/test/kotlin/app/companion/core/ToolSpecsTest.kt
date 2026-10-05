@@ -112,7 +112,7 @@ class ToolSpecsTest {
     @Test
     fun newSpecsStayCompact() {
         val new = ToolSpecs.all.drop(16)
-        assertEquals(20, new.size)
+        assertEquals(21, new.size)
         assertTrue(new.all { it.desc.split(' ').size <= 8 }, "desc")
         assertTrue(new.all { t -> t.args.all { it.desc.split(' ').filter(String::isNotEmpty).size <= 6 } }, "arg desc")
     }

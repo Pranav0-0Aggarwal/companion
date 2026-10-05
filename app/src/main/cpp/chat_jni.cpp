@@ -18,7 +18,7 @@
 
 namespace {
 
-constexpr int CTX = 2048;
+constexpr int CTX = 3072;
 constexpr int BATCH = 256;
 constexpr int STEPS = 512;
 constexpr size_t CAP = 16384;

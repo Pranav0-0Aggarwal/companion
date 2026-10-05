@@ -311,7 +311,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         const val MAX_CALLS = 4
         const val MAX_TOKENS = 384
         const val WARM_MS = 10_000L
-        const val MAX_PROMPT = 5200
+        const val MAX_PROMPT = 8000
         const val MAX_RESULT = 1200
         const val MAX_TEXT = 600
         const val TEMP = 0.2f

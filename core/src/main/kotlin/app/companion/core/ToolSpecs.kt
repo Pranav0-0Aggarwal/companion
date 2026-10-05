@@ -82,6 +82,7 @@ object ToolSpecs {
     val weightTrend = ToolSpec("weight_trend", "Weight trend over recent weeks.", listOf(Arg("weeks", Ty.Int, false)))
     val meetings = ToolSpec("meetings", "Calendar meetings on a day.", listOf(Arg("day", Ty.Str, false)))
     val trips = ToolSpec("trips", "All trips with their spend.")
+    val suggestMeal = ToolSpec("suggest_meal", "Meal ideas from the food list.", listOf(Arg("kcal", Ty.Num, false), Arg("veg", Ty.Bool, false)))
 
     val markPaid = ToolSpec("mark_paid", "Mark a bill paid, after confirm.", listOf(Arg("bill", Ty.Str, desc = "item id or bill name")))
     val file = ToolSpec("file", "File a spend under a category.", listOf(Arg("item", Ty.Str, desc = "item id like i:12"), Arg("category", categories)))
@@ -95,7 +96,7 @@ object ToolSpecs {
 
     val all = listOf(
         spend, bills, cards, balance, logMeal, foodToday, setKcal, logWeight, startTrip, endTrip, tripSummary, vaultFind, vaultAdd, remind, calendarAdd, open,
-        searchMessages, ledger, topMerchants, compare, needsYou, billCycle, bestCard, meals, weightTrend, meetings, trips,
+        searchMessages, ledger, topMerchants, compare, needsYou, billCycle, bestCard, meals, weightTrend, meetings, trips, suggestMeal,
         markPaid, file, retype, markDup, renameMerchant, notSpending, addCard, setBudget, dismiss,
     )
 }

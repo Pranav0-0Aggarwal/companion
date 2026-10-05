@@ -32,6 +32,15 @@ class FoodToday(private val foods: Foods) : Base(ToolSpecs.foodToday) {
     override suspend fun run(a: Map<String, Any?>): ToolOut = ToolOut.Ok(foods.day(foods.wen(a.s("date").orEmpty()).day))
 }
 
+class SuggestMeal(private val foods: Foods) : Base(ToolSpecs.suggestMeal) {
+    override suspend fun run(a: Map<String, Any?>): ToolOut {
+        val p = foods.plates(a.d("kcal")?.toInt()?.takeIf { it in 100..3000 }, a["veg"] == true)
+        if (p.isEmpty()) return ToolOut.Ok("No plate in the food list fits that.")
+        val left = foods.target()?.let { t -> " Goal $t kcal a day." }.orEmpty()
+        return ToolOut.Ok("Ideas from the food list: " + p.joinToString("; ") { it.line() } + "." + left)
+    }
+}
+
 class SetKcal(private val repo: Repo) : Base(ToolSpecs.setKcal) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
         val key = a.s("item_key") ?: return ToolOut.Fail("item_key")

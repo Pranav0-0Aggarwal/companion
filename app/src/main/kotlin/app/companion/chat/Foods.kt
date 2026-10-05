@@ -8,6 +8,7 @@ import app.companion.core.Card
 import app.companion.core.BrandMenus
 import app.companion.core.Clarify
 import app.companion.core.FoodDb
+import app.companion.core.Plates
 import app.companion.core.Hit
 import app.companion.core.MealLine
 import app.companion.core.Meal
@@ -45,6 +46,8 @@ class Foods(private val c: Context, private val repo: Repo) {
     val pending get() = hold != null
 
     private fun asset(n: String) = c.assets.open(n).use { it.readBytes().decodeToString() }
+
+    fun plates(max: Int?, veg: Boolean) = Plates.of(db, max, veg)
 
     fun chain(merchant: String?) = merchant?.let { menus.match(it) }?.first
 

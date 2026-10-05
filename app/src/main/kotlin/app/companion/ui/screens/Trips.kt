@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -159,7 +160,7 @@ fun TripsScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
                         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Tag("Top: ${top.first().label} ${inr(top.first().value)}") }
                     }
                 }
-                if (t.active) TextBtn("End trip", Modifier.padding(top = 4.dp)) { ending = t }
+                if (t.active) TextBtn("End trip", Modifier.offset(x = (-12).dp)) { ending = t }
             }
         }
     }
@@ -229,6 +230,7 @@ fun TripScreen(id: Long, back: () -> Unit) {
     }
     var edit by remember { mutableStateOf<TSpend?>(null) }
     var ending by remember { mutableStateOf(false) }
+    var drop by remember { mutableStateOf(false) }
     val s = data?.first
     val groups = remember(data) { data?.second?.let { TripView.byDay(it, zone()) }.orEmpty() }
     Screen(t?.name ?: "Trip", t?.dates().orEmpty(), back = back, nav = false, tall = false, lead = {
@@ -274,12 +276,13 @@ fun TripScreen(id: Long, back: () -> Unit) {
         }
         if (t != null) {
             item(key = "del") {
-                TextBtn("Delete this trip", Modifier.padding(start = 16.dp, top = 12.dp), color = p.red) { scope.launch { repo.life.dropTrip(t.id); back() } }
+                TextBtn("Delete this trip", Modifier.padding(start = 16.dp, top = 12.dp), color = p.red) { drop = true }
             }
         }
     }
     edit?.let { ShareSheet(id, it, { rev++ }) { edit = null } }
     if (ending && t != null) EndTrip(t, s) { ending = false }
+    if (drop && t != null) PassConfirm("Delete ${t.name}?", "Its spends stay in your ledger. Only the trip is removed.", "Delete", { drop = false; scope.launch { repo.life.dropTrip(t.id); back() } }, { drop = false })
 }
 
 @Composable

@@ -244,7 +244,7 @@ private fun WeightCard(points: List<Pair<LocalDate, Double>>, now: LocalDate, lo
     ) {
         Column(Modifier.weight(1f)) {
             Text("Weight", style = Ty.ui(13, FontWeight.Medium).copy(color = p.ink2))
-            Text(last?.let { String.format(Locale.US, "%.1f kg", it.second) } ?: "Not logged", Modifier.padding(top = 2.dp), style = Ty.mono(26, FontWeight.Bold).copy(color = p.ink), maxLines = 1)
+            Text(last?.let { String.format(Locale.US, "%.1f kg", it.second) } ?: "Not logged", Modifier.padding(top = 2.dp), style = if (last != null) Ty.mono(26, FontWeight.Bold).copy(color = p.ink) else Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 1)
             Text(
                 trend?.let { String.format(Locale.US, "%+.1f kg a week", it.slopePerWeek) } ?: "Log once a week to see a trend",
                 Modifier.padding(top = 2.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1,
@@ -289,7 +289,7 @@ private fun ItemSheet(x: MealItemRow, onClose: () -> Unit) {
         SheetTitle(x.name.cap(), Origin.of(x.source)?.badge?.cap())
         Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Field(
-                "Portion ${x.unit.takeIf { it != "serving" } ?: "servings"}", qty,
+                "Portion in ${x.unit.takeIf { it != "serving" }?.let { u -> "${u}s" } ?: "servings"}", qty,
                 { v ->
                     qty = v.take(6)
                     val a = v.replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }

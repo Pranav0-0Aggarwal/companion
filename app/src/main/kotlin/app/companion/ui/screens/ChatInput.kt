@@ -31,7 +31,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import app.companion.ui.Ty
 import app.companion.ui.kit.Ic
@@ -39,14 +41,14 @@ import app.companion.ui.kit.motion
 import app.companion.ui.pal
 
 @Composable
-internal fun ChatInput(q: String, set: (String) -> Unit, send: () -> Unit, listen: (() -> Unit)?, listening: Boolean, busy: Boolean, stop: () -> Unit, hint: String, modifier: Modifier) {
+internal fun ChatInput(q: TextFieldValue, set: (TextFieldValue) -> Unit, send: () -> Unit, listen: (() -> Unit)?, listening: Boolean, busy: Boolean, stop: () -> Unit, hint: String, modifier: Modifier) {
     val p = pal
     Row(
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(28.dp)).background(p.card).padding(start = 20.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.weight(1f).padding(vertical = 12.dp)) {
-            if (q.isEmpty()) Text(hint, style = Ty.ui(17, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
+            if (q.text.isEmpty()) Text(hint, style = Ty.ui(17, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
             BasicTextField(
                 q, set, modifier.fillMaxWidth().semantics { contentDescription = "Message" },
                 textStyle = Ty.ui(17, FontWeight.Medium).copy(color = p.ink),
@@ -58,7 +60,7 @@ internal fun ChatInput(q: String, set: (String) -> Unit, send: () -> Unit, liste
         }
         when {
             busy -> Round(Ic.Stop, "Stop", p.accentBox, p.onAccentBox, stop)
-            q.isBlank() -> if (listen != null) Mic(listening, listen)
+            q.text.isBlank() -> if (listen != null) Mic(listening, listen)
             else -> Round(Ic.Send, "Send", p.accent, p.onAccent, send)
         }
     }

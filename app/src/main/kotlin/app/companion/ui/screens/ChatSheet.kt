@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,7 +41,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import app.companion.chat.LogReq
 import app.companion.chat.Msg
@@ -69,7 +72,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
     val d = LocalDensity.current
     val kb = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
-    var q by remember(r) { mutableStateOf(r.text) }
+    var q by remember(r) { mutableStateOf(TextFieldValue(r.text, TextRange(r.text.length))) }
     var hint by remember(r) { mutableStateOf("Ask or say what you ate") }
     var listening by remember { mutableStateOf(false) }
     val leave = { route: String ->
@@ -78,7 +81,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
     }
     val submit = { t: String ->
         if (t.isNotBlank() && !s.busy) {
-            q = ""
+            q = TextFieldValue()
             hint = "Ask or say what you ate"
             kb?.hide()
             s.send(t, leave)
@@ -91,7 +94,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
     val listen = voice?.let { v -> { listening = true; v() } }
     val log = { c: LogReq, text: String ->
         s.ctx = c
-        q = text
+        q = TextFieldValue(text, TextRange(text.length))
         hint = "What did you have?"
         runCatching { focus.requestFocus() }
         Unit
@@ -121,14 +124,16 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
         }
         Row(Modifier.padding(start = 24.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Companion", Modifier.weight(1f), style = Ty.ui(22, FontWeight.Bold).copy(color = p.ink))
-            if (s.msgs.isNotEmpty()) ToolButton(Ic.Edit, "New chat") { s.reset(); q = "" }
+            if (s.msgs.isNotEmpty()) ToolButton(Ic.Edit, "New chat") { s.reset(); q = TextFieldValue() }
             ToolButton(Ic.Close, "Close", close)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (s.msgs.isEmpty() && !s.typing) {
                 Empty(Ic.Sparkle, "Ask or log anything", "Spending, bills, plans and meals. It all stays on this phone.", Modifier.align(Alignment.Center))
             } else {
-                LazyColumn(Modifier.fillMaxSize(), reverseLayout = true, contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val list = rememberLazyListState()
+                LaunchedEffect(s.msgs.size, s.typing) { list.animateScrollToItem(0) }
+                LazyColumn(Modifier.fillMaxSize(), list, reverseLayout = true, contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (s.typing) item(key = "typing") { Typing() }
                     items(s.msgs.asReversed(), key = { it.id }) { m ->
                         when (m) {
@@ -174,7 +179,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
                     }
                 }
             }
-            ChatInput(q, { q = it }, { submit(q) }, listen, listening, s.busy, { s.stop() }, hint, Modifier.focusRequester(focus))
+            ChatInput(q, { q = it }, { submit(q.text) }, listen, listening, s.busy, { s.stop() }, hint, Modifier.focusRequester(focus))
         }
     }
 }

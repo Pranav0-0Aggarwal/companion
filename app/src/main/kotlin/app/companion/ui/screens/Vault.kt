@@ -148,7 +148,7 @@ fun VaultDocScreen(id: Long, back: () -> Unit) {
                                 Text("Expires", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
                                 Text(d.date()!!.let { "${shortDay(it)} ${it.year}" }, style = Ty.mono(16, FontWeight.Medium).copy(color = p.ink))
                             }
-                            ExpiryChip(days, d.date())
+                            ExpiryChip(days, d.date(), quiet = false)
                         }
                     }
                 }

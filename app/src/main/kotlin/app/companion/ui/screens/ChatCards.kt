@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -173,7 +174,7 @@ internal fun ResCard(c: Card, go: (String) -> Unit, change: (Card.Meal) -> Unit)
                     Text(inr(r.paise), Modifier.padding(start = 8.dp), style = Ty.mono(15, FontWeight.SemiBold).copy(color = p.ink), maxLines = 1)
                 }
             }
-            TextBtn("Open bills", Modifier.padding(top = 4.dp)) { go("bills") }
+            TextBtn("Open bills", Modifier.offset(x = (-12).dp)) { go("bills") }
         }
         is Card.Meal -> Shell {
             val d = LocalDate.ofEpochDay(c.day)
@@ -204,7 +205,7 @@ internal fun ResCard(c: Card, go: (String) -> Unit, change: (Card.Meal) -> Unit)
                     Text("${num(m.value.toInt())} kcal", style = Ty.mono(15, FontWeight.SemiBold).copy(color = p.ink2))
                 }
             }
-            TextBtn("Open food", Modifier.padding(top = 4.dp)) { go("food") }
+            TextBtn("Open food", Modifier.offset(x = (-12).dp)) { go("food") }
         }
         is Card.Weight -> Shell {
             Label("Weight logged · ${shortDay(LocalDate.ofEpochDay(c.day))}")
@@ -235,7 +236,8 @@ internal fun kindIcon(kind: String) = when (kind) {
 internal fun kindLabel(kind: String) = DocKind.entries.firstOrNull { it.name == kind }?.label ?: kind
 
 @Composable
-internal fun ExpiryChip(days: Int?, date: LocalDate?) {
+internal fun ExpiryChip(days: Int?, date: LocalDate?, quiet: Boolean = true) {
+    if (!quiet && DocState.of(days) == Due.Ok) return
     val t = DocState.chip(days, date) ?: return
     Stamp(t, ink = when (DocState.of(days)) { Due.Expired -> Ink.Red; Due.Soon -> Ink.Amber; else -> Ink.Quiet })
 }

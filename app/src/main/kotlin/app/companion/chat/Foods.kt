@@ -124,7 +124,7 @@ class Foods(private val c: Context, private val repo: Repo) {
         val total = hits.sumOf { it.kcal }
         val goal = target()
         val dayKcal = repo.life.kcalOn(day)
-        emit?.invoke(Card.Meal(id, day.toEpochDay(), slot, Math.round(total).toInt(), hits.map { MealLine(it.name, "${qty(it.qty)}${it.unit.takeIf { u -> u != "serving" }?.let { u -> " $u" }.orEmpty()}", Math.round(it.kcal).toInt(), it.source.label == "estimate") }, Math.round(dayKcal).toInt(), goal))
+        emit?.invoke(Card.Meal(id, day.toEpochDay(), slot, Math.round(total).toInt(), hits.map { MealLine(it.name, "${qty(it.qty)} ${it.unit}", Math.round(it.kcal).toInt(), it.source.label == "estimate") }, Math.round(dayKcal).toInt(), goal))
         val items = hits.joinToString(", ") { "${it.name} ${qty(it.qty)}${it.unit.takeIf { u -> u != "serving" }?.let { u -> " $u" }.orEmpty()} ${k(it.kcal)}${if (it.source.label == "estimate") " est" else ""}" }
         return "Logged $slot on $day: $items. Meal ${k(total)} kcal. Day ${k(dayKcal)}${goal?.let { " of $it" }.orEmpty()} kcal."
     }

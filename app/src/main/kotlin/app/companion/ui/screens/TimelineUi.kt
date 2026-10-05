@@ -70,7 +70,7 @@ fun Ev.beat(): Beat = when (this) {
         val m = e.meal
         Beat(m.slot.cap(), if (e.items.isEmpty()) "Not logged" else "${Math.round(e.kcal)} kcal", paid?.let { amt(it.paise, it.currency) })
     }
-    is Ev.Spend -> Beat(i.shown(), i.meta().joinToString(" · "), (if (i.credit && !i.moved) "+" else "") + amt(i.paise, i.currency))
+    is Ev.Spend -> Beat(i.shown(), (i.meta() + listOfNotNull("moved".takeIf { i.paying })).joinToString(" · "), (if (i.credit && !i.moved) "+" else "") + amt(i.paise, i.currency))
     is Ev.Meet -> Beat(m.title.ifBlank { "Meeting" }, "${hm(m.start)} to ${hm(m.end)}", null)
     is Ev.Order -> Beat("${o.merchant ?: "Order"} order", Track.word(o.stage), null)
     is Ev.Bill -> Beat(b.title, b.dueDate?.let { "Due ${shortDay(it)}" }.orEmpty(), b.paise.takeIf { it > 0 }?.let { amt(it, b.currency) })

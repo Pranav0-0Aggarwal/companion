@@ -2,7 +2,7 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-10-05)
 
 ### Learning that actually learns
 - One correction is enough: the rule takes effect immediately.

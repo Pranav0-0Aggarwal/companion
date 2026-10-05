@@ -102,9 +102,9 @@ fun AskHost(req: AskReq?, onClose: () -> Unit, go: (String) -> Unit) {
             held = req
             drag.snapTo(0f)
             k.animateTo(1f, spring(0.86f, 420f))
-        } else if (held != null) {
+        } else {
             launch { drag.animateTo(0f, spring(1f, 600f)) }
-            k.animateTo(0f, spring(1f, 700f))
+            if (held != null) k.animateTo(0f, spring(1f, 700f)) else k.snapTo(0f)
             held = null
         }
     }

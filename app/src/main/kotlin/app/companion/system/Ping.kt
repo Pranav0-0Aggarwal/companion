@@ -200,6 +200,6 @@ object Ping {
                 .setProgress(at)
                 .setProgressTrackerIcon(icon(c)),
         )
-        if (out) b.setRequestPromotedOngoing(true).setShortCriticalText(chip)
+        if (out && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) b.setRequestPromotedOngoing(true).setShortCriticalText(chip)
     }
 }

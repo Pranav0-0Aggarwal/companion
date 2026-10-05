@@ -167,7 +167,7 @@ object Meetings {
 
     @RequiresApi(36)
     private fun promote(b: Notification.Builder, chip: String) {
-        b.setRequestPromotedOngoing(true).setShortCriticalText(chip)
+        if (Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) b.setRequestPromotedOngoing(true).setShortCriticalText(chip)
     }
 
     private fun join(c: Context, k: String, url: String) = PendingIntent.getActivity(

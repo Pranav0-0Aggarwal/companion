@@ -21,6 +21,7 @@ enum class Category(val label: String) {
         fun of(merchant: String?, credit: Boolean = false): Category {
             if (merchant == null) return Other
             return rules.firstOrNull { it.second.containsMatchIn(merchant) }?.first
+                ?: Merchant.brand(merchant)?.let { b -> entries.firstOrNull { it.label == b.cat && it != Other } }
                 ?: if (credit) Income else Other
         }
 

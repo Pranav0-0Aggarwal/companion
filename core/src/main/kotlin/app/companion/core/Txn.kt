@@ -23,7 +23,6 @@ internal object Txn {
     private val at = Regex("(?i)\\b(?:at|towards)\\s+([^\\n]{2,40}?)$END")
     private val to = Regex("(?i)\\b(?:trf to|paid to|sent to|to)\\s+(?:vpa\\s+)?([^\\n]{2,40}?)$END")
     private val from = Regex("(?i)\\b(?:from|by)\\s+(?:vpa\\s+)?([^\\n]{2,40}?)$END")
-    private val gap = Regex("\\s+")
     const val BAD = "your|a/c|acct|account|card|the|my|you|this|credit|debit|bank|neft|imps|rtgs|upi|ach|cheque|cash|transfer|slice|customer|ref|date|rs|inr"
     private val bad = Regex("(?i)^($BAD)\\b")
 
@@ -34,8 +33,7 @@ internal object Txn {
         var s = raw?.trim()?.trimEnd('-', ' ', ':', '/') ?: return null
         if (s.contains('@')) s = s.substringBefore('@')
         if (s.isBlank() || s.all { it.isDigit() || it == ' ' } || bad.containsMatchIn(s) || s.first().isDigit() && s.contains('-')) return null
-        s = s.replace(gap, " ").take(28).trim()
-        return if (s.any { it.isLowerCase() } && s.any { it.isUpperCase() }) s else s.lowercase().split(' ').joinToString(" ") { w -> w.replaceFirstChar(Char::uppercase) }
+        return Merchant.resolve(s)?.take(28)?.trim()
     }
 
     private fun pick(re: Regex, t: String) = re.findAll(t).firstNotNullOfOrNull { name(it.groupValues[1]) }

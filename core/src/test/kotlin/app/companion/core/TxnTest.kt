@@ -40,7 +40,7 @@ class TxnTest {
         assertEquals(12345600L, e.paise)
         assertEquals("9032", e.last4)
         assertEquals(Mode.Netbanking, e.mode)
-        assertEquals("Acme Labs Pvt Ltd", e.merchant)
+        assertEquals("Acme Labs", e.merchant)
     }
 
     @Test
@@ -143,7 +143,7 @@ class TxnTest {
     @Test
     fun `payee stops before thru`() {
         val e = assertIs<Event.Debit>(extract(sms("AD-PNBSMS-S", "A/c X1234 debited INR 111.00 Dt 01-01-30 10:00:00 to ACME Club thru UPI:000111222333.Bal INR 9999.00")))
-        assertEquals("ACME Club", e.merchant)
+        assertEquals("Acme Club", e.merchant)
         assertEquals("1234", e.last4)
     }
 

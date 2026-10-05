@@ -19,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -69,6 +71,8 @@ import app.companion.ui.screens.OnboardingScreen
 import app.companion.ui.screens.PlanScreen
 import app.companion.ui.screens.SettingsScreen
 import app.companion.ui.screens.TodayScreen
+import app.companion.ui.screens.TripScreen
+import app.companion.ui.screens.VaultDocScreen
 
 class MainActivity : FragmentActivity() {
     private var unlocked by mutableStateOf(false)
@@ -199,7 +203,9 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                             composable("food") { FoodScreen(go) }
                             composable("inbox") { InboxScreen(go) }
                             composable("you") { YouScreen(go) }
-                            composable("vault") { VaultScreen { nav.popBackStack() } }
+                            composable("vault") { VaultScreen({ nav.popBackStack() }, go) }
+                            composable("vault/{id}", listOf(navArgument("id") { type = NavType.LongType })) { e -> VaultDocScreen(e.arguments?.getLong("id") ?: 0L) { nav.popBackStack() } }
+                            composable("trip/{id}", listOf(navArgument("id") { type = NavType.LongType })) { e -> TripScreen(e.arguments?.getLong("id") ?: 0L) { nav.popBackStack() } }
                             composable("learn") { LearnScreen { nav.popBackStack() } }
                             composable("settings") { SettingsScreen { nav.popBackStack() } }
                             composable("plan") { PlanScreen({ nav.popBackStack() }) }

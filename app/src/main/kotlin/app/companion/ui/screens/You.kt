@@ -139,28 +139,6 @@ fun YouScreen(go: (String) -> Unit) {
 }
 
 @Composable
-fun VaultScreen(back: () -> Unit) {
-    val p = pal
-    val c = LocalContext.current
-    val docs by remember { c.sl.repo.docs.list() }.collectAsStateWithLifecycle(emptyList())
-    val now = today()
-    Screen("Vault", if (docs.isEmpty()) "Nothing saved yet" else "${docs.size} ${if (docs.size == 1) "document" else "documents"} · numbers stay masked", back = back, nav = false, tall = false) {
-        if (docs.isEmpty()) empty(Ic.Vault, "Nothing saved yet", "Ask Companion to save a document, like your insurance number and its expiry.")
-        itemsIndexed(docs, key = { _, d -> "d${d.id}" }) { k, d ->
-            val exp = d.date()
-            val days = exp?.let { ChronoUnit.DAYS.between(now, it).toInt() }
-            Box(Modifier.animateItem().part(p, k == 0, k == docs.lastIndex)) {
-                PassLine(
-                    d.title, listOfNotNull(DocKind.entries.firstOrNull { it.name == d.kind }?.label, d.mask, exp?.let { "expires ${shortDay(it)} ${it.year}" }).joinToString(" · "),
-                    lead = Ic.Vault, tone = Tone.Plain, lines = 1,
-                    trailing = { if (days != null && days <= 30) Stamp(if (days < 0) "EXPIRED" else "SOON", ink = if (days < 0) Ink.Red else Ink.Amber) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun LearnScreen(back: () -> Unit) {
     Screen("What I've learned", "Corrections and rules, kept on this phone", back = back, nav = false, tall = false) {
         item(key = "learn") { LearnSettings() }

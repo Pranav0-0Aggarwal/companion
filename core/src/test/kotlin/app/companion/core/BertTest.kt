@@ -208,7 +208,10 @@ class BertTest {
     fun `plan needs every file listed and verified`() {
         val p = assertNotNull(BertPlan.of(specJson(), listed) { _, _ -> true })
         assertEquals(files.toSet(), p.shas.keys)
-        assertNull(BertPlan.of(specJson(), listed - "category.tflite") { _, _ -> true })
+        val t = assertNotNull(BertPlan.of(specJson(), listed - "category.tflite") { _, _ -> true })
+        assertFalse(t.spec.has(Calibration.CATEGORY))
+        assertFalse("category.tflite" in t.shas)
+        assertNull(BertPlan.of(specJson(), listed) { f, _ -> f != "tokenizer.json" })
         assertNull(BertPlan.of(specJson(), listed) { f, _ -> f != "type.tflite" })
         assertNull(BertPlan.of(specJson(), listed) { _, _ -> false })
         assertNull(BertPlan.of(specJson(), emptyMap()) { _, _ -> true })

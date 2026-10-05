@@ -15,10 +15,9 @@ object Manifest {
     val tokenizer = Spec("ModernBERT tokenizer", "tokenizer.json", 3583326, "fe530b837c912faf33acd6b1a15a46234259519acb967ead693c692cc2e93647", "models-v4")
     val calibration = Spec("ModernBERT calibration", "calibration.json", 950, "e6f811eff7bcbdf010745ccc5266f225baeb79574bf866d4f62252a602b5f7b7", "models-v4")
     val type = Spec("ModernBERT type", "type.tflite", 409130000, "df080d4697ed36a212095cf20b44c03c24ff937d6194eafe92ad9c8eac1ff821", "models-v4", 30_000)
-    val category = Spec("ModernBERT category", "category.tflite", 409131056, "7e07e3b0dbd426db0489d6a155ae5c73d22d00864feb4bfa39d70028117bf696", "models-v4", 30_000)
     val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", "models-v2", 60_000)
     val chat = Spec("Conversation (Qwen3.5-2B)", "qwen3.5-2b-q4_0.gguf", 1_236_740_608, "b58f077d816cc565b2d6ae55e2da5997b3837a1bd79ec70a014801c582fa627b", "models-v3", 60_000)
-    val bert = listOf(spec, tokenizer, calibration, type, category)
+    val bert = listOf(spec, tokenizer, calibration, type)
     val all = bert + listOf(nux, chat)
     val llama = setOf(nux, chat)
     val wanted get() = all.filter { it !in llama || Chip.nux }

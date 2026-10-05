@@ -27,6 +27,8 @@ class BertSpec(
 
     fun has(task: String) = task in tasks
 
+    fun keep(ok: (String) -> Boolean) = BertSpec(model, template, maxLen, buckets, pad, cls, sep, tokenizer, calibration, inputs, tasks.filter { (t, v) -> t == Calibration.TYPE || ok(v.file) })
+
     fun labels(task: String) = tasks.getValue(task).labels
 
     fun file(task: String) = tasks.getValue(task).file
@@ -97,7 +99,9 @@ class BertPlan(val spec: BertSpec, val shas: Map<String, String>) {
 
     companion object {
         fun of(spec: String?, listed: Map<String, String>, ok: (String, String) -> Boolean): BertPlan? {
-            val s = runCatching { BertSpec.fromJson(spec ?: return null) }.getOrNull() ?: return null
+            val all = runCatching { BertSpec.fromJson(spec ?: return null) }.getOrNull() ?: return null
+            val s = all.keep { f -> listed[f]?.let { ok(f, it) } == true }
+            if (!s.has(Calibration.TYPE)) return null
             val shas = s.files.associateWith { f -> listed[f]?.takeIf { ok(f, it) } ?: return null }
             return BertPlan(s, shas)
         }

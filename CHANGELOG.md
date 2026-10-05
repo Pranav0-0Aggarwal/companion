@@ -59,6 +59,15 @@ All notable changes to Companion. Everything runs on your phone; nothing about y
 - Between 6:00 and 10:30 the cover screen shows a compact brief with your first meeting and bills due today when nothing more urgent needs you.
 - Everything stays on your phone. Notifications hide meeting names on the lock screen unless you turn on details there.
 
+### WhatsApp and chats
+- Fixed: a new WhatsApp message that Companion judged unimportant used to be counted and thrown away, so it looked like it was never pulled. Now every chat is kept for a couple of days.
+- Inbox has a calm "Chats" section ("12 chats today · not important"), collapsed by default. Tap it to see who wrote, and tap "Mark important" next to a person so their messages show under Needs you from then on.
+- Chats that are not important never count in Needs you, never notify you and are removed after 2 days.
+- WhatsApp Business and Instagram Lite are now read too.
+- Business chats are understood like their SMS. A WhatsApp or Instagram message from Swiggy, HDFC Bank, IndiGo, Shipway or Amazon becomes a delivery, order, bill, payment or code in the right place, with the brand's name and logo.
+- A banner on Today and Inbox says when Companion can't see WhatsApp and app notifications, with a Turn on button that opens notification access. Companion also asks Android to reconnect by itself if the connection drops.
+- Turning on WhatsApp or Instagram in Settings opens notification access if it is still off. WhatsApp is on by default.
+
 ## 0.4.2 (2026-10-05)
 
 ### Fixed

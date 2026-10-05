@@ -31,8 +31,16 @@ class ToolSpecsTest {
         val l = reg.listing()
         ToolSpecs.all.forEach {
             assertTrue("\\\"${it.name}\\\"" in g, it.name)
-            assertTrue("\"${it.name}\"" in l, it.name)
+            assertTrue(l.lines().any { x -> x.startsWith(it.name + "(") }, it.name)
         }
+    }
+
+    @Test
+    fun systemPromptStaysWithinItsBudget() {
+        val p = Prompt.system(reg.listing())
+        assertTrue(p.length <= 2600, "${p.length} chars")
+        assertTrue(reg.listing().lines().all { it.substringAfterLast("): ").split(' ').size <= 8 })
+        assertTrue(Regex("^.* -> \\{", RegexOption.MULTILINE).findAll(p).count() <= 3)
     }
 
     @Test

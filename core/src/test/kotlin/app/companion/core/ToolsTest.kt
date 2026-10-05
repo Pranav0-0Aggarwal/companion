@@ -124,17 +124,13 @@ class ToolsTest {
     }
 
     @Test
-    fun `listing is one compact json line per tool`() {
+    fun `listing is one signature line per tool`() {
         val t = Registry(
             listOf(
-                DemoTool("spend", listOf(Arg("note", Ty.Str, false), Arg("query", Ty.Str, desc = "what"), Arg("p", Ty.Pick(listOf("a", "b"))), Arg("xs", Ty.Arr(Ty.Obj(listOf(Arg("k", Ty.Num))))), Arg("ok", Ty.Bool), Arg("n", Ty.Int)), "Spend."),
+                DemoTool("spend", listOf(Arg("note", Ty.Str, false), Arg("query", Ty.Str, desc = "what"), Arg("p", Ty.Pick(listOf("a", "b"))), Arg("xs", Ty.Arr(Ty.Obj(listOf(Arg("k", Ty.Num), Arg("z", Ty.Pick(listOf("x", "y")), false))))), Arg("ok", Ty.Bool), Arg("n", Ty.Int)), "Spend."),
                 DemoTool("end_trip", desc = "End."),
             ),
         )
-        assertEquals(
-            """{"name":"spend","desc":"Spend.","args":{"query":"str, what","p":"a|b","xs":[{"k":"num"}],"ok":"bool","n":"int","note?":"str"}}""" + "\n" +
-                """{"name":"end_trip","desc":"End.","args":{}}""",
-            t.listing(),
-        )
+        assertEquals("spend(query:str, p:a|b, xs:[{k:num, z:x|y?}], ok:bool, n:int, note:str?): Spend.\nend_trip(): End.", t.listing())
     }
 }

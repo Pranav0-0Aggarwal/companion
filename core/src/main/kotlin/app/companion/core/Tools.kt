@@ -48,7 +48,7 @@ class Registry(val tools: List<Tool>) {
 
     fun grammar() = Grammar.of(tools)
 
-    fun listing() = tools.joinToString("\n") { Json.write(mapOf("name" to it.name, "desc" to it.desc, "args" to args(it.args))) }
+    fun listing() = tools.joinToString("\n") { "${it.name}(${sig(it.args)}): ${it.desc}" }
 
     fun parse(out: String): Step {
         val m = runCatching { Json.obj(out.trim()) }.getOrNull() ?: return Step.Bad("json")
@@ -90,18 +90,15 @@ class Registry(val tools: List<Tool>) {
         is Ty.Obj -> if (v is Map<*, *>) obj(t.f, v, at) else null
     } ?: throw Invalid(at)
 
-    private fun doc(t: Ty): Any = when (t) {
+    private fun doc(t: Ty): String = when (t) {
         Ty.Str -> "str"
         Ty.Int -> "int"
         Ty.Num -> "num"
         Ty.Bool -> "bool"
         is Ty.Pick -> t.v.joinToString("|")
-        is Ty.Arr -> listOf(doc(t.of))
-        is Ty.Obj -> args(t.f)
+        is Ty.Arr -> "[${doc(t.of)}]"
+        is Ty.Obj -> "{${sig(t.f)}}"
     }
 
-    private fun args(f: List<Arg>): Map<String, Any> = ordered(f).associate {
-        val d = doc(it.ty)
-        (if (it.req) it.name else it.name + "?") to if (it.desc.isEmpty() || d !is String) d else "$d, ${it.desc}"
-    }
+    private fun sig(f: List<Arg>) = ordered(f).joinToString(", ") { it.name + ":" + doc(it.ty) + if (it.req) "" else "?" }
 }

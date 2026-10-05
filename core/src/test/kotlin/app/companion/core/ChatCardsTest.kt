@@ -99,8 +99,8 @@ class ChatCardsTest {
     fun `card payment titles use the bank`() {
         assertEquals("SBI card payment", CardPay.title("SBI"))
         assertEquals("HDFC card payment", CardPay.title("HDFC Bank"))
-        assertEquals("Card card payment", CardPay.title(null))
-        assertEquals("Card card payment", CardPay.title(" "))
+        assertEquals("Card payment", CardPay.title(null))
+        assertEquals("Card payment", CardPay.title(" "))
     }
 
     @Test

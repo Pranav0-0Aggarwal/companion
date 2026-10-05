@@ -213,7 +213,7 @@ private fun NowPage(v: Cov) {
             val b = v.due!!
             Head("${b.title} · ${Cover.due(v.dueDays!!)}", v.dueDays < 0)
             Big(if (b.paise > 0) v.show(amt(b.paise, b.currency)) else "Due")
-            BigBtn(if (cred != null) "Pay" else "Mark paid", Modifier.padding(top = 16.dp)) { if (cred != null) c.startActivity(cred) else scope.launch { repo.pay(b.id) } }
+            BigBtn("Pay", Modifier.padding(top = 16.dp)) { if (cred != null) c.startActivity(cred) else scope.launch { repo.pay(b.id) } }
         }
         Focus.Spent -> {
             Head("Spent today")
@@ -342,7 +342,7 @@ private fun BillsPage(v: Cov) {
                 Modifier.padding(start = 8.dp).heightIn(min = 56.dp).clip(RoundedCornerShape(50)).background(p.accentBox)
                     .clickable(role = Role.Button) { if (cred != null) c.startActivity(cred) else scope.launch { repo.pay(b.id) } }.padding(horizontal = 20.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (cred != null) "Pay" else "Mark paid", style = Ty.ui(16).copy(color = p.onAccentBox), maxLines = 1) }
+            ) { Text("Pay", style = Ty.ui(16).copy(color = p.onAccentBox), maxLines = 1) }
         }
     }
 }

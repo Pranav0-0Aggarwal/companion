@@ -209,8 +209,8 @@ fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
                 item(key = i.id, contentType = "txn") {
                     Column(Modifier.animateItem().part(p, k == 0, k == list.lastIndex)) {
                         MoneyRow(
-                            i.title, i.srcLine(links), amt(i.paise, i.currency), i.credit,
-                            lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagList,
+                            i.shown(), i.srcLine(links), amt(i.paise, i.currency), i.credit,
+                            lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.credit && i.moved,
                             onClick = { open = if (open == i.id) -1 else i.id },
                         )
                         AnimatedVisibility(open == i.id, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {

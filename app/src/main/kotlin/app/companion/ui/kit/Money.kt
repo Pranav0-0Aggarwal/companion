@@ -48,6 +48,7 @@ fun MoneyRow(
     time: String? = null,
     stamp: String? = null,
     tags: List<String> = emptyList(),
+    moved: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val p = pal
@@ -59,7 +60,7 @@ fun MoneyRow(
             BrandMark(brand)
             Box(Modifier.size(14.dp))
         } else if (lead != null) {
-            Lead(lead, if (credit) Tone.Green else Tone.Accent)
+            Lead(lead, if (moved) Tone.Plain else if (credit) Tone.Green else Tone.Accent)
             Box(Modifier.size(14.dp))
         } else if (time != null) {
             Text(time, Modifier.width(52.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2))
@@ -75,9 +76,9 @@ fun MoneyRow(
             }
         }
         Text(
-            if (credit) "+$amount" else amount,
+            if (credit && !moved) "+$amount" else amount,
             Modifier.padding(start = 12.dp),
-            style = Ty.mono(16, FontWeight.SemiBold).copy(color = if (credit) p.green else p.ink),
+            style = Ty.mono(16, FontWeight.SemiBold).copy(color = if (moved) p.ink2 else if (credit) p.green else p.ink),
             maxLines = 1,
         )
     }

@@ -22,6 +22,8 @@ import app.companion.data.Link
 import app.companion.data.Profile
 import app.companion.data.cardPay
 import app.companion.data.moved
+import app.companion.data.tagList
+import app.companion.core.CardPay
 import app.companion.core.Flow as Route
 import app.companion.core.Flows
 import app.companion.data.credit
@@ -76,7 +78,13 @@ fun String.cap() = replaceFirstChar(Char::uppercase)
 
 fun Item.acct() = listOfNotNull(bank, last4?.let { "··$it" }).joinToString(" ").ifEmpty { null }
 
-fun Item.meta() = listOfNotNull(category, acct(), currency.takeIf { it != "INR" && paise > 0 })
+val Item.paying get() = credit && flow == Route.CardBill.name
+
+fun Item.shown() = if (paying) CardPay.title(bank) else title
+
+fun Item.meta() = listOfNotNull(category.takeIf { !(credit && moved) }, acct(), currency.takeIf { it != "INR" && paise > 0 })
+
+fun Item.tagged() = if (paying) tagList + "moved" else tagList
 
 fun Item.via(links: Links) = links[id].orEmpty().map { it.src }.ifEmpty { listOf(src) }.distinct().joinToString(" + ") { names[it] ?: it }
 
@@ -88,6 +96,7 @@ fun Item.picks() = if (money) listOfNotNull(category, "bills", "other").distinct
 
 fun Item.stamp() = when {
     flow == Route.Self.name -> "OWN ACCOUNT"
+    paying -> null
     flow == Route.CardBill.name || cardPay -> "CARD PAYMENT"
     flow == Route.Invest.name -> "INVESTMENT"
     else -> null

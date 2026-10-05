@@ -125,6 +125,17 @@ class MerchantTest {
     }
 
     @Test
+    fun `truncated and tagged upi payees resolve to the brand and its category`() {
+        listOf("AMAZON PAY IN G", "Amazon Pay India Pri", "Amazon Pay In R", "amazon pay indi", "AMAZON PAY INDIA PRIVATE LIMITED").forEach { assertEquals("Amazon Pay", Merchant.resolve(it), it) }
+        listOf("EATCLUB BRANDS", "eatclub@ybl", "Eatclub", "EAT CLUB", "EATCLUB BRANDS PRIV").forEach { assertEquals("EatClub", Merchant.resolve(it), it) }
+        assertEquals(Category.Food, Category.of("EatClub"))
+        assertEquals(Category.Food, Category.of(Merchant.resolve("eatclub@ybl")))
+        assertEquals(Category.Food, Category.of(Event.Debit(25000, "INR", "1234", "HDFC Bank", "EatClub", Mode.Upi)))
+        assertEquals(Category.Transfer, Category.of(Event.Debit(25000, "INR", "1234", "HDFC Bank", "Rahul Kumar", Mode.Upi)))
+        assertEquals(Category.Shopping, Category.of(Merchant.resolve("AMAZON PAY IN G")))
+    }
+
+    @Test
     fun `keys are normalized`() {
         assertEquals("swiggy instamart", Merchant.key("Swiggy-Instamart"))
         assertEquals(Merchant.key("'Swiggy"), Merchant.key("swiggy"))
@@ -180,5 +191,32 @@ class BrandDbTest {
         assertEquals("Swiggy Instamart", db.find("swiggy instamart", 1)?.name)
         assertEquals("Swiggy", db.find("swiggy", 1)?.name)
         assertEquals("Swiggy Dineout", db.find("swiggy dineout table", 1)?.name)
+    }
+}
+
+class SenderTitleTest {
+    @Test
+    fun `dlt headers resolve to brands`() {
+        mapOf(
+            "JM-ENFILD-S" to "Royal Enfield", "AD-ACTGRP-S" to "ACT Fibernet", "VA-ACTGRP-S" to "ACT Fibernet", "AX-BPCLIN-S" to "Bharat Petroleum",
+            "AX-HDFCBK-S" to "HDFC Bank", "VM-ICICIT-S" to "ICICI Bank", "JD-ICICIO-S" to "ICICI Bank", "VK-SBIINB-S" to "SBI", "AD-SBICRD-S" to "SBI Card",
+            "AX-AXISBK-S" to "Axis Bank", "VM-KOTAKB-S" to "Kotak Bank", "JX-JIOINF-S" to "Jio", "JD-JIOCOM-S" to "Jio", "AD-AIRTEL-S" to "Airtel",
+            "VM-ARTLTD-S" to "Airtel", "AX-AMAZON-S" to "Amazon", "VM-AMZNIN-S" to "Amazon", "AD-FLPKRT-S" to "Flipkart", "VM-SWIGGY-S" to "Swiggy",
+            "VM-SWIGGI-S" to "Swiggy", "AX-ZOMATO-S" to "Zomato", "JM-PAYTMB-S" to "Paytm", "AX-PHONPE-S" to "PhonePe", "AD-CREDIN-S" to "CRED",
+            "VM-CREDCL-S" to "CRED", "VM-IRCTCS-S" to "IRCTC", "AX-MYNTRA-S" to "Myntra", "AD-BLINKT-S" to "Blinkit", "VM-ZEPTON-S" to "Zepto",
+            "AX-UBERIN-S" to "Uber", "VM-OLACAB-S" to "Ola", "AD-ETCLUB-S" to "EatClub",
+        ).forEach { (k, v) -> assertEquals(v, Brands.header(k), k) }
+    }
+
+    @Test
+    fun `unknown stems fall back to the stem in capitals and other senders are left alone`() {
+        assertEquals("SLCBNK", Brands.header("AX-SLCBNK-S"))
+        assertEquals("QWERTY", Brands.header("VM-QWERTY"))
+        assertEquals("Swiggy", Brands.header("SWIGGY"))
+        assertNull(Brands.header("Rahul Kumar"))
+        assertNull(Brands.header("+919876543210"))
+        assertNull(Brands.header("Amit"))
+        assertEquals("Rahul", Senders.title("Rahul"))
+        assertEquals("HDFC Bank", Senders.title("AX-HDFCBK-S"))
     }
 }

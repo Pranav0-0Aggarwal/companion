@@ -48,6 +48,8 @@ object Senders {
 
     fun name(key: String) = key.replaceFirstChar(Char::uppercase)
 
+    fun title(sender: String) = Brands.header(sender) ?: sender
+
     fun counts(label: String) = label in labels
 
     fun bump(label: String?, count: Int, chosen: String) = Rules.bump(label, count, chosen)

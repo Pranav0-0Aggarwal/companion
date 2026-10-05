@@ -72,6 +72,34 @@ class MerchantTest {
     }
 
     @Test
+    fun `people named like brands stay people`() {
+        mapOf(
+            "RAHUL KOTAK" to "Rahul Kotak", "Zara Khan" to "Zara Khan", "Sneha Canara" to "Sneha Canara", "Priya Baroda" to "Priya Baroda", "Akasa Singh" to "Akasa Singh",
+        ).forEach { (raw, name) ->
+            assertEquals(name, Merchant.resolve(raw), raw)
+            assertEquals(name, Merchant.resolve(raw, exact = true), raw)
+            assertNull(Merchant.brand(raw), raw)
+        }
+        assertEquals("Amazon Pay", Merchant.resolve("AMAZON PAY IN G"))
+        assertEquals("Swiggy Instamart", Merchant.resolve("SWIGGY INSTAMART"))
+        assertEquals("Swiggy", Merchant.resolve("swiggy@icici"))
+        assertEquals("Kotak Bank", Merchant.resolve("Kotak Bank"))
+        assertEquals("Zara", Merchant.resolve("ZARA"))
+    }
+
+    @Test
+    fun `contained brands and banks need an exact alias`() {
+        assertNull(Merchant.brand("Order from Swiggy"))
+        assertNull(Merchant.brand("Rahul Kumar Kotak Bank"))
+        assertNull(Merchant.brand("Kotak Securities Limited"))
+        assertEquals("Kotak Bank", Merchant.brand("Kotak Mahindra Bank")?.name)
+        assertEquals("Swiggy", Merchant.resolve("Swiggy Limited Mumbai"))
+        assertEquals("Amazon Pay India Pri", Merchant.resolve("Amazon Pay India Pri", exact = true))
+        assertEquals("HDFC Bank", Merchant.brand("HDFC Bank Card", true)?.name)
+        assertNull(Merchant.brand("Priya Baroda", true))
+    }
+
+    @Test
     fun `brand matching`() {
         assertEquals("Amazon", Merchant.brand("amazon")?.name)
         assertEquals("Amazon Pay", Merchant.brand("Amazon Pay India")?.name)

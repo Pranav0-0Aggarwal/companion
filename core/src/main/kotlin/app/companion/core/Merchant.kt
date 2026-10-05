@@ -40,18 +40,18 @@ object Merchant {
 
     fun clean(raw: String?): String = trim(tidy(raw)).joinToString(" ", transform = ::case)
 
-    fun resolve(raw: String?): String? {
+    fun resolve(raw: String?, exact: Boolean = false): String? {
         val w = tidy(raw)
         if (w.isEmpty()) return null
         val t = w.joinToString(" ")
         val c = trim(w)
-        val brand = Brands.db.merchant(t) ?: Brands.db.merchant(c.joinToString(" "))
+        val brand = if (exact) Brands.db.exact(t) ?: Brands.db.exact(c.joinToString(" ")) else Brands.db.merchant(t) ?: Brands.db.merchant(c.joinToString(" "))
         return (brand?.name ?: c.joinToString(" ", transform = ::case)).takeIf { it.isNotBlank() }
     }
 
     fun key(s: String) = BrandDb.words(s).joinToString(" ")
 
-    fun brand(name: String?): Brand? = name?.let { Brands.db.merchant(it) }
+    fun brand(name: String?, banks: Boolean = false): Brand? = name?.let { Brands.db.merchant(it, banks) }
 
     fun guess(merchant: String, sender: String): String? {
         val b = Brands.db.stem(Brands.clean(sender)) { !it.bank && it.cat != Category.Transfer.label && it.cat != Category.Income.label } ?: return null

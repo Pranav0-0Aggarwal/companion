@@ -89,7 +89,7 @@ class Upgrade(private val c: Context, private val db: Db) {
                 rows.forEach { i ->
                     val old = i.merchant
                     if (old != null && i.kind in NAMED && old !in held) {
-                        val clean = Merchant.resolve(old)
+                        val clean = Merchant.resolve(old, exact = true)
                         val to = clean?.let { n -> d.alias(Merchant.key(n)) ?: n }
                         if (to != null && to != old) {
                             d.setNamed(i.id, to, if (i.title.startsWith(old)) to + i.title.removePrefix(old) else i.title)

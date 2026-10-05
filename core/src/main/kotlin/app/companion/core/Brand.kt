@@ -34,10 +34,10 @@ class BrandDb(val brands: List<Brand>) {
         return null
     }
 
-    fun find(text: String, min: Int = 1, want: (Brand) -> Boolean = { true }): Brand? {
+    fun find(text: String, min: Int = 1, lead: Boolean = false, want: (Brand) -> Boolean = { true }): Brand? {
         val w = words(text)
         var best: Seq? = null
-        for (i in w.indices) {
+        for (i in 0 until if (lead) minOf(1, w.size) else w.size) {
             val c = first[w[i]] ?: continue
             for (s in c) {
                 if (s.len < min || best != null && s.len <= best.len || !want(s.brand) || i + s.words.size > w.size) continue
@@ -47,7 +47,11 @@ class BrandDb(val brands: List<Brand>) {
         return best?.brand
     }
 
-    fun merchant(text: String) = exact(text) ?: find(text, MIN_CONTAINED)
+    fun merchant(text: String, banks: Boolean = false): Brand? {
+        exact(text)?.let { return it }
+        val w = words(text)
+        return if (w.size == 2 && w.all { it.all(Char::isLetter) }) null else find(text, MIN_CONTAINED, true) { banks || !it.bank }
+    }
 
     companion object {
         const val MIN_CONTAINED = 4

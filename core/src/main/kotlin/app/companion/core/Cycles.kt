@@ -8,7 +8,7 @@ data class Pay(val at: Long, val last4: String?, val bank: String?)
 
 object Pays {
     fun of(e: Event.Move, text: String, at: Long) =
-        if (e is Event.Credit) Pay(at, e.last4, e.bank) else Pay(at, Flows.counterparty(e, text).singleOrNull(), Merchant.brand(e.merchant)?.takeIf { it.bank }?.name)
+        if (e is Event.Credit) Pay(at, e.last4, e.bank) else Pay(at, Flows.counterparty(e, text).singleOrNull(), Merchant.brand(e.merchant, true)?.takeIf { it.bank }?.name)
 }
 
 enum class Phase { Open, Old, Paid, Closed }

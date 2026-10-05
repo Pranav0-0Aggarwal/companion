@@ -357,8 +357,6 @@ class Repo(private val db: Db) {
 
     suspend fun unDup(id: Long) = d.setDup(id, null)
 
-    suspend fun ping(id: Long, bits: Int) = d.setPing(id, bits)
-
     fun next(now: Long = System.currentTimeMillis()) = d.nextTask(now)
 
     suspend fun pending(now: Long = System.currentTimeMillis()) = d.pending(now)

@@ -115,7 +115,7 @@ private fun Glance(d: Day, modifier: Modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Spent today", Modifier.weight(1f)) {
                 Amount(amt(d.printed.tot(false), "INR"), Ty.mono(if (o == null) 40 else 28, FontWeight.Bold).copy(color = p.ink))
-                Text("${d.printed.count { it.paise > 0 }} payments", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+                Text("${d.printed.spends().size} payments", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
             }
             Tile("Next bill", Modifier.weight(1f)) {
                 if (bill == null) {

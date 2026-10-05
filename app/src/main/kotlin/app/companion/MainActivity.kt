@@ -150,7 +150,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
     LaunchedEffect(route) { ask = null }
     LaunchedEffect(dest?.n) {
         dest?.let {
-            if (it.item > 0) Pick.item.value = it.item
+            if (it.item > 0 && it.route == "ledger") Pick.item.value = it.item
             go(it.route)
             took()
         }

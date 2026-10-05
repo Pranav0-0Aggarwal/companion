@@ -154,9 +154,6 @@ interface Dao {
     @Query("UPDATE items SET kind = :kind, state = 'settled', code = NULL, expires = NULL WHERE id = :id")
     suspend fun retype(id: Long, kind: String)
 
-    @Query("UPDATE items SET ping = :ping WHERE id = :id")
-    suspend fun setPing(id: Long, ping: Int)
-
     @Query("UPDATE items SET ping = ping | :bit WHERE id = :id")
     suspend fun addPing(id: Long, bit: Int)
 

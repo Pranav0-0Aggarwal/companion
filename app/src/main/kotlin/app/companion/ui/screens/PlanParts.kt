@@ -137,7 +137,7 @@ fun Suggested() {
             val s = i.cal() ?: return@forEachIndexed
             if (k > 0) Rule()
             PassLine(s.title, "${dayLabel(dateOf(s.start))}${if (s.allDay) "" else " ${clock(s.start)}"}", actions = {
-                CalBtn(s) { scope.launch { repo.ping(i.id, i.ping or 8) } }
+                CalBtn(s) { scope.launch { repo.addPing(i.id, 8) } }
             })
         }
     }

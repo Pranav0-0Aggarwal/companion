@@ -93,7 +93,9 @@ fun Item.stamp() = when {
     else -> null
 }
 
-fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit && if (credit) Flows.income(it.flow) else !it.moved }.sumOf { it.paise }
+fun List<Item>.spends() = filter { it.currency == "INR" && !it.credit && !it.moved }
+
+fun List<Item>.tot(credit: Boolean) = if (credit) filter { it.currency == "INR" && it.credit && Flows.income(it.flow) }.sumOf { it.paise } else spends().sumOf { it.paise }
 
 fun List<Item>.away() = filter { it.currency == "INR" && !it.credit && it.moved }.sumOf { it.paise }
 

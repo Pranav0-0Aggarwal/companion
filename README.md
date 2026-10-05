@@ -2,6 +2,15 @@
 
 A private, on-device Android companion that reads SMS, app notifications and Gmail, and turns them into a ledger, bills, reminders and an expiring OTP list. Sideloaded, single user, nothing leaves the phone.
 
+<p align="center">
+  <a href="https://github.com/Pranav0-0Aggarwal/companion/releases/download/v0.6.1/companion-launch.mp4"><img src="docs/media/launch.gif" width="720" alt="Companion launch video: Today, Money, Ask, Food and Inbox running on the phone"></a>
+</p>
+<p align="center">
+  <a href="https://github.com/Pranav0-0Aggarwal/companion/releases/download/v0.6.1/companion-launch.mp4">Watch with sound</a> · <a href="https://github.com/Pranav0-0Aggarwal/companion/releases/tag/v0.6.1">Download the app</a>
+</p>
+
+Light on memory and battery: one small model at a time, only when it is needed, and heavy work waits for the charger.
+
 ## Modules
 
 - `:core` pure Kotlin/JVM. Extraction, dedup, classifier slot, date and time slots, suggestions, query planner and validator, byte-level BPE tokenizer, ModernBERT input builder, calibration, template hashing and learned-rule logic. Tested without the Android SDK.

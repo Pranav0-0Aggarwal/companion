@@ -125,4 +125,12 @@ class GuardTest {
         assertEquals(1, Guard.take(v(charging = false), 1, true))
         assertEquals(0, Guard.take(v(charging = false), 0, true))
     }
+
+    @Test
+    fun `prefill uses four threads unless the phone is hot on battery`() {
+        assertEquals(4, Guard.prefill(v(charging = true, thermal = 3)))
+        assertEquals(4, Guard.prefill(v(charging = false, thermal = Guard.LIGHT)))
+        assertEquals(2, Guard.prefill(v(charging = false, thermal = Guard.MODERATE)))
+        assertEquals(listOf(4, 2), listOf(v(charging = true), v(charging = false)).map(Guard::threads))
+    }
 }

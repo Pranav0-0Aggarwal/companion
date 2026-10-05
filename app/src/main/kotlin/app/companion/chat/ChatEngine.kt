@@ -131,6 +131,8 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
 
     private fun threads() = Guard.threads(vitals(c))
 
+    private fun pre() = Guard.prefill(vitals(c))
+
     private fun said(s: String) = Json.write(mapOf("say" to s))
 
     private suspend fun ProducerScope<Out>.settle(text: String, out: ToolOut) {
@@ -162,7 +164,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
             val prompt = b.tpl.render(system, hist.turns + local)
             val ok = try {
                 gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
-                    cl.run(prompt, grammar, MAX_TOKENS, threads(), TEMP, if (bg) Process.THREAD_PRIORITY_BACKGROUND else Process.THREAD_PRIORITY_DEFAULT) { piece ->
+                    cl.run(prompt, b.tpl.head(system), grammar, MAX_TOKENS, threads(), pre(), TEMP, if (bg) Process.THREAD_PRIORITY_BACKGROUND else Process.THREAD_PRIORITY_DEFAULT) { piece ->
                         raw.append(piece)
                         stream.feed(piece).takeIf { it.isNotEmpty() }?.let { trySend(Out.Say(it)) }
                         isActive

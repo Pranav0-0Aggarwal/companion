@@ -9,7 +9,11 @@ object ChatJni {
 
     external fun load(fd: Int, threads: Int): Long
 
-    external fun run(h: Long, prompt: String, grammar: String, maxTokens: Int, threads: Int, temp: Float, sink: Predicate<String>): Boolean
+    external fun warm(h: Long, pin: String, pre: Int): Boolean
+
+    external fun run(h: Long, prompt: String, pin: String, grammar: String, maxTokens: Int, threads: Int, pre: Int, temp: Float, sink: Predicate<String>): Boolean
+
+    external fun stats(h: Long): LongArray
 
     external fun cancel(h: Long)
 

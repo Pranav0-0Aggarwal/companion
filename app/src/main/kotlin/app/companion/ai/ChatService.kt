@@ -14,6 +14,9 @@ import android.os.Messenger
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.RemoteException
+import android.system.Os
+import android.system.OsConstants
+import android.util.Log
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -26,9 +29,12 @@ object ChatWire {
     const val REPLY = 3
     const val PIECE = 4
     const val CANCEL = 5
+    const val WARM = 6
     const val MODEL = "model"
     const val THREADS = "threads"
     const val PROMPT = "prompt"
+    const val PIN = "pin"
+    const val PRE = "pre"
     const val GRAMMAR = "grammar"
     const val MAX = "max"
     const val TEMP = "temp"
@@ -65,6 +71,13 @@ class ChatService : Service() {
         false
     }
 
+    private fun rssMb() = runCatching { File("/proc/self/statm").readText().split(' ')[1].toLong() * Os.sysconf(OsConstants._SC_PAGESIZE) shr 20 }.getOrDefault(-1)
+
+    private fun log() {
+        val s = ChatJni.stats(handle)
+        Log.i("Companion", "chat prefill=${s[0]}/${s[1]}ms gen=${s[2]}/${s[3]}ms rss=${rssMb()}")
+    }
+
     private fun serve(what: Int, d: Bundle, to: Messenger) {
         val out = Bundle()
         try {
@@ -79,10 +92,17 @@ class ChatService : Service() {
                 ChatWire.RUN -> {
                     Process.setThreadPriority(d.getInt(ChatWire.PRIO, Process.THREAD_PRIORITY_DEFAULT))
                     val ok = ChatJni.run(
-                        handle, d.getString(ChatWire.PROMPT).orEmpty(), d.getString(ChatWire.GRAMMAR).orEmpty(), d.getInt(ChatWire.MAX, 256),
-                        d.getInt(ChatWire.THREADS, 2), d.getFloat(ChatWire.TEMP, 0f),
+                        handle, d.getString(ChatWire.PROMPT).orEmpty(), d.getString(ChatWire.PIN).orEmpty(), d.getString(ChatWire.GRAMMAR).orEmpty(), d.getInt(ChatWire.MAX, 256),
+                        d.getInt(ChatWire.THREADS, 2), d.getInt(ChatWire.PRE, 2), d.getFloat(ChatWire.TEMP, 0f),
                         Predicate { s -> send(to, ChatWire.PIECE, Bundle().apply { putString(ChatWire.TEXT, s) }) },
                     )
+                    log()
+                    out.putBoolean(ChatWire.OK, ok)
+                }
+                ChatWire.WARM -> {
+                    Process.setThreadPriority(d.getInt(ChatWire.PRIO, Process.THREAD_PRIORITY_DEFAULT))
+                    val ok = ChatJni.warm(handle, d.getString(ChatWire.PIN).orEmpty(), d.getInt(ChatWire.PRE, 2))
+                    log()
                     out.putBoolean(ChatWire.OK, ok)
                 }
             }
@@ -124,32 +144,21 @@ class ChatClient private constructor(private val c: Context, private val link: L
         },
     )
 
-    private fun cancel() {
+    fun cancel() {
         try {
             to.send(Message.obtain(null, ChatWire.CANCEL))
         } catch (_: RemoteException) {
         }
     }
 
-    fun run(prompt: String, grammar: String, max: Int, threads: Int, temp: Float, prio: Int, on: (String) -> Boolean): Boolean {
+    private fun call(what: Int, d: Bundle, secs: Long, on: ((String) -> Boolean)?): Boolean {
         val latch = CountDownLatch(1)
         done = latch
         sink = on
         ok = false
         try {
-            val m = Message.obtain(null, ChatWire.RUN).apply {
-                replyTo = back
-                data = Bundle().apply {
-                    putString(ChatWire.PROMPT, prompt)
-                    putString(ChatWire.GRAMMAR, grammar)
-                    putInt(ChatWire.MAX, max)
-                    putInt(ChatWire.THREADS, threads)
-                    putFloat(ChatWire.TEMP, temp)
-                    putInt(ChatWire.PRIO, prio)
-                }
-            }
-            to.send(m)
-            if (!latch.await(RUN_SECS, TimeUnit.SECONDS)) {
+            to.send(Message.obtain(null, what).apply { replyTo = back; data = d })
+            if (!latch.await(secs, TimeUnit.SECONDS)) {
                 cancel()
                 link.dead = true
                 return false
@@ -163,6 +172,23 @@ class ChatClient private constructor(private val c: Context, private val link: L
         }
     }
 
+    fun run(prompt: String, pin: String, grammar: String, max: Int, threads: Int, pre: Int, temp: Float, prio: Int, on: (String) -> Boolean) = call(
+        ChatWire.RUN,
+        Bundle().apply {
+            putString(ChatWire.PROMPT, prompt)
+            putString(ChatWire.PIN, pin)
+            putString(ChatWire.GRAMMAR, grammar)
+            putInt(ChatWire.MAX, max)
+            putInt(ChatWire.THREADS, threads)
+            putInt(ChatWire.PRE, pre)
+            putFloat(ChatWire.TEMP, temp)
+            putInt(ChatWire.PRIO, prio)
+        },
+        RUN_SECS, on,
+    )
+
+    fun warm(pin: String, pre: Int, prio: Int) = call(ChatWire.WARM, Bundle().apply { putString(ChatWire.PIN, pin); putInt(ChatWire.PRE, pre); putInt(ChatWire.PRIO, prio) }, WARM_SECS, null)
+
     override fun close() {
         rx.quitSafely()
         c.unbindService(link)
@@ -171,6 +197,7 @@ class ChatClient private constructor(private val c: Context, private val link: L
     companion object {
         private const val BIND_SECS = 5L
         private const val LOAD_SECS = 90L
+        private const val WARM_SECS = 60L
         private const val RUN_SECS = 180L
 
         fun open(c: Context, model: File, threads: Int): ChatClient {

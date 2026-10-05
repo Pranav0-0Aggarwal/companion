@@ -22,5 +22,6 @@ add_subdirectory(${LLAMA_DIR} llama EXCLUDE_FROM_ALL)
 
 add_library(llm_jni SHARED nux_jni.cpp chat_jni.cpp)
 target_compile_options(llm_jni PRIVATE -Wall -Werror -fvisibility=hidden -O3)
+target_include_directories(llm_jni PRIVATE ${LLAMA_DIR}/ggml/src)
 target_link_libraries(llm_jni PRIVATE llama)
 target_link_options(llm_jni PRIVATE -Wl,--exclude-libs,ALL -Wl,-z,max-page-size=16384 -Wl,--gc-sections)

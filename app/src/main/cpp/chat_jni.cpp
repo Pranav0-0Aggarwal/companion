@@ -3,30 +3,42 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <mutex>
 #include <new>
 #include <string>
 #include <vector>
 
+#include "ggml-backend-impl.h"
 #include "jni_util.h"
 #include "llama.h"
 
 namespace {
 
-constexpr int CTX = 4096;
-constexpr int BATCH = 512;
+constexpr int CTX = 2048;
+constexpr int BATCH = 256;
 constexpr int STEPS = 512;
 constexpr size_t CAP = 16384;
+
+using Put = std::function<bool(const std::string &)>;
+using Tokens = std::vector<llama_token>;
 
 struct C {
     FILE *f = nullptr;
     llama_model *m = nullptr;
     llama_context *c = nullptr;
-    std::vector<llama_token> kv;
+    Tokens kv, pin;
+    std::vector<uint8_t> snap;
     std::atomic<bool> stop{false};
+    int64_t st[4] = {0, 0, 0, 0};
 };
+
+int64_t since(std::chrono::steady_clock::time_point t) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count();
+}
 
 void drop(C *h) {
     if (!h) return;
@@ -36,12 +48,12 @@ void drop(C *h) {
     delete h;
 }
 
-void reset(C *h) {
+void clear(C *h) {
     llama_memory_clear(llama_get_memory(h->c), true);
     h->kv.clear();
 }
 
-bool enc(const llama_vocab *v, const std::string &s, std::vector<llama_token> &t) {
+bool enc(const llama_vocab *v, const std::string &s, Tokens &t) {
     t.resize(s.size() + 16);
     int n = llama_tokenize(v, s.data(), (int32_t)s.size(), t.data(), (int32_t)t.size(), true, true);
     if (n < 0) {
@@ -51,6 +63,68 @@ bool enc(const llama_vocab *v, const std::string &s, std::vector<llama_token> &t
     if (n <= 0) return false;
     t.resize((size_t)n);
     return t.size() < (size_t)(CTX - 16);
+}
+
+size_t same(const Tokens &a, const Tokens &b) {
+    size_t i = 0;
+    while (i < a.size() && i < b.size() && a[i] == b[i]) i++;
+    return i;
+}
+
+bool eval(C *h, Tokens &t) {
+    for (size_t i = h->kv.size(); i < t.size(); i += BATCH) {
+        if (h->stop.load()) return false;
+        const size_t c = std::min((size_t)BATCH, t.size() - i);
+        if (llama_decode(h->c, llama_batch_get_one(t.data() + i, (int32_t)c)) != 0) {
+            clear(h);
+            return false;
+        }
+        h->kv.insert(h->kv.end(), t.begin() + (long)i, t.begin() + (long)(i + c));
+        h->st[0] += (int64_t)c;
+    }
+    return true;
+}
+
+bool save(C *h) {
+    h->snap.resize(llama_state_seq_get_size(h->c, 0));
+    if (llama_state_seq_get_data(h->c, h->snap.data(), h->snap.size(), 0) != h->snap.size()) {
+        h->snap.clear();
+        return false;
+    }
+    h->pin = h->kv;
+    return true;
+}
+
+bool recall(C *h) {
+    clear(h);
+    if (!h->snap.empty() && llama_state_seq_set_data(h->c, h->snap.data(), h->snap.size(), 0) == h->snap.size()) {
+        h->kv = h->pin;
+        return true;
+    }
+    clear(h);
+    h->snap.clear();
+    return false;
+}
+
+bool seed(C *h, Tokens &p) {
+    if (!h->snap.empty() && h->pin == p) return true;
+    clear(h);
+    h->snap.clear();
+    return eval(h, p) && save(h);
+}
+
+llama_model *model(FILE *f) {
+    static ggml_backend_buffer_type plain = *ggml_backend_cpu_buffer_type();
+    static const llama_model_tensor_buft_override tied[] = {{"^token_embd\\.weight$", &plain}, {nullptr, nullptr}};
+    llama_model_params mp = llama_model_default_params();
+    mp.n_gpu_layers = 0;
+    mp.load_mode = LLAMA_LOAD_MODE_NONE;
+    mp.tensor_buft_overrides = tied;
+    llama_model *m = llama_model_load_from_file_ptr(f, mp);
+    if (m) return m;
+    rewind(f);
+    mp.tensor_buft_overrides = nullptr;
+    return llama_model_load_from_file_ptr(f, mp);
 }
 
 size_t whole(const std::string &s) {
@@ -65,53 +139,36 @@ size_t whole(const std::string &s) {
     return s.size();
 }
 
-struct Sink {
-    JNIEnv *e;
-    jobject o;
-    jmethodID m;
-
-    bool put(const std::string &s) const {
-        jstring j = jstr(e, s);
-        if (!j) return false;
-        const bool go = e->CallBooleanMethod(o, m, j) == JNI_TRUE;
-        e->DeleteLocalRef(j);
-        if (e->ExceptionCheck()) {
-            e->ExceptionClear();
-            return false;
-        }
-        return go;
+bool prime(C *h, const llama_vocab *v, const std::string &pin, Tokens &t, Tokens &p) {
+    p.clear();
+    if (pin.empty() || !enc(v, pin, p) || p.size() >= t.size() || same(p, t) != p.size()) {
+        p.clear();
+        return true;
     }
-};
+    return seed(h, p);
+}
 
-bool gen(C *h, const std::string &prompt, const std::string &g, int max, float temp, const Sink &sink, std::string &out) {
-    const llama_vocab *v = llama_model_get_vocab(h->m);
-    std::vector<llama_token> t;
-    if (!enc(v, prompt, t)) return false;
-    const int n = (int)t.size();
-    max = std::max(1, std::min({max, STEPS, CTX - n}));
-
-    llama_memory_t mem = llama_get_memory(h->c);
-    size_t k = 0;
-    while (k < h->kv.size() && k < t.size() && h->kv[k] == t[k]) k++;
+bool fit(C *h, Tokens &t, const Tokens &p) {
+    size_t k = same(h->kv, t);
     if (k == t.size()) k--;
-    if (!llama_memory_seq_rm(mem, 0, (llama_pos)k, -1)) {
-        llama_memory_clear(mem, true);
-        k = 0;
+    if (k < h->kv.size()) {
+        if (k > 0 && llama_memory_seq_rm(llama_get_memory(h->c), 0, (llama_pos)k, -1)) {
+            h->kv.resize(k);
+        } else if (p.empty() || !recall(h)) {
+            clear(h);
+        }
     }
-    h->kv.resize(k);
+    return eval(h, t);
+}
 
-    for (size_t i = k; i < t.size(); i += BATCH) {
-        if (h->stop.load()) {
-            reset(h);
-            return false;
-        }
-        const int c = (int)std::min((size_t)BATCH, t.size() - i);
-        if (llama_decode(h->c, llama_batch_get_one(t.data() + i, c)) != 0) {
-            reset(h);
-            return false;
-        }
-    }
-    h->kv = t;
+bool gen(C *h, const std::string &prompt, const std::string &pin, const std::string &g, int max, float temp, const Put &put) {
+    const auto t0 = std::chrono::steady_clock::now();
+    h->st[0] = h->st[1] = h->st[2] = h->st[3] = 0;
+    const llama_vocab *v = llama_model_get_vocab(h->m);
+    Tokens t, p;
+    if (!enc(v, prompt, t) || !prime(h, v, pin, t, p) || !fit(h, t, p)) return false;
+    h->st[1] = since(t0);
+    max = std::max(1, std::min({max, STEPS, CTX - (int)t.size()}));
 
     llama_sampler *s = llama_sampler_chain_init(llama_sampler_chain_default_params());
     if (!s) return false;
@@ -131,37 +188,49 @@ bool gen(C *h, const std::string &prompt, const std::string &g, int max, float t
         llama_sampler_chain_add(s, llama_sampler_init_greedy());
     }
 
+    const auto t1 = std::chrono::steady_clock::now();
     bool ok = true;
+    size_t size = 0;
     std::string pend;
     for (int i = 0; i < max && !h->stop.load(); i++) {
         llama_token tok = llama_sampler_sample(s, h->c, -1);
         if (llama_vocab_is_eog(v, tok)) break;
+        h->st[2]++;
         char b[256];
         const int m = llama_token_to_piece(v, tok, b, (int32_t)sizeof b, 0, false);
-        if (m < 0 || out.size() + (size_t)m > CAP) {
+        if (m < 0 || size + (size_t)m > CAP) {
             ok = false;
             break;
         }
-        out.append(b, (size_t)m);
+        size += (size_t)m;
         pend.append(b, (size_t)m);
         const size_t w = whole(pend);
         if (w > 0) {
-            const bool go = sink.put(pend.substr(0, w));
+            const bool go = put(pend.substr(0, w));
             pend.erase(0, w);
             if (!go) break;
         }
-        if (i + 1 < max && llama_decode(h->c, llama_batch_get_one(&tok, 1)) != 0) {
-            ok = false;
-            break;
+        if (i + 1 < max) {
+            if (llama_decode(h->c, llama_batch_get_one(&tok, 1)) != 0) {
+                ok = false;
+                break;
+            }
+            h->kv.push_back(tok);
         }
     }
     llama_sampler_free(s);
+    h->st[3] = since(t1);
+    if (!ok) clear(h);
+    return ok;
+}
 
-    if (!ok || !llama_memory_seq_rm(mem, 0, (llama_pos)t.size(), -1)) {
-        reset(h);
-        return ok;
-    }
-    return true;
+bool warm(C *h, const std::string &pin) {
+    h->st[0] = h->st[1] = h->st[2] = h->st[3] = 0;
+    const auto t0 = std::chrono::steady_clock::now();
+    Tokens p;
+    const bool ok = !pin.empty() && enc(llama_model_get_vocab(h->m), pin, p) && seed(h, p);
+    h->st[1] = since(t0);
+    return ok;
 }
 
 }
@@ -188,10 +257,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_app_companion_ai_ChatJni_load(JNIEnv *, 
             return 0;
         }
         rewind(h->f);
-        llama_model_params mp = llama_model_default_params();
-        mp.n_gpu_layers = 0;
-        mp.load_mode = LLAMA_LOAD_MODE_MMAP;
-        h->m = llama_model_load_from_file_ptr(h->f, mp);
+        h->m = model(h->f);
         if (!h->m) {
             drop(h);
             return 0;
@@ -202,8 +268,15 @@ extern "C" JNIEXPORT jlong JNICALL Java_app_companion_ai_ChatJni_load(JNIEnv *, 
         cp.n_ubatch = BATCH;
         cp.n_seq_max = 1;
         cp.n_threads = cp.n_threads_batch = std::max(1, std::min((int)threads, 4));
+        cp.type_k = cp.type_v = GGML_TYPE_Q8_0;
+        cp.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
         cp.no_perf = true;
         h->c = llama_init_from_model(h->m, cp);
+        if (!h->c) {
+            cp.type_k = cp.type_v = GGML_TYPE_F16;
+            cp.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_AUTO;
+            h->c = llama_init_from_model(h->m, cp);
+        }
         if (!h->c) {
             drop(h);
             return 0;
@@ -215,9 +288,9 @@ extern "C" JNIEXPORT jlong JNICALL Java_app_companion_ai_ChatJni_load(JNIEnv *, 
     }
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_run(JNIEnv *e, jobject, jlong hh, jstring prompt, jstring grammar, jint maxTokens, jint threads, jfloat temp, jobject sink) {
+extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_run(JNIEnv *e, jobject, jlong hh, jstring prompt, jstring pin, jstring grammar, jint maxTokens, jint threads, jint pre, jfloat temp, jobject sink) {
     C *h = (C *)(intptr_t)hh;
-    if (!h || !prompt || !grammar || !sink) return JNI_FALSE;
+    if (!h || !prompt || !pin || !grammar || !sink) return JNI_FALSE;
     jclass cls = e->FindClass("java/util/function/Predicate");
     jmethodID mid = cls ? e->GetMethodID(cls, "test", "(Ljava/lang/Object;)Z") : nullptr;
     if (!mid) {
@@ -227,15 +300,44 @@ extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_run(JNIEnv *
     h->stop.store(false);
     try {
         const std::string p = utf8(e, prompt);
-        const std::string g = utf8(e, grammar);
         if (p.empty()) return JNI_FALSE;
-        llama_set_n_threads(h->c, std::max(1, std::min((int)threads, 4)), std::max(1, std::min((int)threads, 4)));
-        std::string out;
-        return gen(h, p, g, (int)maxTokens, (float)temp, Sink{e, sink, mid}, out) ? JNI_TRUE : JNI_FALSE;
+        llama_set_n_threads(h->c, std::max(1, std::min((int)threads, 4)), std::max(1, std::min((int)pre, 4)));
+        const Put put = [&](const std::string &s) {
+            jstring j = jstr(e, s);
+            if (!j) return false;
+            const bool go = e->CallBooleanMethod(sink, mid, j) == JNI_TRUE;
+            e->DeleteLocalRef(j);
+            if (e->ExceptionCheck()) {
+                e->ExceptionClear();
+                return false;
+            }
+            return go;
+        };
+        return gen(h, p, utf8(e, pin), utf8(e, grammar), (int)maxTokens, (float)temp, put) ? JNI_TRUE : JNI_FALSE;
     } catch (...) {
-        reset(h);
+        clear(h);
         return JNI_FALSE;
     }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_warm(JNIEnv *e, jobject, jlong hh, jstring pin, jint pre) {
+    C *h = (C *)(intptr_t)hh;
+    if (!h || !pin) return JNI_FALSE;
+    h->stop.store(false);
+    try {
+        llama_set_n_threads(h->c, 1, std::max(1, std::min((int)pre, 4)));
+        return warm(h, utf8(e, pin)) ? JNI_TRUE : JNI_FALSE;
+    } catch (...) {
+        clear(h);
+        return JNI_FALSE;
+    }
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_app_companion_ai_ChatJni_stats(JNIEnv *e, jobject, jlong hh) {
+    C *h = (C *)(intptr_t)hh;
+    jlongArray a = e->NewLongArray(4);
+    if (a && h) e->SetLongArrayRegion(a, 0, 4, (const jlong *)h->st);
+    return a;
 }
 
 extern "C" JNIEXPORT void JNICALL Java_app_companion_ai_ChatJni_cancel(JNIEnv *, jobject, jlong hh) {

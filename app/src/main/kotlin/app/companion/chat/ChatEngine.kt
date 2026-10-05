@@ -63,9 +63,10 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
 
     private val brains = listOf(Brain(Manifest.chat, ChatTemplate.Qwen))
     val foods = Foods(c, repo)
+    val gate = Gate(repo)
 
     @Volatile private var sink: SendChannel<Out>? = null
-    private val registry by lazy { Registry(ChatTools.of(c, repo, foods, { sink?.trySend(Out.Open(it)) }, ::show)) }
+    private val registry by lazy { Registry(ChatTools.of(c, repo, foods, gate, { sink?.trySend(Out.Open(it)) }, ::show)) }
     private val system by lazy { Prompt.system(registry.listing()) }
     private val grammar by lazy { registry.grammar() }
     private val hist = Convo()
@@ -136,6 +137,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     fun reset() {
         hist.clear()
         foods.cancel()
+        gate.clear()
     }
 
     private fun threads() = Guard.threads(vitals(c))

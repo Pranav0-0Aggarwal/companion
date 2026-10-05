@@ -50,6 +50,7 @@ import app.companion.core.DocLine
 import app.companion.core.DocState
 import app.companion.core.Due
 import app.companion.core.Opt
+import app.companion.core.Pend
 import app.companion.core.Show
 import app.companion.data.Revealed
 import app.companion.data.credit
@@ -221,6 +222,48 @@ internal fun ResCard(c: Card, go: (String) -> Unit, change: (Card.Meal) -> Unit)
             if (c.top.isNotEmpty()) MiniBars(c.top.take(3), Modifier.padding(top = 14.dp))
         }
         is Card.Docs -> DocsCard(c)
+        is Card.Facts -> FactsCard(c, go)
+        is Card.Confirm -> Unit
+    }
+}
+
+@Composable
+private fun FactsCard(c: Card.Facts, go: (String) -> Unit) {
+    val p = pal
+    Shell {
+        Label(c.label)
+        c.big?.let { Big(it) }
+        c.rows.forEach { r ->
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(r.title, style = Ty.ui(15, FontWeight.Medium).copy(color = p.ink), maxLines = 1)
+                    if (r.sub.isNotEmpty()) Text(r.sub, style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 2)
+                }
+                if (r.value.isNotEmpty()) Text(r.value, Modifier.padding(start = 8.dp), style = Ty.mono(15, FontWeight.SemiBold).copy(color = p.ink), maxLines = 1)
+            }
+        }
+        if (c.more > 0) Text("${c.more} more", Modifier.padding(top = 12.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+        c.open?.let { r -> TextBtn("Open $r", Modifier.offset(x = (-12).dp)) { go(r) } }
+    }
+}
+
+@Composable
+internal fun ConfirmCard(m: Msg.Act, confirm: () -> Unit, cancel: () -> Unit) {
+    val p = pal
+    Shell {
+        Text(m.text, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink))
+        when (m.at) {
+            Pend.Wait, Pend.Run -> Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Btn("Confirm", go = true, enabled = m.at == Pend.Wait, onClick = confirm)
+                Btn("Cancel", enabled = m.at == Pend.Wait, onClick = cancel)
+            }
+            Pend.Done -> Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Ic.Check, null, Modifier.size(16.dp), tint = p.accent)
+                Text(m.said, Modifier.padding(start = 8.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))
+            }
+            Pend.Fail -> Text(m.said, Modifier.padding(top = 10.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))
+            Pend.Cancel -> Text("Cancelled", Modifier.padding(top = 10.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))
+        }
     }
 }
 

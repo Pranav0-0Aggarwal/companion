@@ -181,6 +181,15 @@ interface Dao {
     @Query("SELECT COUNT(*) FROM items WHERE state IN ('ask', 'check') AND kind NOT IN ('Otp', 'Spam') AND dup IS NULL AND at >= :since")
     suspend fun needs(since: Long): Int
 
+    @Query(
+        "SELECT * FROM items WHERE state IN ('ask', 'check') AND kind NOT IN ('Otp', 'Spam') AND dup IS NULL " +
+            "ORDER BY CASE state WHEN 'ask' THEN 0 ELSE 1 END, at DESC LIMIT :n",
+    )
+    suspend fun needing(n: Int): List<Item>
+
+    @Query("SELECT MIN(id) AS id, merchant FROM items WHERE merchant IS NOT NULL AND kind IN ('Debit', 'Credit', 'CardSpend', 'Bill', 'Delivery') GROUP BY merchant")
+    suspend fun merchants(): List<Mer>
+
     @Query("SELECT * FROM cards ORDER BY id")
     fun cards(): Flow<List<Card>>
 

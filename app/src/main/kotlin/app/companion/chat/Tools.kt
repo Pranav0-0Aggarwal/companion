@@ -25,11 +25,15 @@ abstract class Base(private val s: ToolSpec) : Tool {
 }
 
 object ChatTools {
-    fun of(c: Context, repo: Repo, foods: Foods, go: (String) -> Unit, show: (Card) -> Unit): List<Tool> = listOf(
+    fun of(c: Context, repo: Repo, foods: Foods, gate: Gate, go: (String) -> Unit, show: (Card) -> Unit): List<Tool> = listOf(
         Spend(repo, show), Bills(repo, show), Cards(repo), Balance(),
         LogMeal(foods), FoodToday(foods), SetKcal(repo), LogWeight(c, repo, show),
         StartTrip(repo, show), EndTrip(repo, show), TripSummaryTool(repo, show),
         VaultFind(repo, show), VaultAdd(repo),
         Remind(c), CalendarAdd(c, repo), Open(go),
+        SearchMessages(repo, show), Ledger(repo, show), TopMerchants(repo, show), Compare(repo, show), NeedsYou(repo, show),
+        BillCycle(repo, show), BestCard(repo, show), Meals(repo, foods, show), WeightTrend(repo, show), Meetings(c, show), Trips(repo, show),
+        MarkPaid(repo, gate, show), FileSpend(repo, gate, show), Retype(repo, gate, show), MarkDup(repo, gate, show), RenameMerchant(repo, gate, show),
+        NotSpending(repo, gate, show), AddCard(repo, gate, show), SetBudget(gate, show), Dismiss(repo, gate, show),
     )
 }

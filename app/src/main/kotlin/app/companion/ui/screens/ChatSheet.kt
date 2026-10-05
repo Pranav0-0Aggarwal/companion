@@ -24,7 +24,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +42,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +58,8 @@ import app.companion.ui.dayLabel
 import app.companion.ui.kit.Chip
 import app.companion.ui.kit.Empty
 import app.companion.ui.kit.Ic
+import app.companion.ui.kit.Snack
+import app.companion.ui.kit.SnackLane
 import app.companion.ui.kit.ToolButton
 import app.companion.ui.pal
 import app.companion.ui.rememberVoice
@@ -62,7 +67,7 @@ import app.companion.ui.today
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val chips = listOf("Log lunch", "Food today", "Spent this week", "Next bill")
+private val chips = listOf("What needs me today?", "Swiggy vs last month", "Mark my HDFC bill paid", "Log lunch", "Food today", "Spent this week")
 
 @Composable
 fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit, drag: Animatable<Float, *>) {
@@ -72,6 +77,12 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
     val d = LocalDensity.current
     val kb = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
+    val view = LocalView.current
+    val snack = remember { Snack(SnackbarHostState(), scope) }
+    DisposableEffect(s.busy) {
+        view.keepScreenOn = s.busy
+        onDispose { view.keepScreenOn = false }
+    }
     var q by remember(r) { mutableStateOf(TextFieldValue(r.text, TextRange(r.text.length))) }
     var hint by remember(r) { mutableStateOf("Ask or say what you ate") }
     var listening by remember { mutableStateOf(false) }
@@ -151,10 +162,12 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
                             is Msg.Hits -> HitsCard(m.items, leave)
                             is Msg.Need -> NeedCard()
                             is Msg.Note -> BotBubble(m.text)
+                            is Msg.Act -> ConfirmCard(m, { s.confirm(m) { u -> snack.offer(Unit, u.text) { u.run() } } }, { s.cancel(m) })
                         }
                     }
                 }
             }
+            SnackLane(snack, Modifier.align(Alignment.BottomCenter))
         }
         Column(Modifier.navigationBarsPadding().imePadding()) {
             s.ctx?.let { c ->
@@ -173,7 +186,6 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
                         when (c) {
                             "Log lunch" -> log(LogReq(today(), "lunch"), "I had ")
                             "Food today" -> s.today()
-                            "Next bill" -> submit("Bills due this week")
                             else -> submit(c)
                         }
                     }

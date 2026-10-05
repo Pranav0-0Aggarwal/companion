@@ -122,6 +122,14 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     suspend fun needs(since: Long) = d.needs(since)
 
+    suspend fun needing(n: Int) = d.needing(n)
+
+    suspend fun needCount() = d.needs(0)
+
+    suspend fun merchants() = d.merchants()
+
+    suspend fun restate(id: Long, state: String) = d.setState(id, state)
+
     suspend fun spentToday(now: Long = System.currentTimeMillis()): Pair<Long, Int> =
         d.spentSince(Alerts.dayStart(now, ZoneId.systemDefault())).filter { !it.cardPay && it.flow == null && it.currency == "INR" }.let { l -> l.sumOf { it.paise } to l.size }
 

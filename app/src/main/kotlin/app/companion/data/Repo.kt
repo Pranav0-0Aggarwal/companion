@@ -156,7 +156,11 @@ class Repo(private val db: Db) {
 
     suspend fun deleteSender(key: String) = d.deleteSender(key)
 
-    suspend fun deleteAlias(raw: String) = d.deleteAlias(raw)
+    suspend fun deleteAlias(a: Alias) = db.withTransaction {
+        d.deleteAlias(a.raw)
+        val to = Merchant.clean(a.raw)
+        if (to.isNotEmpty()) d.named().filter { it.merchant == a.name && Merchant.mentions(it.body, a.raw) }.forEach { r -> d.setNamed(r.id, to, r.title.takeIf { it.startsWith(a.name) }?.let { to + it.removePrefix(a.name) } ?: r.title) }
+    }
 
     private suspend fun aliased(e: Event): Event = e.who()?.let { d.alias(Merchant.key(it)) }?.let { e.named(it) } ?: e
 
@@ -189,9 +193,9 @@ class Repo(private val db: Db) {
         if (r.moved) d.rekeyMoved(r.to, r.from)
     }
 
-    private suspend fun learnName(i: Item, sender: String): Boolean {
+    private suspend fun learnName(i: Item, raw: Raw): Boolean {
         val m = i.merchant?.takeIf { i.money } ?: return false
-        val to = Merchant.guess(m, sender) ?: return false
+        val to = Merchant.guess(m, raw.sender, raw.text()) ?: return false
         if (d.alias(Merchant.key(m)) != null) return false
         val seen = d.sendersOf(m).filter { Merchant.guess(m, it.sender) == to }.map { it.itemId }.distinct().size
         return Merchant.due(seen) && name(m, to, true) != null
@@ -416,7 +420,7 @@ class Repo(private val db: Db) {
         fresh[id] = System.currentTimeMillis()
         tidy(item)
         val kept = item.copy(id = id)
-        return Added(if (learnName(kept, raw.sender)) d.item(id) ?: kept else kept, true)
+        return Added(if (learnName(kept, raw)) d.item(id) ?: kept else kept, true)
     }
 
     private fun day(raw: Raw) = Instant.ofEpochMilli(raw.at).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()

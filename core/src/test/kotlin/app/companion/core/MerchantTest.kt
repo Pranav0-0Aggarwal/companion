@@ -153,6 +153,27 @@ class MerchantTest {
     }
 
     @Test
+    fun `auto alias skips people and platform intermediaries`() {
+        assertEquals("Swiggy", Merchant.guess("Acme Eats", "VM-SWIGGY-S", "Rs 250 paid to Acme Eats on Swiggy"))
+        assertNull(Merchant.guess("Rahul Kumar", "VM-SWIGGY-S"))
+        assertNull(Merchant.guess("Acme Eats", "VM-SWIGGY-S", "Rs 250 paid via Swiggy to Acme Eats"))
+        assertNull(Merchant.guess("Acme Eats", "VM-SWIGGY-S", "Paid through SWIGGY"))
+        assertNull(Merchant.guess("Acme Eats", "VM-SWIGGY-S", "Booked on Swiggy Dineout"))
+        assertTrue(Merchant.person("Rahul Kumar"))
+        assertTrue(!Merchant.person("Acme Eats"))
+        assertTrue(!Merchant.person("Pizza Hut"))
+        assertTrue(!Merchant.person("Rahul"))
+    }
+
+    @Test
+    fun `mentions finds the raw name in a message`() {
+        assertTrue(Merchant.mentions("Rs 250 paid to ACME EATS PRIVATE LIMITED on 04-10", "acme eats"))
+        assertTrue(!Merchant.mentions("Rs 250 paid to SWIGGY", "acme eats"))
+        assertTrue(!Merchant.mentions(null, "acme eats"))
+        assertTrue(!Merchant.mentions("anything", ""))
+    }
+
+    @Test
     fun `truncated and tagged upi payees resolve to the brand and its category`() {
         listOf("AMAZON PAY IN G", "Amazon Pay India Pri", "Amazon Pay In R", "amazon pay indi", "AMAZON PAY INDIA PRIVATE LIMITED").forEach { assertEquals("Amazon Pay", Merchant.resolve(it), it) }
         listOf("EATCLUB BRANDS", "eatclub@ybl", "Eatclub", "EAT CLUB", "EATCLUB BRANDS PRIV").forEach { assertEquals("EatClub", Merchant.resolve(it), it) }

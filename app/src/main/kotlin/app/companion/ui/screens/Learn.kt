@@ -118,7 +118,7 @@ fun LearnSettings() {
             if (i > 0) Rule()
             PassLine(
                 a.raw.cap(), "→ ${a.name}${if (a.auto) " · learned" else ""}", brand = a.name,
-                actions = { Btn("Delete") { scope.launch { repo.deleteAlias(a.raw) } } },
+                actions = { Btn("Delete") { scope.launch { repo.deleteAlias(a) } } },
             )
         }
     }

@@ -6,6 +6,8 @@ object Merchant {
     private val acronyms = setOf("HDFC", "ICICI", "SBI", "IRCTC", "KFC", "OYO", "CRED", "IKEA", "BSNL", "LIC", "IDFC", "RBL", "AU", "HSBC", "DTDC", "BMS")
     private val tail = setOf("pvt", "ltd", "private", "limited", "llp", "inc", "india", "technologies", "payments", "bangalore", "bengaluru", "mumbai", "delhi", "gurgaon", "gurugram", "noida", "hyderabad", "chennai", "pune")
     private val keep = setOf("of", "air")
+    private val trade = setOf("eats", "food", "foods", "kitchen", "cafe", "restaurant", "bakery", "sweets", "store", "stores", "mart", "hotel", "house", "tea", "coffee")
+    private val via = setOf("via", "through")
     private val prefix = Regex("(?i)^(?:upi[-/\\s]+)+")
     private val ref = Regex("^#?\\d{3,}$|^(?=.*\\d)(?=.*[A-Za-z])[A-Za-z0-9]{7,}$")
     private val seq = Regex("(?i)[-/]\\d[\\w-]*$")
@@ -53,9 +55,23 @@ object Merchant {
 
     fun brand(name: String?, banks: Boolean = false): Brand? = name?.let { Brands.db.merchant(it, banks) }
 
-    fun guess(merchant: String, sender: String): String? {
+    fun person(name: String) = BrandDb.words(name).let { w -> w.size == 2 && w.all { it.all(Char::isLetter) } && w[1] !in trade && Category.of(name) == Category.Other }
+
+    fun platform(text: String, brand: String): Boolean {
+        val t = BrandDb.words(text)
+        val b = BrandDb.words(brand)
+        return b.isNotEmpty() && (0..t.size - b.size).any { i -> t.subList(i, i + b.size) == b && (t.getOrNull(i - 1) in via || t.getOrNull(i + b.size) == "dineout") }
+    }
+
+    fun mentions(text: String?, key: String): Boolean {
+        val t = BrandDb.words(text.orEmpty())
+        val k = BrandDb.words(key)
+        return k.isNotEmpty() && (0..t.size - k.size).any { i -> t.subList(i, i + k.size) == k }
+    }
+
+    fun guess(merchant: String, sender: String, text: String = ""): String? {
         val b = Brands.db.stem(Brands.clean(sender)) { !it.bank && it.cat != Category.Transfer.label && it.cat != Category.Income.label } ?: return null
-        return b.name.takeIf { Brands.db.merchant(merchant) == null }
+        return b.name.takeIf { Brands.db.merchant(merchant) == null && !person(merchant) && !platform(text, b.name) }
     }
 
     fun due(seen: Int) = seen >= MIN

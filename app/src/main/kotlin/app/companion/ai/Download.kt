@@ -86,7 +86,10 @@ object Dl {
     private val gate = ReentrantLock()
     private const val TRIES = 3
 
-    private val pins get() = Manifest.wanted.filter(Models::pinned)
+    @Volatile
+    var talk = false
+
+    private val pins get() = Manifest.wanted(talk).filter(Models::pinned)
 
     val total get() = pins.sumOf { it.bytes }
 
@@ -95,6 +98,15 @@ object Dl {
     fun want(c: Context, on: Boolean) = prefs(c).edit().putBoolean("want", on).apply()
 
     fun wants(c: Context) = prefs(c).getBoolean("want", false)
+
+    fun load(c: Context) {
+        talk = prefs(c).getBoolean("talk", false) || Models.base(c, Manifest.chat).isFile
+    }
+
+    fun chat(c: Context) {
+        talk = true
+        prefs(c).edit().putBoolean("talk", true).apply()
+    }
 
     fun partial(c: Context, s: Spec): Long {
         val p = Models.part(c, s)

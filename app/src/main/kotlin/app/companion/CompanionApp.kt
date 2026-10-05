@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Process
 import androidx.work.WorkManager
 import app.companion.ai.BertScorer
+import app.companion.ai.Dl
 import app.companion.chat.ChatEngine
 import app.companion.chat.ChatSession
 import app.companion.ai.DocIngest
@@ -77,6 +78,7 @@ class CompanionApp : Application() {
         super.onCreate()
         Merchant.source { assets.open("brands.json").use { it.readBytes().decodeToString() } }
         if (Process.isIsolated()) return
+        Dl.load(this)
         Live.boot(this)
         Processing.boot(this)
         Proc.watch(this)

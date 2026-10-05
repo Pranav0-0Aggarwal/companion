@@ -306,6 +306,7 @@ internal fun NeedCard() {
         Text("Spending and bills answers work without it. The model lets you log meals and ask in plain words.", Modifier.padding(top = 12.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))
         if (!busy) {
             Btn("Download", Modifier.padding(top = 12.dp), go = true, icon = Ic.Download) {
+                Dl.chat(c)
                 ModelJobs.start(c)
                 if (!c.has(Manifest.permission.POST_NOTIFICATIONS)) askNotif()
             }

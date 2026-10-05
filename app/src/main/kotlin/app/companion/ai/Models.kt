@@ -20,7 +20,7 @@ object Manifest {
     val bert = listOf(spec, tokenizer, calibration, type)
     val all = bert + listOf(nux, chat)
     val llama = setOf(nux, chat)
-    val wanted get() = all.filter { it !in llama || Chip.nux }
+    fun wanted(talk: Boolean) = all.filter { (it !in llama || Chip.nux) && (it != chat || talk) }
 }
 
 object Models {

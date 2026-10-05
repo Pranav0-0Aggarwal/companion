@@ -61,8 +61,8 @@ fun AiSettings() {
     val run = s.mode == Mode.Running
     val busy = run || s.mode == Mode.Waiting
     val total = remember { Dl.total }
-    val got = if (run) s.ready + s.pos else Pins.wanted.filter(Models::pinned).sumOf { disk[it.file]?.second ?: 0 }
-    val missing = Pins.wanted.any { Models.pinned(it) && disk[it.file]?.first != true }
+    val got = if (run) s.ready + s.pos else Pins.wanted(Dl.talk).filter(Models::pinned).sumOf { disk[it.file]?.second ?: 0 }
+    val missing = Pins.wanted(Dl.talk).any { Models.pinned(it) && disk[it.file]?.first != true }
     val resume = !busy && got > 0 && missing
     val cur = Pins.all.indexOfFirst { it.file == s.cur }
     Section("On-device AI")

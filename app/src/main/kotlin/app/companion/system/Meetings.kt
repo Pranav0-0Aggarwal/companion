@@ -73,6 +73,7 @@ object Meetings {
     private var watcher: ContentObserver? = null
 
     fun watch(app: Application) {
+        if (watcher != null || !app.has(Manifest.permission.READ_CALENDAR)) return
         val h = Handler(Looper.getMainLooper())
         val run = Runnable { CoroutineScope(Dispatchers.IO).launch { sync(app); Live.widgets(app) } }
         watcher = object : ContentObserver(h) {
@@ -80,7 +81,7 @@ object Meetings {
                 h.removeCallbacks(run)
                 h.postDelayed(run, 3_000)
             }
-        }.also { app.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, it) }
+        }.takeIf { runCatching { app.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, it) }.isSuccess }
     }
 
     fun soon(c: Context, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Soon {

@@ -107,6 +107,11 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        app.companion.system.Meetings.watch(application)
+    }
+
     override fun onStop() {
         super.onStop()
         unlocked = false

@@ -83,6 +83,11 @@ class Foods(private val c: Context, private val repo: Repo) {
             when (val x = r.resolve(req)) {
                 is Hit -> got += x
                 is Ask -> {
+                    val parts = if (x.size) null else r.parts(req)
+                    if (parts != null) {
+                        parts.asReversed().forEach(q::addFirst)
+                        continue
+                    }
                     hold = Hold(w, src, note, order, got.toList(), x, q.toList())
                     return ToolOut.Ask(x.question)
                 }

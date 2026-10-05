@@ -233,4 +233,13 @@ class ResolverTest {
         assertEquals(listOf("sku", "brand", "db", "asked", "estimate"), Origin.entries.map { it.label })
         assertNull(Origin.of("nope"))
     }
+
+    @Test
+    fun runTogetherFoodsSplitIntoKnownItems() {
+        val parts = r.parts(Req("roti dal", qty = 2.0))!!
+        assertEquals(listOf("roti", "dal"), parts.map { it.name })
+        assertEquals(2.0, parts[0].qty)
+        assertEquals(null, r.parts(Req("roti")))
+        assertEquals(null, r.parts(Req("mystery stew")))
+    }
 }

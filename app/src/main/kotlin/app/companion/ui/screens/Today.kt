@@ -90,7 +90,6 @@ fun TodayScreen(go: (String) -> Unit) {
             bar = if (live) "Today" else dayLabel(day),
             tall = false,
             foot = 66.dp,
-            tools = { ToolButton(Ic.Search, "Search or ask") { ask(AskReq(null)) } },
             lead = {
                 Column {
                     DayStrip(day, d.today, Modifier.padding(top = 4.dp)) { sel = it.takeIf { x -> x != d.today }?.toEpochDay() }

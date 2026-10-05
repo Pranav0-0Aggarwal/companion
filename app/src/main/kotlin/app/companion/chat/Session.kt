@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import app.companion.Services
 import app.companion.ai.Answer
 import app.companion.ai.Answers
+import app.companion.core.Route
 import app.companion.core.Card
 import app.companion.core.ChatOpts
 import app.companion.core.Opt
@@ -155,16 +156,15 @@ class ChatSession(private val sl: Services) {
                 answers.forEach { msgs += Msg.Rule(id(), it) }
                 return
             }
-            if (!chat.ready()) {
+            if (!chat.ready() && !Route.direct(text)) {
                 val hits = withContext(Dispatchers.Default) { sl.repo.search(text).first() }
                 if (hits.isNotEmpty()) msgs += Msg.Hits(id(), hits) else msgs += Msg.Note(id(), "I can answer questions about your spending, bills and plans. Try \"spent this week\" or \"bills due this week\".")
                 msgs += Msg.Need(id())
                 return
             }
         }
-        if (c != null && !held && !chat.ready()) return collect(chat.log(text, c.day, c.slot, c.order), go)
-        val ask = if (c != null && !held) "I had this${c.slot?.let { " for $it" }.orEmpty()}: $text" else text
-        collect(chat.ask(ask, c?.order, at = c?.takeIf { !held }?.let { it.day to it.slot }), go)
+        if (c != null && !held) return collect(chat.log(text, c.day, c.slot, c.order), go)
+        collect(chat.ask(text, c?.order, at = null), go)
     }
 
     private suspend fun collect(flow: Flow<Out>, go: (String) -> Unit) {

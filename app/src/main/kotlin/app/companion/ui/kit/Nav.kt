@@ -115,6 +115,7 @@ fun FloatNav(route: String?, modifier: Modifier = Modifier, onGo: (String) -> Un
                 }
             }
         }
+        if (route == Tab.Today.route) return@Row
         val src = remember { MutableInteractionSource() }
         Box(
             Modifier.size(64.dp).press(src, 0.92f).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.16f))

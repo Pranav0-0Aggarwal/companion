@@ -2,6 +2,17 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.6.1 (2026-10-05)
+
+### Fixed
+- The app no longer crashes on first launch when calendar access has not been allowed. Meetings start syncing as soon as you allow it.
+- Adding a card found in your messages no longer crashes Money, Cards.
+- Instant answers work before the chat model is downloaded: what needs me today, meal ideas, comparisons, which card, meetings, weight, trips and plain meal logs.
+- Logging from "Add breakfast" and similar buttons no longer counts the prefilled words as food, and foods written without commas ("2 roti dal aur dahi") are split into separate items.
+
+### Changed
+- Today has one way into chat, the Ask bar. The round Ask button stays on the other tabs.
+
 ## 0.6.0 (2026-10-05)
 
 ### A new app

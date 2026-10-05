@@ -38,6 +38,13 @@ object Route {
     fun meal(text: String): List<Req>? {
         val t = text.lowercase().replace('’', '\'').replace(Regex("[^a-z0-9,+&/'\\s]"), " ").replace(Regex("\\s+"), " ").trim()
         if (text.trim().endsWith("?") || ask.containsMatchIn(t) || money.containsMatchIn(t) || !ate.containsMatchIn(t)) return null
+        return items(text)
+    }
+
+    fun direct(text: String) = of(text) != null || meal(text) != null
+
+    fun items(text: String): List<Req>? {
+        val t = text.lowercase().replace('’', '\'').replace(Regex("[^a-z0-9,+&/'\\s]"), " ").replace(Regex("\\s+"), " ").trim()
         val items = t.replace(Regex("\\s+with\\s+"), " and ").replace(drop, " ").replace(Regex("\\s+"), " ").trim()
         return Clarify.spoken(items).filter { r -> r.name.any(Char::isLetter) }.takeIf { it.isNotEmpty() }
     }

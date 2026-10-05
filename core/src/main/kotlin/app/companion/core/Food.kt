@@ -158,6 +158,25 @@ class Resolver(val skus: Map<String, Sku>, val db: FoodDb, val menus: BrandMenus
         return fin(r, f.name, brand, u ?: f.unit, f.kcal * g, f.protein * g, f.carbs * g, f.fat * g, 1.0, emptyList(), Origin.Db, conf)
     }
 
+    fun parts(r: Req): List<Req>? {
+        if (r.brand != null || skus.isNotEmpty() && (skus[Sku.key(null, r.name.trim())] != null)) return null
+        val w = Words.norm(r.name).split(' ').filter { it.isNotEmpty() }
+        if (w.size < 2) return null
+        val out = mutableListOf<String>()
+        var i = 0
+        while (i < w.size) {
+            val j = (minOf(w.size, i + 3) downTo i + 1).firstOrNull { j -> known(w.subList(i, j).joinToString(" ")) } ?: return null
+            out += w.subList(i, j).joinToString(" ")
+            i = j
+        }
+        return out.takeIf { it.size > 1 }?.mapIndexed { k, n -> if (k == 0) r.copy(name = n, mods = emptyList()) else Req(n) }
+    }
+
+    private fun known(n: String): Boolean {
+        val q = Words.toks(n)
+        return q.isNotEmpty() && foods.any { (_, ns) -> ns.any { Words.score(q, it) >= 0.9 } }
+    }
+
     fun guess(r: Req): Int {
         val t = Words.norm(r.name)
         return guesses.firstOrNull { it.first.containsMatchIn(t) }?.second ?: 300

@@ -88,4 +88,13 @@ class RouteTest {
         assertNull(Route.meal("how much did I spend on lunch"))
         assertNull(Route.meal("paid 300 for lunch"))
     }
+
+    @Test
+    fun prefilledLogTextLosesTheLeadWords() {
+        assertEquals(listOf("idli" to 2.0), Route.items("I had 2 idli")!!.map { it.name to it.qty })
+        assertEquals(listOf("roti", "dal", "dahi"), Route.items("2 roti, dal aur dahi")!!.map { it.name })
+        assertTrue(Route.direct("What needs me today?"))
+        assertTrue(Route.direct("had 2 idli and chai"))
+        assertFalse(Route.direct("tell me a joke"))
+    }
 }

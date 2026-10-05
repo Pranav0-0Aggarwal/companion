@@ -140,7 +140,7 @@ fun CardsScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
         } else {
             item(key = "faces") { Faces(cycles, pager) }
             item(key = "cycle") { CycleBlock(sel, Modifier.part(p, true, true)) { deleting = sel.card } }
-            item(key = "head") {
+            item(key = "cycle-head") {
                 Text("This cycle", Modifier.padding(start = 28.dp, top = 22.dp, bottom = 8.dp), style = Ty.ui(14).copy(color = p.ink2))
             }
             if (sel.rows.isEmpty()) {

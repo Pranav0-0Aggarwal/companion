@@ -13,7 +13,6 @@ import app.companion.ai.Spec
 import app.companion.ai.vitals
 import app.companion.core.Card
 import app.companion.core.ChatTemplate
-import app.companion.core.Clarify
 import app.companion.core.Convo
 import app.companion.core.Decode
 import app.companion.core.Guard
@@ -98,8 +97,8 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     fun ask(text: String, order: Long? = null, bg: Boolean = false, at: Pair<LocalDate, String?>? = null): Flow<Out> = direct(order, at) { run(text.take(MAX_TEXT), bg) }
 
     fun log(text: String, day: LocalDate, slot: String?, order: Long?): Flow<Out> = direct(order, day to slot) {
-        foods.quiet(Clarify.spoken(text), foods.wenFor(day, slot), "chat", null, order)
-        send(Out.Done)
+        val reqs = Route.items(text) ?: return@direct fail("format")
+        settle(text, foods.log(reqs, foods.wenFor(day, slot), "chat", null, order))
     }
 
     fun dayCard(day: LocalDate): Flow<Out> = direct(null, null) {

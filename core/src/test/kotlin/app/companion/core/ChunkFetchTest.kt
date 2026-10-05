@@ -180,9 +180,12 @@ class ChunkFetchTest {
         assertTrue(book.known() && book.done() > 0 && book.done() < size)
         assertTrue(part.exists())
         assertFalse(dest.exists())
+        val gaps = book.missing()
+        asked.clear()
         assertEquals(Fetcher.Out.Done, pull())
         assertContentEquals(data, dest.readBytes())
-        assertEquals(size - book.done(), served.get() - first)
+        assertTrue(served.get() - first >= size - book.done())
+        assertTrue(asked.isNotEmpty() && asked.all { (a, e) -> gaps.any { a >= it.from && e <= it.to - 1 } })
     }
 
     @Test

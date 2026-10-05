@@ -38,7 +38,7 @@ class ToolSpecsTest {
     @Test
     fun systemPromptStaysWithinItsBudget() {
         val p = Prompt.system(reg.listing())
-        assertTrue(p.length <= 2600, "${p.length} chars")
+        assertTrue(p.length <= 4200, "${p.length} chars")
         assertTrue(reg.listing().lines().all { it.substringAfterLast("): ").split(' ').size <= 8 })
         assertTrue(Regex("^.* -> \\{", RegexOption.MULTILINE).findAll(p).count() <= 3)
     }
@@ -72,6 +72,49 @@ class ToolSpecsTest {
         assertIs<Step.Call>(step("""{"tool":"open","args":{"screen":"bills"}}"""))
         assertIs<Step.Call>(step("""{"tool":"open","args":{"screen":"vault"}}"""))
         assertIs<Step.Bad>(step("""{"tool":"open","args":{"screen":"nowhere"}}"""))
+    }
+
+    @Test
+    fun readCalls() {
+        assertIs<Step.Call>(step("""{"tool":"search_messages","args":{"q":"refund","from":"Amazon","days":30}}"""))
+        assertIs<Step.Call>(step("""{"tool":"ledger","args":{"merchant":"Swiggy","category":"food","card":"HDFC","min":100,"max":2500.5,"period":"last month"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"ledger","args":{}}"""))
+        assertIs<Step.Call>(step("""{"tool":"top_merchants","args":{"period":"this month","n":5}}"""))
+        assertIs<Step.Call>(step("""{"tool":"compare","args":{"period_a":"this month","period_b":"last month","merchant":"Swiggy"}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"compare","args":{"period_a":"this month"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"needs_you","args":{"n":5}}"""))
+        assertIs<Step.Call>(step("""{"tool":"bill_cycle","args":{"card":"ICICI"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"best_card","args":{}}"""))
+        assertIs<Step.Call>(step("""{"tool":"meals","args":{"date":"yesterday"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"weight_trend","args":{"weeks":12}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"weight_trend","args":{"weeks":"many"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"meetings","args":{"day":"tomorrow"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"trips","args":{}}"""))
+    }
+
+    @Test
+    fun actCalls() {
+        assertIs<Step.Call>(step("""{"tool":"mark_paid","args":{"bill":"i:123"}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"mark_paid","args":{}}"""))
+        assertIs<Step.Call>(step("""{"tool":"file","args":{"item":"i:5","category":"food"}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"file","args":{"item":"i:5","category":"dining"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"retype","args":{"item":"i:5","label":"promo"}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"retype","args":{"item":"i:5","label":"otp"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"mark_dup","args":{"item":"i:5","keep":"i:4"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"rename_merchant","args":{"from":"SWIGGY LTD","to":"Swiggy"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"not_spending","args":{"merchant":"Zerodha"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"add_card","args":{"bank":"HDFC","last4":"1234"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"set_budget","args":{"amount":50000}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"set_budget","args":{"amount":"lots"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"dismiss","args":{"item":"i:9"}}"""))
+    }
+
+    @Test
+    fun newSpecsStayCompact() {
+        val new = ToolSpecs.all.drop(16)
+        assertEquals(20, new.size)
+        assertTrue(new.all { it.desc.split(' ').size <= 8 }, "desc")
+        assertTrue(new.all { t -> t.args.all { it.desc.split(' ').filter(String::isNotEmpty).size <= 6 } }, "arg desc")
     }
 
     @Test

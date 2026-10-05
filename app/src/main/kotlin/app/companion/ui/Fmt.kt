@@ -1,5 +1,6 @@
 package app.companion.ui
 
+import app.companion.core.Rs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -24,10 +25,7 @@ fun plain(paise: Long): String {
     return "${group(a / 100)}.${(a % 100).toString().padStart(2, '0')}"
 }
 
-fun inr(paise: Long): String {
-    val a = kotlin.math.abs(paise)
-    return if (a % 100 == 0L) "₹${group(a / 100)}" else "₹${plain(a)}"
-}
+fun inr(paise: Long) = Rs.of(paise)
 
 fun money(paise: Long, currency: String) = if (currency == "INR") inr(paise) else "$currency ${plain(paise)}"
 

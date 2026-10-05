@@ -11,6 +11,7 @@ import app.companion.ai.Answers
 import app.companion.core.Card
 import app.companion.core.ChatOpts
 import app.companion.core.Opt
+import app.companion.core.Pend
 import app.companion.data.Item
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +46,11 @@ sealed class Msg(val id: Long) {
     class Need(id: Long) : Msg(id)
 
     class Note(id: Long, val text: String) : Msg(id)
+
+    class Act(id: Long, val key: Long, val text: String) : Msg(id) {
+        var at by mutableStateOf(Pend.Wait)
+        var said by mutableStateOf("")
+    }
 }
 
 @Stable
@@ -88,6 +94,21 @@ class ChatSession(private val sl: Services) {
         job?.cancel()
         busy = false
         idle()
+    }
+
+    fun confirm(m: Msg.Act, offer: (Undo) -> Unit) {
+        if (m.at != Pend.Wait) return
+        m.at = Pend.Run
+        scope.launch {
+            val d = sl.chat.gate.confirm(m.key)
+            m.at = if (d?.ok == true) Pend.Done else Pend.Fail
+            m.said = d?.said ?: "This is no longer available."
+            d?.undos?.forEach(offer)
+        }
+    }
+
+    fun cancel(m: Msg.Act) {
+        if (m.at == Pend.Wait && sl.chat.gate.cancel(m.key)) m.at = Pend.Cancel
     }
 
     private fun idle() {
@@ -162,8 +183,9 @@ class ChatSession(private val sl: Services) {
                 }
                 is Out.Show -> {
                     idle()
-                    msgs += Msg.Res(id(), o.card)
-                    if (o.card is Card.Meal) ctx = null
+                    val c = o.card
+                    msgs += if (c is Card.Confirm) Msg.Act(id(), c.key, c.text) else Msg.Res(id(), c)
+                    if (c is Card.Meal) ctx = null
                 }
                 is Out.Ask -> {
                     idle()

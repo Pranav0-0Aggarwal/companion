@@ -109,17 +109,9 @@ object Nudge {
 }
 
 object Spend {
-    private fun group(n: Long): String {
-        val s = n.toString()
-        if (s.length <= 3) return s
-        return s.dropLast(3).reversed().chunked(2).joinToString(",").reversed() + "," + s.takeLast(3)
-    }
-
-    private fun rupees(paise: Long) = "₹" + group(paise / 100) + if (paise % 100 == 0L) "" else "." + (paise % 100).toString().padStart(2, '0')
-
     fun prompt(merchant: String?, category: String?, paise: Long, hasItems: Boolean, inBrandDb: Boolean): String? {
         if (category != Category.Food.label || hasItems || inBrandDb || paise <= 0 || merchant.isNullOrBlank()) return null
-        return "Logged ${rupees(paise)} at ${merchant.trim()}. What did you have?"
+        return "Logged ${Rs.of(paise)} at ${merchant.trim()}. What did you have?"
     }
 }
 

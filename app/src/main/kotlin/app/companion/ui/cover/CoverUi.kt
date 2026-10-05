@@ -315,6 +315,7 @@ private fun LastAnswer(s: ChatSession, v: Cov) {
             is Msg.Hits -> Text("${m.items.size} matching ${if (m.items.size == 1) "message" else "messages"}", style = Ty.ui(20, FontWeight.Bold).copy(color = p.ink))
             is Msg.Need -> Quiet("Download the chat model in Settings on the main screen to log meals and ask in plain words.")
             is Msg.Note -> Quiet(m.text)
+            is Msg.Act -> Quiet("Open the main screen to confirm.")
             is Msg.User -> Unit
         }
     }
@@ -331,6 +332,8 @@ private fun Brief(c: Card, v: Cov) {
         is Card.Weight -> String.format(java.util.Locale.US, "%.1f kg", c.kg) to "Weight logged"
         is Card.Trip -> v.show(inr(c.total)) to c.name
         is Card.Docs -> "${c.rows.size} saved" to "Open the vault on the main screen to reveal"
+        is Card.Facts -> v.show(c.big ?: "${c.rows.size}") to c.label
+        is Card.Confirm -> "Confirm" to "Open the main screen to confirm"
     }
     Text(big, style = Ty.mono(32, FontWeight.Bold).copy(color = p.ink), maxLines = 1)
     Quiet(line, Modifier.padding(top = 4.dp))

@@ -60,7 +60,7 @@ class BertSpec(
             val m = Json.obj(text)
             require(m["arch"] == ARCH)
             val buckets = (m["buckets"] as List<*>).map { (it as Number).toInt() }.sorted()
-            require(buckets.isNotEmpty() && buckets.all { it >= 3 })
+            require(buckets.isNotEmpty() && buckets.all { it >= 3 } && (m["truncation"] ?: "right") == "right")
             val tasks = (m["tasks"] as Map<String, Map<String, Any?>>).mapValues { (_, t) ->
                 val labels = (t["labels"] as List<*>).map { it as String }
                 require(labels.isNotEmpty())

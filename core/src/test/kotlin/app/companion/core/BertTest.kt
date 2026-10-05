@@ -98,6 +98,7 @@ class BertTest {
         assertFailsWith<Exception> { BertSpec.fromJson(realJson(sigs = sig(64).replace("int32", "float32"))) }
         assertFailsWith<Exception> { BertSpec.fromJson(realJson(tok = """{"json":"../tok.json"}""")) }
         assertFailsWith<Exception> { BertSpec.fromJson(realJson(cal = "\"a/b.json\"")) }
+        assertFailsWith<Exception> { BertSpec.fromJson(realJson().replace("\"right\"", "\"left\"")) }
     }
 
     @Test

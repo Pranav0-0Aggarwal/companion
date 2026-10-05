@@ -78,14 +78,14 @@ class Pending(
         }
     }
 
-    internal suspend fun drain(id: Long) {
+    internal suspend fun drain(id: Long, more: LongArray? = null) {
         delay(WINDOW)
-        val todo = take(id)
+        val todo = take(id, more)
         if (todo.isEmpty()) return
-        val now = Guard.take(vitals(app), todo.size, Active.bert(app) != null)
-        if (now < todo.size) later(todo, now)
         var changed = false
         try {
+            val now = Guard.take(vitals(app), todo.size, Active.bert(app) != null)
+            if (now < todo.size) later(todo, now)
             val p = repo.profileNow()
             gov.hold {
                 val raws = LinkedHashMap<Long, Raw>()
@@ -127,12 +127,12 @@ class Pending(
         rest.keys.forEach(todo::remove)
         release(rest)
         val req = OneTimeWorkRequestBuilder<RefineWork>()
-            .setInputData(workDataOf(ID to 0L))
+            .setInputData(workDataOf(IDS to rest.keys.take(MAX).toLongArray()))
             .setConstraints(Constraints.Builder().setRequiresCharging(true).build())
             .setInitialDelay(Guard.RECHECK, TimeUnit.MILLISECONDS)
             .build()
         try {
-            WorkManager.getInstance(app).enqueueUniqueWork("$NAME:later", ExistingWorkPolicy.KEEP, req).await()
+            WorkManager.getInstance(app).enqueueUniqueWork("$NAME:later", ExistingWorkPolicy.APPEND_OR_REPLACE, req).await()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -154,10 +154,10 @@ class Pending(
         return raw(app, i, repo.senders(listOf(id))[id], true)
     }
 
-    private fun take(id: Long): MutableMap<Long, Todo> = synchronized(lock) {
+    private fun take(id: Long, more: LongArray?): MutableMap<Long, Todo> = synchronized(lock) {
         val out = LinkedHashMap(queue)
         queue.clear()
-        if (id !in out && id !in claimed) out[id] = Todo(null, null)
+        (more ?: longArrayOf(id)).forEach { if (it !in out && it !in claimed) out[it] = Todo(null, null) }
         claimed.addAll(out.keys)
         while (claimed.size > MAX) claimed.remove(claimed.first())
         out
@@ -172,6 +172,7 @@ class Pending(
 
     companion object {
         internal const val ID = "id"
+        internal const val IDS = "ids"
         private const val NAME = "refine"
         private const val WINDOW = 1_000L
         private const val MAX = 500
@@ -188,7 +189,7 @@ class Pending(
 
 class RefineWork(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        applicationContext.sl.pending.drain(inputData.getLong(Pending.ID, 0))
+        applicationContext.sl.pending.drain(inputData.getLong(Pending.ID, 0), inputData.getLongArray(Pending.IDS))
         Result.success()
     }
 }

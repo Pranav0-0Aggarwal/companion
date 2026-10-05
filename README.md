@@ -15,31 +15,37 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 ./gradlew :app:assembleDebug
 ```
 
-Native build: `:app` compiles two tiny JNI shims with the NDK (arm64-v8a only): `needle_jni` for the Needle query model and `nux_jni` for NuExtract on llama.cpp. Install the pinned toolchain once with `sdkmanager "ndk;28.2.13676358" "cmake;3.22.1"`. The Gradle task `fetchNeedle` downloads `libneedle.a` and `needle.h` from Hugging Face `Cactus-Compute/needle3` at revision `27c0a9a5b3ca835e0b7dbeaccf555df03dac493d` into `app/build/needle/`, checks both against pinned SHA-256s and fails the build on a mismatch. `fetchLlama` downloads the llama.cpp `b11306` source tarball and the KleidiAI `v1.24.0` source tarball over HTTPS into `app/build/llama/`, checks both against pinned SHA-256s, rejects archive paths that escape the target and fails the build on a mismatch; CMake gets the KleidiAI directory through `FETCHCONTENT_SOURCE_DIR_KLEIDIAI` with `FETCHCONTENT_FULLY_DISCONNECTED`, so configuring never touches the network. Nothing fetched is committed. CI runs both fetch tasks before it blackholes the model hosts; the release workflow runs them as part of the build.
+Native build: `:app` compiles one JNI library, `llm_jni`, with the NDK (arm64-v8a only): `NuxJni` runs NuExtract and `ChatJni` runs the conversation model, both on llama.cpp. Install the pinned toolchain once with `sdkmanager "ndk;28.2.13676358" "cmake;3.22.1"`. `fetchLlama` downloads the llama.cpp `b11306` source tarball and the KleidiAI `v1.24.0` source tarball over HTTPS into `app/build/llama/`, checks both against pinned SHA-256s, rejects archive paths that escape the target and fails the build on a mismatch; CMake gets the KleidiAI directory through `FETCHCONTENT_SOURCE_DIR_KLEIDIAI` with `FETCHCONTENT_FULLY_DISCONNECTED`, so configuring never touches the network. Nothing fetched is committed. CI runs both fetch tasks before it blackholes the model hosts; the release workflow runs them as part of the build.
 
-llama.cpp is built as static libraries with `BUILD_SHARED_LIBS=OFF`, `GGML_CPU_ARM_ARCH=armv8.6-a+dotprod+i8mm`, `GGML_CPU_KLEIDIAI=ON`, `GGML_OPENMP=OFF`, `GGML_NATIVE=OFF`, `GGML_LLAMAFILE=OFF`, `LLAMA_CURL=OFF`, `LLAMA_OPENSSL=OFF`, no common library, tests, examples, tools or server, `-O3` and ThinLTO. The build needs a CPU with dot product and i8mm (Snapdragon 8 Gen 1, Exynos 2200, Tensor G3 and newer); `nux_jni` checks both hardware capabilities at load and fails closed on older phones, which then keep the rules-only result.
+llama.cpp is built as static libraries with `BUILD_SHARED_LIBS=OFF`, `GGML_CPU_ARM_ARCH=armv8.6-a+dotprod+i8mm`, `GGML_CPU_KLEIDIAI=ON`, `GGML_OPENMP=OFF`, `GGML_NATIVE=OFF`, `GGML_LLAMAFILE=OFF`, `LLAMA_CURL=OFF`, `LLAMA_OPENSSL=OFF`, no common library, tests, examples, tools or server, `-O3` and ThinLTO. The build needs a CPU with dot product and i8mm (Snapdragon 8 Gen 1, Exynos 2200, Tensor G3 and newer); `llm_jni` checks both hardware capabilities at load and fails closed on older phones, which then keep the rules-only result.
 
 `local.properties` (gitignored): `sdk.dir=...` and `gmail.webClientId=` (empty disables Gmail). compileSdk is 37 because current AndroidX and SQLCipher releases require it; targetSdk is 35, minSdk 34. `android.uniquePackageNames=false` is set because `litert` and `litert-api` share one manifest namespace.
 
 ## Ask
 
-The search field answers data questions locally, for example "how much did I spend on food last month" or "Swiggy this week". `RulePlanner` (English and Hinglish) turns the text into typed queries first. Only when it finds nothing, and the text has at least three words, the Needle 3 tool-calling model gets a turn: it picks one of six tools (`sum_spend`, `list_transactions`, `list_bills`, `top_merchants`, `create_reminder`, `create_event`) and copies the date phrase word for word; `Phrase` resolves the phrase against today in Asia/Kolkata and `Validator` rejects anything out of range, with an unknown tool, or with a bad argument. If anything is invalid the screen says "Couldn't understand, try 'food last month'".
+The search field answers data questions locally, for example "how much did I spend on food last month" or "Swiggy this week". `RulePlanner` (English and Hinglish) turns the text into typed queries first and those rule answers are instant. Everything else goes to the Conversation model (Chat, below). If the model is not installed or the phone cannot run it, the screen falls back to the matching messages.
 
 Every answer card starts with the interpreted query, for example "Food · 1 to 30 Sep 2026", and an Edit chip that opens the fields (category, merchant, card, dates, or title and time) so a wrong parse is visible and fixable. Reads run immediately; reminders and events need one tap to confirm.
 
-Needle runs only inside `NeedleService`, declared `android:isolatedProcess="true"`: no network, no permissions, no access to the app's files. The app opens `needle3.cact` and passes the file descriptor over the binder; the isolated process maps it with `mmap` and hands the buffer to `needle_load`, so the model is never copied. The JNI shim sets `NEEDLE_TELEMETRY=0` and `DO_NOT_TRACK=1` before loading. Queries, prompts and outputs are never logged. The service is bound on demand and unbound after 60 s idle; its process is killed when it is destroyed, which frees the model.
+## Chat
+
+The Conversation model (Qwen3.5-2B Q4_0, or LFM2.5-1.2B-Instruct as the alternative; the spec names are in `Manifest.chat` and `Manifest.chatLfm`) runs only inside `ChatService`, declared `android:isolatedProcess="true"`: no network, no permissions, no access to the app's files. The app opens the GGUF and passes the file descriptor over the binder; `ChatJni` maps it, tokenizes the prompt, reuses the KV cache for the longest common prefix (system prompt and tool schema stay cached), and streams each token back over a Messenger. Generation is constrained by a GBNF grammar built from the tool registry, so the model can only emit `{"tool":..,"args":..}` or `{"say":..}`. Threads are 4 while charging and 2 on battery; background work runs at background priority.
+
+`ChatEngine` stays in the app process. It renders the conversation (last 12 turns, `ChatTemplate.Qwen` or `ChatTemplate.Lfm`), runs up to 4 tool calls per turn against `Repo` (spend, bills, cards, balance, log_meal, food_today, set_kcal, log_weight, start_trip, end_trip, trip_summary, vault_find, vault_add, remind, calendar_add, open), and streams the answer. Tools never run inside the isolated process. `vault_find` returns masked numbers only. The model is unloaded after 60 s idle. Prompts, chat text, food and documents are never logged.
+
+Food logging resolves each item through personal SKUs, brand menus and the bundled food database (`food_db.json`, `brand_menus.json`) and asks a short question when unsure; the answer is saved as a SKU. Meal and weight nudges are notifications with an inline reply that a background worker hands to Chat. Trips, the document vault and Health Connect sit on the same repo.
 
 ## On-device models and memory budget
 
-Three components, never resident together: `Governor` holds a mutex so only one model is loaded, unloads Decide after 30 s idle and Needle and NuExtract after 60 s idle, refuses to load below 1.5 GB available or when the system reports low memory, and unloads everything on `onTrimMemory(UI_HIDDEN)` and above. Without any model the app runs on rules alone.
+Three components, never resident together: `Governor` holds a mutex so only one model is loaded, unloads Decide after 30 s idle and the Conversation model and NuExtract after 60 s idle, refuses to load below 1.5 GB available or when the system reports low memory, and unloads everything on `onTrimMemory(UI_HIDDEN)` and above. Without any model the app runs on rules alone.
 
 | Budget | Limit |
 | --- | --- |
 | App | 200 MB |
 | Decide (LiteRT, GLiNER2.5-Decide int8) | 600 MB |
-| Needle 3 (isolated process, CPU) | 150 MB |
+| Conversation, Qwen3.5-2B Q4_0 (llama.cpp, isolated process, CPU, 2 to 4 threads) | 1.6 GB |
 | NuExtract-1.5-tiny q4_0 (llama.cpp, isolated process, CPU, 2 threads) | 600 MB |
-| Peak (app + Decide, or app + Needle, or app + NuExtract) | about 0.8 GB |
+| Peak (app + Decide, or app + NuExtract, or app + Conversation) | about 1.8 GB |
 | Hard ceiling | 2 GB |
 
 ### Smart extraction (NuExtract)
@@ -52,7 +58,7 @@ A value is filled in automatically only when the classifier's kind is money (exp
 
 Phones without dot product and i8mm (read from `/proc/cpuinfo` once per process) never download the model, show "Not supported on this phone's CPU" in Settings and never bind `NuxService`; a native load failure also disables it until the process restarts. With the ModernBERT classifier, a batch (Pending, Reprocess, Import) runs every type inference with the type model loaded once, then loads the category model once for the expense items only.
 
-NuExtract runs only inside `NuxService`, a sibling of `NeedleService` declared `android:isolatedProcess="true"`: no network, no permissions, no access to the app's files. The app opens the GGUF and passes the file descriptor over the binder; the shim duplicates it and lets llama.cpp memory-map the weights from that descriptor. The service thread runs at `THREAD_PRIORITY_BACKGROUND` and the context uses 2 threads. The context is 768 tokens with a 512 token batch and a greedy sampler behind the grammar sampler, which stops at the end of the grammar or end of sequence. The shim keeps the tokens in sequence 0 of the KV cache, so the constant template prefix is evaluated once per load: each call tokenizes the whole prompt in one pass, exactly as the model was evaluated, after `Nux.clip` breaks up any `<|` and `|>` in the message so token-like text inside an SMS stays plain text, keeps the longest common token prefix with the cached tokens, removes the rest with `llama_memory_seq_rm`, decodes only the new tokens and removes the generated tokens afterwards. Output is capped at 4 KB and everything is freed on every error path. Text, prompts and outputs are never logged and the llama.cpp log is silenced. After 60 s idle the service is unbound and its process is killed, which frees the model.
+NuExtract runs only inside `NuxService`, a sibling of `ChatService` declared `android:isolatedProcess="true"`: no network, no permissions, no access to the app's files. The app opens the GGUF and passes the file descriptor over the binder; the shim duplicates it and lets llama.cpp memory-map the weights from that descriptor. The service thread runs at `THREAD_PRIORITY_BACKGROUND` and the context uses 2 threads. The context is 768 tokens with a 512 token batch and a greedy sampler behind the grammar sampler, which stops at the end of the grammar or end of sequence. The shim keeps the tokens in sequence 0 of the KV cache, so the constant template prefix is evaluated once per load: each call tokenizes the whole prompt in one pass, exactly as the model was evaluated, after `Nux.clip` breaks up any `<|` and `|>` in the message so token-like text inside an SMS stays plain text, keeps the longest common token prefix with the cached tokens, removes the rest with `llama_memory_seq_rm`, decodes only the new tokens and removes the generated tokens afterwards. Output is capped at 4 KB and everything is freed on every error path. Text, prompts and outputs are never logged and the llama.cpp log is silenced. After 60 s idle the service is unbound and its process is killed, which frees the model.
 
 Decide runs on LiteRT `CompiledModel` (NPU, then GPU, then CPU) and only when rules are unsure. Its input follows `schema_prefix.json` `steps` exactly: the template "Text message from {sender}:\n{body}", a full stop appended when the text does not end in `.`, `!` or `?`, the schema's word splitter, lowercase, per-word unigram encoding over NFC text with consecutive unknowns fused, then the task prefix, truncation to 384 and padding to bucket 256 or 384. `:core` tests compare every step with ids produced by the Python reference (200 tokenizer vectors and 13 synthetic messages) and check the argmax of the int8 model's logits against the reference labels. It settles a message only when its calibrated probability clears that label's own bar; otherwise the item stays ASK.
 
@@ -66,10 +72,10 @@ Decide runs on LiteRT `CompiledModel` (NPU, then GPU, then CPU) and only when ru
 | `tokenizer.dtk` | SentencePiece unigram vocabulary |
 | `schema_prefix.json` | task prefixes, labels and signatures |
 | `calibration.json` | temperatures and per-label bars |
-| `needle3.cact` | Cactus Needle 3 query model (about 35 MB) |
+| `qwen3.5-2b-q4_0.gguf` | Conversation model (about 1.3 GB; size and SHA-256 are filled in when published) |
 | `nuextract-tiny-q4_0.gguf` | NuExtract-1.5-tiny q4_0, Smart extraction (release `models-v2`, about 352 MB) |
 
-Settings, On-device AI lists each file (the NuExtract row is labelled Smart extraction) as not installed, queued, downloading x%, verifying, paused, waiting for Wi-Fi, ready or custom, with one progress bar for the whole set (MB done of total, speed, time left) and Download, Pause, Resume and Cancel buttons. It refreshes live. Files go in this order: `needle3.cact`, the small tokenizer, schema and calibration files, `decide.tflite`, then `nuextract-tiny-q4_0.gguf`, so Ask works first and the extraction model, which needs Decide to be used, comes last.
+Settings, On-device AI lists each file (the NuExtract row is labelled Smart extraction) as not installed, queued, downloading x%, verifying, paused, waiting for Wi-Fi, ready or custom, with one progress bar for the whole set (MB done of total, speed, time left) and Download, Pause, Resume and Cancel buttons. It refreshes live. Files go in this order: `qwen3.5-2b-q4_0.gguf`, the small tokenizer, schema and calibration files, `decide.tflite`, then `nuextract-tiny-q4_0.gguf`, so Ask works first and the extraction model, which needs Decide to be used, comes last.
 
 The download is an Android 14 user-initiated data transfer job (`ModelJob`, `JobInfo.setUserInitiated(true)`, unmetered network, `RUN_USER_INITIATED_JOBS`, service bound only by `BIND_JOB_SERVICE`, not exported). It is scheduled from the Download or Resume tap and shows an ongoing progress notification (percent, MB, speed, time left) with a Cancel action; every `PendingIntent` is `FLAG_IMMUTABLE`. User-initiated jobs have no 10-minute cutoff. If the system stops the job (Wi-Fi lost, timeout) it is rescheduled, and a WorkManager job with the same unmetered constraint is queued as a fallback, which also runs after a reboot while a download is wanted. Only one runner is active at a time. A full disk is not retried: Settings and the notification say "Not enough storage: need X MB free".
 
@@ -90,14 +96,14 @@ adb shell mkdir -p /sdcard/Download/companion-models
 adb push model_spec.json type.tflite category.tflite tokenizer.json calibration.json custom.json /sdcard/Download/companion-models/
 ```
 
-On the phone, tap Import private model files, open Downloads, then companion-models, select `model_spec.json`, `tokenizer.json`, `type.tflite`, `category.tflite`, `calibration.json` and `custom.json` (or the whole folder; pushing `TOKENIZER.md`, `tokenizer.mbpe`, `tokenizer_vectors.json` or `SHA256SUMS` along is harmless) and confirm. The first message scored after an import packs the weights once (a few seconds of extra load and about 350 MB of cache per task), later loads are fast. Add `"decide.tflite": "<sha256>"` or `"needle3.cact": "<sha256>"` to `custom.json` (and push those files too) to install them in the same import.
+On the phone, tap Import private model files, open Downloads, then companion-models, select `model_spec.json`, `tokenizer.json`, `type.tflite`, `category.tflite`, `calibration.json` and `custom.json` (or the whole folder; pushing `TOKENIZER.md`, `tokenizer.mbpe`, `tokenizer_vectors.json` or `SHA256SUMS` along is harmless) and confirm. The first message scored after an import packs the weights once (a few seconds of extra load and about 350 MB of cache per task), later loads are fast. Add `"decide.tflite": "<sha256>"` or `"qwen3.5-2b-q4_0.gguf": "<sha256>"` to `custom.json` (and push those files too) to install them in the same import.
 
 **Debug build (adb).** `run-as` only works on a debuggable build (`assembleDebug`):
 
 ```
-echo '{"decide.tflite": "<sha256>", "needle3.cact": "<sha256>"}' > custom.json
-adb push decide.tflite needle3.cact custom.json /data/local/tmp/
-adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/needle3.cact /data/local/tmp/custom.json files/models/custom/'
+echo '{"decide.tflite": "<sha256>", "qwen3.5-2b-q4_0.gguf": "<sha256>"}' > custom.json
+adb push decide.tflite qwen3.5-2b-q4_0.gguf custom.json /data/local/tmp/
+adb shell run-as app.companion sh -c 'mkdir -p files/models/custom && cp /data/local/tmp/decide.tflite /data/local/tmp/qwen3.5-2b-q4_0.gguf /data/local/tmp/custom.json files/models/custom/'
 ```
 
 ### Private ModernBERT classifier
@@ -129,7 +135,7 @@ Only `arch`, `buckets` and `tasks.type` are required. `template` defaults to `{s
 
 Install them with the release flow above (the example there pushes exactly these files). On a debuggable build the same files can be copied with `adb shell run-as app.companion` into `files/models/custom/`.
 
-If an earlier `custom.json` listed `decide.tflite` or `needle3.cact`, keep those entries in the new one.
+If an earlier `custom.json` listed `decide.tflite` or `qwen3.5-2b-q4_0.gguf`, keep those entries in the new one.
 
 ModernBERT is used for classification (live refine, import, reprocess) only when `model_spec.json` has the right `arch` and every file it names (the tokenizer and each task file) is listed in `custom.json` with a matching SHA-256. Otherwise the app keeps the GLiNER Decide path, and removing `model_spec.json` switches back. Settings, On-device AI shows "Message classifier: ModernBERT (custom)" or "GLiNER (base)". The processing key is a hash of the model file hashes and the active custom calibration hash, so swapping a model or its calibration shows the reprocess banner, as does switching backend.
 
@@ -190,4 +196,4 @@ Settings, Privacy, Keep message text: 90 days, 1 year (default) or forever. A da
 
 ## Security
 
-Encrypted database (SQLCipher, passphrase wrapped by an Android Keystore AES-GCM key), `allowBackup=false`, no analytics, no logging of content, Gmail read-only with the token held in memory only, the only other network use is the user-started model download from GitHub Releases (a non-exported job service and cancel receiver), the Needle and NuExtract models run in isolated processes with no network or permissions, exported components limited to the launcher, SMS receiver, notification listener, Quick Settings tiles and the widget receiver. Corrections are shared only on request through a non-exported FileProvider limited to the cache exports folder.
+Encrypted database (SQLCipher, passphrase wrapped by an Android Keystore AES-GCM key), `allowBackup=false`, no analytics, no logging of content, Gmail read-only with the token held in memory only, the only other network use is the user-started model download from GitHub Releases (a non-exported job service and cancel receiver), the Conversation and NuExtract models run in isolated processes with no network or permissions, exported components limited to the launcher, SMS receiver, notification listener, Quick Settings tiles and the widget receiver. Corrections are shared only on request through a non-exported FileProvider limited to the cache exports folder.

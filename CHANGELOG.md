@@ -2,6 +2,17 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.6.0 (unreleased)
+
+Backend only; the new screens land separately.
+
+- Chat. A small conversational model (Qwen3.5-2B, or LFM2.5-1.2B) replaces Needle. It runs in an isolated process, streams its answer and calls tools on your data: spend, bills, cards, meals, weight, trips, documents, reminders and calendar. Rule answers still come first. Old Needle files are deleted on upgrade.
+- Food log. Say what you ate, now or in the past ("yesterday dinner"), and calories are worked out from your own foods, brand menus and a bundled food table, with a short question when unsure. Food orders create a pending meal. Health Connect sync is optional.
+- Meal and weight reminders with an inline reply, based on your usual meal times and food payments.
+- Trips. Spends in a trip's dates are tagged, forex card charges are converted at the rate in the message, with a summary.
+- Document vault. Insurance, registration, pollution certificate, FASTag, loans and warranties are read from messages or photos (offline text recognition), stored encrypted with a hardware-backed key, and remind you 30, 7 and 1 day before expiry.
+- Database version 9.
+
 ## 0.5.0 (unreleased)
 
 ### Learning that actually learns

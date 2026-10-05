@@ -234,6 +234,9 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         val first = Turn(Role.User, Prompt.user(text, stamp.format(ZonedDateTime.now(zone))))
         val local = mutableListOf(first)
         var calls = 0
+        var got = false
+        var nudged = false
+        val seen = mutableSetOf<Pair<String, Map<String, Any?>>>()
         while (true) {
             val turns = hist.fit(local) { b.tpl.render(system, it).length <= MAX_PROMPT }
             val spoke = StringBuilder()
@@ -255,7 +258,14 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
                     return send(Out.Done)
                 }
                 is Step.Call -> {
-                    if (++calls > MAX_CALLS) return fail("steps")
+                    if (!seen.add(s.tool.name to s.args)) {
+                        if (nudged) return quiet(first, got)
+                        nudged = true
+                        local += Turn(Role.Assistant, d.raw)
+                        local += Turn(Role.Tool, Prompt.ANSWER)
+                        continue
+                    }
+                    if (++calls > MAX_CALLS) return quiet(first, got)
                     send(Out.Used(s.tool.name))
                     local += Turn(Role.Assistant, d.raw)
                     val r = try {
@@ -266,7 +276,10 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
                         ToolOut.Fail("tool failed")
                     }
                     when (r) {
-                        is ToolOut.Ok -> local += Turn(Role.Tool, r.text.take(MAX_RESULT))
+                        is ToolOut.Ok -> {
+                            got = true
+                            local += Turn(Role.Tool, r.text.take(MAX_RESULT))
+                        }
                         is ToolOut.Fail -> local += Turn(Role.Tool, "error: ${r.why}".take(MAX_RESULT))
                         is ToolOut.Ask -> {
                             hist.add(first)
@@ -279,6 +292,12 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
                 is Step.Bad -> return fail("format")
             }
         }
+    }
+
+    private suspend fun ProducerScope<Out>.quiet(first: Turn, got: Boolean) {
+        if (!got) return fail("steps")
+        hist.add(first)
+        send(Out.Done)
     }
 
     private suspend fun ProducerScope<Out>.fail(why: String) {

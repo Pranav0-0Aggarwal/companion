@@ -25,6 +25,8 @@ class Calibration(private val tasks: Map<String, Task> = emptyMap(), val model: 
 
     fun sure(task: String, label: String, p: Float) = p >= bar(task, label)
 
+    fun reachable(task: String) = tasks[task]?.let { t -> t.labels.isEmpty() || t.labels.any { bar(task, it) < NEVER } } ?: true
+
     fun fits(task: String, labels: List<String>) =
         tasks[task]?.labels?.let { it.isEmpty() || it == labels.map(String::lowercase) } ?: true
 

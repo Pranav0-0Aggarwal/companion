@@ -12,7 +12,9 @@ import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import app.companion.core.Batch
 import app.companion.core.Guard
+import app.companion.core.Extractor
 import app.companion.core.Memo
+import app.companion.core.Probe
 import app.companion.core.Pace
 import app.companion.core.Progress
 import app.companion.core.Raw
@@ -65,6 +67,8 @@ private class Engine(private val c: Context, private val job: Job, private val t
     private lateinit var cur: Progress
     private var battery = false
     private val strict = Active.bert(c) != null
+    private val memo = Memo(sl.scorer)
+    private val asked = LinkedHashMap<Long, Raw>()
 
     suspend fun go(): Result {
         val m = repo.mark(job.name)
@@ -135,9 +139,9 @@ private class Engine(private val c: Context, private val job: Job, private val t
             val from = repo.senders(rows.map { it.id })
             val p = repo.profileNow()
             val raws = rows.filter { it.id !in frozen }.associate { it.id to Pending.raw(c, it, from[it.id]) }
-            val memo = Memo(sl.scorer)
             sl.refine.prime(raws.values.filterNotNull(), memo)
-            val out = raws.mapValues { (_, r) -> r?.let { read(it, memo) } }
+            val probe = Probe()
+            val out = raws.mapValues { (_, r) -> r?.let { read(it, probe) } }
             cur = repo.atomic {
                 var moved = 0
                 var ask = 0
@@ -149,14 +153,30 @@ private class Engine(private val c: Context, private val job: Job, private val t
                 }
                 Batch.step(cur, rows.last().id, rows.size, moved, ask, out.count { it.value == null }).also { repo.step(job.name, it) }
             }
+            raws.forEach { (id, r) -> if (r != null && r in probe.asked && out[id] != null) asked[id] = r }
             lap(t, rows.size)
+            extract(false)
         }
+        extract(true)
     }
 
-    private suspend fun read(raw: Raw, memo: Memo): Pair<Raw, Verdict>? {
+    private suspend fun read(raw: Raw, x: Extractor): Pair<Raw, Verdict>? {
         currentCoroutineContext().ensureActive()
-        val v = sl.refine.run(raw, s = memo)
+        val v = sl.refine.run(raw, x, memo)
         return if (Refile.usable(v)) raw to v else null
+    }
+
+    private suspend fun extract(all: Boolean) {
+        if (asked.isEmpty() || !all && asked.size < Batch.SIZE) return
+        if (!sl.nux.on) return asked.clear()
+        val p = repo.profileNow()
+        val out = LinkedHashMap<Long, Pair<Raw, Verdict>>()
+        val todo = asked.toList().also { asked.clear() }
+        for ((id, raw) in todo) {
+            gate()
+            read(raw, sl.nux)?.let { out[id] = it }
+        }
+        repo.atomic { out.forEach { (id, r) -> repo.refile(id, r.first, r.second, p) } }
     }
 
     private suspend fun import() {
@@ -169,24 +189,27 @@ private class Engine(private val c: Context, private val job: Job, private val t
                 if (rows.isEmpty()) break
                 val p = repo.profileNow()
                 val raws = rows.filterNot { repo.seen(it.from, it.sent, it.at, cur.cap) }.map { Raw(Source.Sms, it.from, "", it.body, it.at) }
-                val memo = Memo(sl.scorer)
                 sl.refine.prime(raws, memo)
+                val probe = Probe()
                 val out = raws.map {
                     currentCoroutineContext().ensureActive()
-                    it to sl.refine.run(it, s = memo)
+                    it to sl.refine.run(it, probe, memo)
                 }
                 cur = repo.atomic {
                     var added = 0
                     var ask = 0
                     for ((r, v) in out) {
                         val a = repo.add(r, v, p)?.takeIf { it.fresh } ?: continue
+                        if (r in probe.asked && Refile.usable(v)) asked[a.item.id] = r
                         added++
                         if (a.item.state == State.ASK) ask++
                     }
                     Batch.step(cur, rows.last().id, rows.size, added, ask).also { repo.step(job.name, it) }
                 }
                 lap(t, rows.size)
+                extract(false)
             }
+            extract(true)
             repo.atomic {
                 repo.edit { it.copy(imported = true) }
                 repo.unfold()

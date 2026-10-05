@@ -1,6 +1,7 @@
 package app.companion.ai
 
 import android.content.Context
+import android.util.Log
 import app.companion.core.BertSpec
 import app.companion.core.DecideInput
 import com.google.ai.edge.litert.Accelerator
@@ -51,8 +52,9 @@ class DecideRunner(private val model: CompiledModel, private val env: Environmen
                     val env = if (a == Accelerator.NPU) Environment.create(c, BuiltinNpuAcceleratorProvider(c)) else Environment.create(c)
                     val o = CompiledModel.Options(a)
                     if (cache != null || threads != null) o.cpuOptions = CompiledModel.CpuOptions(threads, null, cache)
-                    return DecideRunner(CompiledModel.create(path, o, env), env, a.name)
+                    return DecideRunner(CompiledModel.create(path, o, env), env, a.name).also { Log.i("Companion", "runner ${a.name}") }
                 } catch (e: Throwable) {
+                    Log.w("Companion", "runner ${a.name} ${e.javaClass.simpleName}: ${e.message?.take(200)}")
                     last = e
                 }
             }

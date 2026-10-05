@@ -11,11 +11,9 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.await
 import androidx.work.workDataOf
-import app.companion.core.Extractor
-import app.companion.core.Field
 import app.companion.core.Guard
 import app.companion.core.Memo
-import app.companion.core.Nux
+import app.companion.core.Probe
 import app.companion.core.Raw
 import app.companion.core.Refine
 import app.companion.core.Scorer
@@ -46,15 +44,6 @@ class Pending(
     private val nux: NuExtractor,
 ) {
     private class Todo(val raw: Raw?, val state: String?)
-
-    private class Probe : Extractor {
-        val asked = HashSet<Raw>()
-
-        override fun extract(raw: Raw, want: Set<Field>): Map<Field, String> {
-            if (want.any(Nux.FIELDS::contains)) asked.add(raw)
-            return emptyMap()
-        }
-    }
 
     private val lock = Any()
     private val queue = LinkedHashMap<Long, Todo>()

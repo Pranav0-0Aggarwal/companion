@@ -76,6 +76,22 @@ class LabelsTest {
     }
 
     @Test
+    fun `a sure delivery the rules missed still files as a delivery`() {
+        val raw = { body: String -> Raw(Source.Sms, "AD-ACMESH-S", "", body, 0) }
+        assertEquals(Event.Delivery(null, Stage.Update), Labels.event("delivery", Event.Unknown, raw("Your package status changed, see link")))
+        assertEquals(Event.Delivery(null, Stage.Shipped), Labels.event("delivery", Event.Alert, raw("Item has been dispatched")))
+        assertNull(Labels.event("delivery", Event.Alert))
+    }
+
+    @Test
+    fun `a sure alert overrides a non money guess but never a code or money`() {
+        assertEquals(Event.Alert, Labels.event("alert", Event.Promo))
+        assertEquals(Event.Alert, Labels.event("alert", Event.Delivery("ACME", Stage.Out)))
+        assertNull(Labels.event("alert", otp))
+        assertNull(Labels.event("alert", bill))
+    }
+
+    @Test
     fun `alert personal promo and spam`() {
         assertEquals(Event.Alert, Labels.event("alert", Event.Unknown))
         assertEquals(Event.Alert, Labels.event("alert", Event.Alert))

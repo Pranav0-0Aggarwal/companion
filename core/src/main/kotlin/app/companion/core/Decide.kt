@@ -60,7 +60,7 @@ object Decide {
     fun ids(spec: DecideSpec, text: String, tok: SpTokenizer): IntArray = words(spec, text).flatMap { tok.word(it).toList() }.toIntArray()
 
     fun message(spec: DecideSpec, sender: String, body: String) =
-        Regex("\\{sender}|\\{body}").replace(spec.template) { if (it.value == "{sender}") sender else body }
+        Regex("\\{sender\\}|\\{body\\}").replace(spec.template) { if (it.value == "{sender}") sender else body }
 
     fun build(spec: DecideSpec, task: String, sender: String, body: String, tok: SpTokenizer): DecideInput {
         val cap = spec.buckets.max()
@@ -98,7 +98,7 @@ class DecideClassifier(
         val p = c.pick(Calibration.TYPE, s.type) ?: return v
         val guess = Guess(p.label, p.prob)
         val cat = s.category?.let { c.pick(Calibration.CATEGORY, it) }?.takeIf { it.sure }?.let { Guess(it.label, it.prob) }
-        val e = Labels.event(p.label, v.event)
+        val e = Labels.event(p.label, v.event, raw)
         return if (p.sure && e != null) {
             Verdict.Sure(e, p.prob, guess, p.tags, cat)
         } else {

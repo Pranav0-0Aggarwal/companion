@@ -251,6 +251,22 @@ class BertTest {
     private fun logits(top: Int, n: Int, v: Float = 6f) = FloatArray(n) { if (it == top) v else 0f }
 
     @Test
+    fun `the category model is skipped while no category can ever be sure`() {
+        val never = Calibration.fromJson(
+            """{"version":2,"model":"m","tasks":{"type":{"temperature":1,"labels":${q(types)}},"category":{"temperature":1,"labels":${q(cats)},"sure":${cats.joinToString(",", "{", "}") { "\"$it\":1.01" }}}}}""",
+        )
+        assertFalse(never.reachable("category"))
+        assertTrue(cal.reachable("category"))
+        val asked = mutableListOf<String>()
+        val s = Bert.scoreAll(spec, never, bpe, listOf("VM-SHOP" to "Rs 99 spent")) { task, xs ->
+            asked += task
+            xs.map { logits(if (task == "type") types.indexOf("expense") else 0, if (task == "type") types.size else cats.size) }
+        }
+        assertEquals(listOf("type"), asked)
+        assertNull(s.single()!!.category)
+    }
+
+    @Test
     fun `version 2 calibration keeps its shape and names the model`() {
         assertEquals("modernbert-large-sms-v1", cal.model)
         assertNull(Calibration.DEFAULT.model)

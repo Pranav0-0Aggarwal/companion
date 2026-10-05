@@ -8,7 +8,7 @@ enum class Mode { Upi, Card, Netbanking, Other }
 
 enum class Kind { Otp, Debit, Credit, CardSpend, Bill, Statement, Delivery, Travel, Alert, Promo, Spam, Personal, Unknown }
 
-enum class Stage { Placed, Shipped, Out, Delivered }
+enum class Stage { Placed, Shipped, Out, Delivered, Update }
 
 data class Raw(val source: Source, val sender: String, val title: String, val body: String, val at: Long)
 

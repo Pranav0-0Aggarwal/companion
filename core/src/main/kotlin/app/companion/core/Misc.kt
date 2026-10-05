@@ -28,8 +28,10 @@ internal object Misc {
     private val suffix = Regex("-([A-Za-z])$")
     private val receipt = Regex("(?i)receipt|invoice|payment\\s+(?:successful|confirmation)|you\\s+paid|order\\s+(?:confirmation|summary)")
 
+    fun stage(t: String) = stages.firstOrNull { it.first.containsMatchIn(t) }?.second
+
     fun delivery(r: Raw, t: String): Event.Delivery? {
-        val stage = stages.firstOrNull { it.first.containsMatchIn(t) }?.second ?: return null
+        val stage = stage(t) ?: return null
         if (!about.containsMatchIn(t) || off.containsMatchIn(t)) return null
         return Event.Delivery(Brands.shop(r.sender, t), stage)
     }

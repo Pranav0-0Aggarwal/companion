@@ -50,7 +50,7 @@ fun Fingerprint.kinds() = when (group) {
 }
 
 object Items {
-    private val stage = mapOf(Stage.Placed to "placed", Stage.Shipped to "shipped", Stage.Out to "out for delivery", Stage.Delivered to "delivered")
+    private val stage = mapOf(Stage.Placed to "placed", Stage.Shipped to "shipped", Stage.Out to "out for delivery", Stage.Delivered to "delivered", Stage.Update to "update")
 
     fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE): Item {
         val unsure = v is Verdict.Unsure

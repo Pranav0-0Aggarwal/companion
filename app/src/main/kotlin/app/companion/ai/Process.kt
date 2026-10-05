@@ -132,7 +132,7 @@ object Processing {
         val w = Guard.wait(why, battery)
         val b = OneTimeWorkRequestBuilder<ProcessWork>().setInputData(workDataOf(JOB to job.name)).addTag(job.name)
         if (w.free) return b.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build()
-        val cons = Constraints.Builder().setRequiresCharging(w.charging).setRequiresDeviceIdle(w.idle).setRequiresBatteryNotLow(w.notLow).build()
+        val cons = Constraints.Builder().setRequiresCharging(w.charging).setRequiresBatteryNotLow(w.notLow).build()
         return b.setInitialDelay(w.delay, TimeUnit.MILLISECONDS).setConstraints(cons).build()
     }
 
@@ -144,6 +144,7 @@ object Processing {
     internal fun boot(app: Application) {
         scope.launch {
             launch { Xnn.prune(app) }
+            WorkManager.getInstance(app).cancelUniqueWork("sms-import")
             launch {
                 combine(app.sl.repo.profile.map { it.model }.distinctUntilChanged(), Dl.state.map { it.mode }.distinctUntilChanged()) { _, _ -> }.collect { verify(app) }
             }

@@ -13,6 +13,15 @@ class Memo(private val scorer: Scorer) : Scorer {
     }
 }
 
+class Probe : Extractor {
+    val asked = HashSet<Raw>()
+
+    override fun extract(raw: Raw, want: Set<Field>): Map<Field, String> {
+        if (want.any(Nux.FIELDS::contains)) asked.add(raw)
+        return emptyMap()
+    }
+}
+
 class Refine(
     private val rules: RulesClassifier,
     private val extractor: Extractor,

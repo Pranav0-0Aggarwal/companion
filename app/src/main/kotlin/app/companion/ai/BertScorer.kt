@@ -2,6 +2,7 @@ package app.companion.ai
 
 import android.app.Application
 import android.os.Process
+import android.util.Log
 import app.companion.core.Bert
 import app.companion.core.BertPlan
 import app.companion.core.Bpe
@@ -32,7 +33,7 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
                 Spec("ModernBERT $it", f, 0, plan.shas.getValue(f), 30_000)
             }
             Loaded(plan, Bpe.fromJson(File(d, plan.spec.tokenizer).readText()), specs)
-        }.getOrNull()
+        }.onFailure { warn("load", it) }.getOrNull()
         cache = key to l
         Xnn.prune(app)
         return l
@@ -66,7 +67,8 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         val s = l.specs[Calibration.TYPE] ?: return false
         return try {
             low { runBlocking { gov.run(s, open(l, Calibration.TYPE)) { true } } }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            warn("warm", e)
             false
         }
     }
@@ -75,7 +77,8 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         val s = l.specs[task] ?: return null
         return try {
             runBlocking { gov.run(s, open(l, task)) { run(it, l, task, x) } }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            warn(task, e)
             null
         }
     }
@@ -83,11 +86,14 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
     private fun batch(l: Loaded, task: String, xs: List<DecideInput>): List<FloatArray?> {
         val s = l.specs[task] ?: return xs.map { null }
         return try {
-            runBlocking { gov.run(s, open(l, task)) { r -> xs.map { x -> runCatching { run(r, l, task, x) }.getOrNull() } } }
-        } catch (_: Exception) {
+            runBlocking { gov.run(s, open(l, task)) { r -> xs.map { x -> runCatching { run(r, l, task, x) }.onFailure { warn(task, it) }.getOrNull() } } }
+        } catch (e: Exception) {
+            warn(task, e)
             xs.map { null }
         }
     }
+
+    private fun warn(at: String, e: Throwable) = Log.w(TAG, "$at ${e.javaClass.simpleName}: ${e.message?.take(200)}")
 
     private fun text(raw: Raw) = listOf(raw.title, raw.body).filter { it.isNotBlank() }.joinToString("\n")
 
@@ -96,7 +102,8 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         val cal = Active.calibration(app, l.plan.spec).first
         return try {
             low { Bert.score(l.plan.spec, cal, l.bpe, raw.sender.trim(), text(raw)) { task, x -> logits(l, task, x) } }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            warn("score", e)
             null
         }
     }
@@ -107,8 +114,13 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         val cal = Active.calibration(app, l.plan.spec).first
         return try {
             low { Bert.scoreAll(l.plan.spec, cal, l.bpe, raws.map { it.sender.trim() to text(it) }) { task, xs -> batch(l, task, xs) } }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            warn("scoreAll", e)
             raws.map { null }
         }
+    }
+
+    private companion object {
+        const val TAG = "Companion"
     }
 }

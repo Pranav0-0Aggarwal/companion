@@ -24,7 +24,7 @@ object Labels {
         else -> null
     }
 
-    fun event(label: String, rules: Event): Event? = when (kind(label, rules)) {
+    fun event(label: String, rules: Event, raw: Raw? = null): Event? = when (kind(label, rules)) {
         Kind.Otp -> rules as? Event.Otp
         Kind.Debit -> (rules as? Event.Move)?.let { it as? Event.Debit ?: Event.Debit(it.paise, it.currency, it.last4, it.bank, it.merchant, it.mode) }
         Kind.CardSpend -> rules as? Event.CardSpend
@@ -34,11 +34,11 @@ object Labels {
             is Event.Move -> Event.Bill(rules.paise, rules.currency, null, null, rules.merchant ?: rules.bank, rules.last4)
             else -> null
         }
-        Kind.Delivery -> rules as? Event.Delivery
+        Kind.Delivery -> rules as? Event.Delivery ?: raw?.text()?.let { Event.Delivery(Brands.shop(raw.sender, it), Misc.stage(it) ?: Stage.Update) }
         Kind.Alert -> when (rules) {
             is Event.Travel -> rules
-            Event.Alert, Event.Unknown -> Event.Alert
-            else -> null
+            is Event.Otp, is Event.Move, is Event.Bill, is Event.Statement -> null
+            else -> Event.Alert
         }
         Kind.Personal -> if (rules == Event.Personal || rules == Event.Unknown) Event.Personal else null
         Kind.Promo -> Event.Promo.takeUnless { rules is Event.Otp }

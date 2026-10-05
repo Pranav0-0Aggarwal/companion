@@ -106,7 +106,7 @@ object Bert {
     const val EXPENSE = "expense"
 
     fun message(spec: BertSpec, sender: String, text: String) =
-        Regex("\\{sender}|\\{text}").replace(spec.template) { if (it.value == "{sender}") sender else text }
+        Regex("\\{sender\\}|\\{text\\}").replace(spec.template) { if (it.value == "{sender}") sender else text }
 
     fun build(spec: BertSpec, bpe: Bpe, sender: String, text: String): DecideInput {
         val cap = minOf(spec.maxLen, spec.buckets.last())
@@ -147,7 +147,7 @@ object Bert {
         }
 
         val type = probs(Calibration.TYPE, xs.indices.toList())
-        val more = if (spec.has(Calibration.CATEGORY)) type.filterValues { it.maxBy { e -> e.value }.key == EXPENSE }.keys.sorted() else emptyList()
+        val more = if (spec.has(Calibration.CATEGORY) && cal.reachable(Calibration.CATEGORY)) type.filterValues { it.maxBy { e -> e.value }.key == EXPENSE }.keys.sorted() else emptyList()
         val cat = probs(Calibration.CATEGORY, more)
         return xs.indices.map { i -> type[i]?.let { Scored(it, cat[i]) } }
     }

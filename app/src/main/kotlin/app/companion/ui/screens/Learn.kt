@@ -19,7 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.ai.Active
 import app.companion.ai.Manifest
 import app.companion.ai.Models
-import app.companion.core.Rules
+import app.companion.core.Senders
+import app.companion.core.Template
 import app.companion.data.RuleRow
 import app.companion.sl
 import app.companion.system.Export
@@ -34,7 +35,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private fun RuleRow.sub() = listOf(task, "→ $label", if (count >= Rules.MIN) "auto-files" else "$count of ${Rules.MIN}").joinToString(" · ")
+private val space = Regex("\\s+")
+
+private fun RuleRow.line(): String {
+    val brand = sender?.let { Template.brand(it, body.orEmpty()) } ?: title.orEmpty()
+    val text = Template.mask(body ?: note?.takeIf { it.isNotBlank() } ?: title.orEmpty()).replace(space, " ").trim()
+    val eg = if (text.length > 60) text.take(59).trimEnd() + "…" else text
+    return listOf(brand, eg).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "Messages like this" }
+}
 
 @Composable
 fun LearnSettings() {
@@ -45,6 +53,8 @@ fun LearnSettings() {
     var note by remember { mutableStateOf<String?>(null) }
     val n by remember(since) { repo.corrections(since) }.collectAsStateWithLifecycle(0)
     val rules by repo.rules.collectAsStateWithLifecycle(emptyList())
+    val merchants by repo.learned.collectAsStateWithLifecycle(emptyList())
+    val senders by repo.senderRules.collectAsStateWithLifecycle(emptyList())
     val share = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { Export.discard(c) }
     val ver by produceState<Pair<String?, String?>>(null to null) {
         value = withContext(Dispatchers.IO) { Active.version(c) to Models.version(c, Manifest.calibration) }
@@ -76,12 +86,32 @@ fun LearnSettings() {
         )
         note?.let { Text(it, Modifier.padding(start = 16.dp, bottom = 12.dp), style = Ty.ui(13, androidx.compose.ui.text.font.FontWeight.Normal).copy(color = pal.ink2)) }
     }
-    Section("Learned rules")
+    Section("Rules")
     Group {
-        if (rules.isEmpty()) PassLine("None yet", "A rule applies after two matching corrections")
+        if (rules.isEmpty()) PassLine("None yet", "Correct a message once and it is filed the same way next time")
         rules.forEachIndexed { i, r ->
             if (i > 0) Rule()
-            PassLine(r.title ?: r.hash.take(8), r.sub(), actions = { Btn("Delete") { scope.launch { repo.deleteRule(r.hash, r.task) } } })
+            PassLine(
+                r.line(),
+                "→ ${r.label.cap()} · caught ${r.hits}",
+                actions = { Btn("Delete") { scope.launch { repo.deleteRule(r.hash, r.task) } } },
+            )
+        }
+    }
+    Section("Merchant categories")
+    Group {
+        if (merchants.isEmpty()) PassLine("None yet", "Filing a payment under a category remembers its merchant")
+        merchants.forEachIndexed { i, m ->
+            if (i > 0) Rule()
+            PassLine(m.key.cap(), "→ ${m.category.cap()}", actions = { Btn("Delete") { scope.launch { repo.deleteLearned(m.key) } } })
+        }
+    }
+    Section("Sender rules")
+    Group {
+        if (senders.isEmpty()) PassLine("None yet", "A sender is remembered after three matching corrections")
+        senders.forEachIndexed { i, r ->
+            if (i > 0) Rule()
+            PassLine(Senders.name(r.sender), "Always ${r.label}", actions = { Btn("Delete") { scope.launch { repo.deleteSender(r.sender) } } })
         }
     }
 }

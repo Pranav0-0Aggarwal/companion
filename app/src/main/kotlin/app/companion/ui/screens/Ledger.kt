@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,16 +32,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.ai.DrillBox
 import app.companion.core.Category
+import app.companion.core.Fingerprint
 import app.companion.core.Span
 import app.companion.data.Card
 import app.companion.data.Item
 import app.companion.data.Profile
-import app.companion.data.cardPay
+import app.companion.data.moved
 import app.companion.data.credit
 import app.companion.data.tagList
 import app.companion.sl
@@ -54,7 +57,9 @@ import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
 import app.companion.ui.kit.MoneyRow
 import app.companion.ui.kit.Pace
-import app.companion.ui.kit.Roll
+import app.companion.ui.kit.AmountPair
+import app.companion.ui.kit.Btn
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Stamp
 import app.companion.ui.kit.ToolButton
@@ -81,7 +86,7 @@ private fun mode(m: String) = when (m) {
     else -> m.lowercase()
 }
 
-private fun Item.spend() = !credit && !cardPay && currency == "INR"
+private fun Item.spend() = !credit && !moved && currency == "INR"
 
 private fun sums(items: List<Item>, ym: YearMonth): LongArray {
     val a = LongArray(ym.lengthOfMonth())
@@ -116,6 +121,9 @@ fun LedgerScreen(go: (String) -> Unit) {
     var cat by rememberSaveable { mutableStateOf<String?>(null) }
     var open by rememberSaveable { mutableLongStateOf(-1L) }
     var who by rememberSaveable { mutableStateOf<String?>(null) }
+    var parked by rememberSaveable { mutableStateOf(false) }
+    val keys by repo.moved.collectAsStateWithLifecycle(emptySet())
+    val snack = LocalSnack.current
     val scope = rememberCoroutineScope()
     val ask = LocalAsk.current
     val drill by DrillBox.pending.collectAsStateWithLifecycle()
@@ -132,20 +140,22 @@ fun LedgerScreen(go: (String) -> Unit) {
     val ym = YearMonth.from(now).minusMonths(back.toLong())
     val inMonth = remember(money, ym) { money.filter { it.at >= ym.ms() && it.at < ym.plusMonths(1).ms() } }
     val card = cards.firstOrNull { it.id == acct }
-    val rows = remember(inMonth, card, cat, who) {
+    val base = remember(inMonth, card, cat, who) {
         inMonth.filter { (card == null || card.has(it)) && (cat == null || it.category == cat) && (who == null || it.title.contains(who!!, true)) }
     }
+    val rows = remember(base, parked) { if (parked) base.filter { it.moved } else base }
     val days = remember(rows) { rows.groupBy { dateOf(it.at) }.toList() }
     val cats = remember(inMonth) { Category.entries.map { it.label }.filter { l -> inMonth.any { it.category == l } } }
     val links = rememberLinks(rows)
-    val all = card == null && cat == null && who == null
-    val spent = rows.tot(false)
+    val all = card == null && cat == null && who == null && !parked
+    val moved = base.away()
+    val spent = if (parked) moved else rows.tot(false)
     val budget = prof.budget.takeIf { all }
     val pace = remember(money, ym, all) { if (all) pacing(money, ym, now) else null }
     val span = Span(ym.atDay(1), if (back == 0) now else ym.atEndOfMonth())
     Screen(
         "Ledger",
-        "${shortDay(span.from)} to ${shortDay(span.to)} · ${inr(spent)} spent",
+        "${shortDay(span.from)} to ${shortDay(span.to)} · ${inr(spent)} ${if (parked) "moved" else "spent"}",
         tools = { ToolButton(Ic.Search, "Search or ask") { ask(AskReq(null)) } },
     ) {
         item(key = "ask") { AskPill(hint = "Ask about your spending") }
@@ -156,7 +166,7 @@ fun LedgerScreen(go: (String) -> Unit) {
                 if (back > 0) ToolButton(Ic.Right, "Next month") { back-- }
             }
         }
-        item(key = "sum") { Summary(spent, rows.tot(true), budget, pace, Modifier.part(p, true, true)) }
+        item(key = "sum") { Summary(spent, if (parked) 0 else rows.tot(true), budget, pace, moved, parked, { parked = !parked }, Modifier.part(p, true, true)) }
         item(key = "chips") {
             Row(
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -192,7 +202,7 @@ fun LedgerScreen(go: (String) -> Unit) {
                             onClick = { open = if (open == i.id) -1 else i.id },
                         )
                         AnimatedVisibility(open == i.id, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                            Detail(i, cards.firstOrNull { it.has(i) }, links) { c -> scope.launch { repo.file(i.id, c) } }
+                            Detail(i, cards.firstOrNull { it.has(i) }, links, keys, { off -> scope.launch { repo.spending(i.id, off) } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }
                         }
                     }
                 }
@@ -202,20 +212,22 @@ fun LedgerScreen(go: (String) -> Unit) {
 }
 
 @Composable
-internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, modifier: Modifier) {
+internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, away: Long, parked: Boolean, onParked: () -> Unit, modifier: Modifier) {
     val p = pal
     Column(modifier.padding(20.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f)) {
-                Text("Spent", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
-                Roll(inr(spent), Ty.mono(36, FontWeight.Bold).copy(color = p.ink))
-            }
-            if (inn > 0) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("In", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
-                    Text(inr(inn), style = Ty.mono(18, FontWeight.SemiBold).copy(color = p.green))
-                }
-            }
+        AmountPair(
+            (if (parked) "Moved" else "Spent") to inr(spent),
+            if (inn > 0) "In" to inr(inn) else null,
+            Ty.mono(36, FontWeight.Bold).copy(color = p.ink),
+            Ty.mono(18, FontWeight.SemiBold).copy(color = p.green),
+            Ty.ui(13, FontWeight.Normal).copy(color = p.ink2),
+        )
+        if (away > 0) {
+            Text(
+                if (parked) "Showing moved items · Show all" else "${inr(away)} moved · card bills, own accounts, investments",
+                Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onParked).padding(top = 10.dp, bottom = 4.dp),
+                style = Ty.ui(13, FontWeight.Normal).copy(color = if (parked) p.accent else p.ink2),
+            )
         }
         if (pace != null) {
             val word = if (pace.delta >= 0) "above" else "below"
@@ -239,8 +251,10 @@ internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, modif
 }
 
 @Composable
-private fun Detail(i: Item, card: Card?, links: Links, onFile: (String) -> Unit) {
+private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpend: (Boolean) -> Unit, onFile: (String) -> Unit) {
     val p = pal
+    var sheet by remember { mutableStateOf(false) }
+    val key = i.merchant?.let { Fingerprint.norm(it) }
     val d = dateOf(i.at)
     val lines = listOf(
         "${dayLabel(d)} ${d.year}, ${clock(i.at)}",
@@ -255,6 +269,14 @@ private fun Detail(i: Item, card: Card?, links: Links, onFile: (String) -> Unit)
                 Chip(c.label.cap(), i.category == c.label, icon = Ic.of(c.label)) { if (i.category != c.label) onFile(c.label) }
             }
         }
+        FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Btn("This is…", dense = true) { sheet = true }
+            if (key != null && i.kind == "Debit") Chip("Not spending", key in moved) { onSpend(key !in moved) }
+        }
+        if (key != null && key in moved) {
+            Text("Everything to ${i.merchant}, past and future, stays out of Spent.", Modifier.padding(top = 6.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+        }
         DupPanel(i, Modifier.padding(top = 12.dp))
     }
+    if (sheet) TypeSheet(i) { sheet = false }
 }

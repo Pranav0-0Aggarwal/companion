@@ -3,7 +3,7 @@ package app.companion.ai
 import app.companion.core.Query
 import app.companion.data.Item
 import app.companion.data.Repo
-import app.companion.data.cardPay
+import app.companion.data.moved
 import app.companion.data.dueDate
 import app.companion.ui.clock
 import app.companion.ui.dateOf
@@ -33,7 +33,7 @@ object DrillBox {
 }
 
 object Answers {
-    private fun spend(i: Item) = (i.kind == "Debit" || i.kind == "CardSpend") && !i.cardPay
+    private fun spend(i: Item) = (i.kind == "Debit" || i.kind == "CardSpend") && !i.moved
 
     private fun line(i: Item) = Line(
         i.title,

@@ -56,7 +56,7 @@ import app.companion.ui.kit.Group
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.MoneyRow
 import app.companion.ui.kit.Motion
-import app.companion.ui.kit.Roll
+import app.companion.ui.kit.Amount
 import app.companion.ui.kit.Rule
 import app.companion.ui.kit.TextBtn
 import app.companion.ui.kit.rememberHaptic
@@ -117,7 +117,7 @@ fun AnswerCard(first: Answer, go: (String) -> Unit, modifier: Modifier = Modifie
                     }
                 }
             }
-            a.total?.let { Roll(inr(it), Ty.mono(36, FontWeight.Bold).copy(color = p.ink), Modifier.padding(top = 14.dp)) }
+            a.total?.let { Amount(inr(it), Ty.mono(36, FontWeight.Bold).copy(color = p.ink), Modifier.padding(top = 14.dp)) }
             a.count?.let {
                 Text(
                     if (it == 0) "Nothing found" else "$it ${if (it == 1) "payment" else "payments"}",

@@ -21,6 +21,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class Snack(val host: SnackbarHostState, private val scope: CoroutineScope) {
+    fun go(block: suspend () -> Unit) {
+        scope.launch { block() }
+    }
+
+    fun say(text: String) = go { host.showSnackbar(text) }
+
+    fun <T : Any> offer(value: T, text: String, undo: suspend (T) -> Unit) = go {
+        if (host.showSnackbar(text, "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) undo(value)
+    }
+
     fun undoable(text: String, act: suspend () -> Boolean, undo: suspend () -> Unit) {
         scope.launch {
             if (act() && host.showSnackbar(text, "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) undo()

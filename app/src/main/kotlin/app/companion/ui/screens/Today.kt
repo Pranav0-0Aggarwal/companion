@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import app.companion.sl
 import app.companion.ui.clock
 import app.companion.ui.kit.Ic
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.MoneyRow
 import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Screen
@@ -34,6 +35,7 @@ fun TodayScreen(go: (String) -> Unit) {
     val p = pal
     val repo = LocalContext.current.sl.repo
     val scope = rememberCoroutineScope()
+    val snack = LocalSnack.current
     val ask = LocalAsk.current
     val d = rememberDay()
     val now = rememberNow(1000, active = d.otps.isNotEmpty())
@@ -51,7 +53,7 @@ fun TodayScreen(go: (String) -> Unit) {
         item(key = "proc", contentType = "proc") { ProcessSlot() }
         item(key = "ask", contentType = "ask") { AskPill(Modifier.padding(bottom = 4.dp)) }
         itemsIndexed(live, key = { _, o -> "o${o.id}" }, contentType = { _, _ -> "code" }) { _, o ->
-            app.companion.ui.kit.CodeCard(o, { scope.launch { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
+            app.companion.ui.kit.CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
         }
         item(key = "needh") { Section("Needs you", if (d.need.size > need.size) "See all ${d.need.size}" else null) { go(if (d.asks.isEmpty()) "bills" else "inbox") } }
         if (need.isEmpty()) {
@@ -59,7 +61,7 @@ fun TodayScreen(go: (String) -> Unit) {
         }
         itemsIndexed(need, key = { _, i -> "n${i.id}" }, contentType = { _, _ -> "need" }) { k, i ->
             Box(Modifier.animateItem().part(p, k == 0, k == need.lastIndex)) {
-                NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> scope.launch { repo.file(i.id, c) } }
+                NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }
             }
         }
         item(key = "spendh") { Section("Spent today", "Ledger") { go("ledger") } }

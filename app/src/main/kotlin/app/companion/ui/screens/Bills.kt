@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
@@ -30,6 +31,7 @@ import app.companion.ui.Voice
 import app.companion.ui.daysTo
 import app.companion.ui.inDays
 import app.companion.ui.inr
+import app.companion.ui.kit.Amount
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
@@ -117,7 +119,7 @@ private fun BillLine(o: Owed, day: LocalDate, cred: Intent?, onPay: () -> Unit, 
         longLabel = "Mark as duplicate",
         trailing = {
             Column(horizontalAlignment = Alignment.End) {
-                Text(money(b.paise, b.currency), style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink))
+                Amount(money(b.paise, b.currency), Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink), Modifier.widthIn(max = 148.dp), roll = false)
                 val label = when {
                     paid -> "PAID"
                     days != null && days < 0 -> "OVERDUE"

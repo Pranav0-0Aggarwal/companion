@@ -57,7 +57,7 @@ import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
 import app.companion.ui.kit.MoneyRow
 import app.companion.ui.kit.Motion
-import app.companion.ui.kit.Roll
+import app.companion.ui.kit.Amount
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Stamp
 import app.companion.ui.kit.TextBtn
@@ -210,7 +210,7 @@ private fun CycleBlock(y: Cyc, modifier: Modifier, onDelete: () -> Unit) {
     val limit = y.card.limit?.takeIf { it > 0 }
     Column(modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Roll(inr(y.spent), Ty.mono(32, FontWeight.Bold).copy(color = p.ink), Modifier.weight(1f))
+            Amount(inr(y.spent), Ty.mono(32, FontWeight.Bold).copy(color = p.ink), Modifier.weight(1f))
             Stamp("DUE ${shortDay(y.due).uppercase()}", ink = Ink.Red)
         }
         Text("Statement ${shortDay(y.span.from)} to ${shortDay(y.span.to)}", Modifier.padding(top = 4.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))

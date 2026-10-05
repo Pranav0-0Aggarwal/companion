@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.State
+import app.companion.data.Taught
 import app.companion.data.Tally
 import app.companion.data.cal
 import app.companion.data.money
@@ -39,6 +40,7 @@ import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Chip
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Screen
 import app.companion.ui.kit.Section
@@ -95,7 +97,7 @@ fun InboxScreen(go: (String) -> Unit) {
     val p = pal
     val c = LocalContext.current
     val repo = c.sl.repo
-    val scope = rememberCoroutineScope()
+    val snack = LocalSnack.current
     val items by remember { repo.inbox(System.currentTimeMillis() - 3.days.inWholeMilliseconds) }.collectAsStateWithLifecycle(emptyList<Item>())
     val tally by remember { repo.tally(today().toEpochDay()) }.collectAsStateWithLifecycle(emptyList<Tally>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
@@ -108,12 +110,12 @@ fun InboxScreen(go: (String) -> Unit) {
         asks.takeIf { it > 0 }?.let { "$it to file" },
         checks.takeIf { it > 0 }?.let { "$it to check" },
     ).joinToString(" · ").ifEmpty { "Nothing waiting" }
-    val acts = remember(repo) {
+    val acts = remember(repo, snack) {
         Acts(
-            { i, cat -> scope.launch { repo.file(i.id, cat) } },
-            { i -> scope.launch { if (i.state == State.ASK) repo.confirm(i.id) else repo.dismiss(i.id) } },
-            { i -> scope.launch { repo.spam(i.id) } },
-            { i -> scope.launch { repo.notSpam(i.id) } },
+            { i, cat -> snack.teach(repo) { repo.file(i.id, cat) } },
+            { i -> snack.teach(repo) { if (i.state == State.ASK) repo.confirm(i.id) else Taught().also { repo.dismiss(i.id) } } },
+            { i -> snack.teach(repo) { repo.spam(i.id) } },
+            { i -> snack.teach(repo) { repo.notSpam(i.id) } },
         )
     }
     Screen("Inbox", sub) {
@@ -156,6 +158,7 @@ internal fun Entry(i: Item, a: Acts) {
         }
         Unit
     }
+    var sheet by remember { mutableStateOf(false) }
     val first = if (i.money) cats(i).first() else null
     val swipe = i.state == State.ASK && i.kind != "Spam" && i.kind != "Promo"
     SwipeAccept(if (first != null) "File as ${first.cap()}" else "File", { act { if (first != null) a.file(i, first) else a.done(i) } }, enabled = swipe && !settled) {
@@ -163,6 +166,7 @@ internal fun Entry(i: Item, a: Acts) {
             i.title,
             listOfNotNull(srcWord(i.src), stamped(i.at), i.takeIf { it.paise > 0 }?.let { money(it.paise, it.currency) }, i.note.take(80).ifBlank { null }).joinToString(" · "),
             tags = i.tagList,
+            onClick = { sheet = true },
             lead = Ic.src(i.src),
             tone = if (i.open) Tone.Accent else Tone.Plain,
             trailing = {
@@ -176,19 +180,23 @@ internal fun Entry(i: Item, a: Acts) {
             },
             actions = when {
                 i.kind == "Promo" || i.kind == "Spam" -> {
-                    { TextBtn("Not spam") { a.notSpam(i) } }
+                    {
+                        TextBtn("Not spam") { a.notSpam(i) }
+                        TextBtn("This is…") { sheet = true }
+                    }
                 }
                 i.open && !settled -> {
-                    { Buttons(i, a, act) }
+                    { Buttons(i, a, act) { sheet = true } }
                 }
                 else -> null
             },
         )
     }
+    if (sheet) TypeSheet(i) { sheet = false }
 }
 
 @Composable
-private fun RowScope.Buttons(i: Item, a: Acts, act: (() -> Unit) -> Unit) {
+private fun RowScope.Buttons(i: Item, a: Acts, act: (() -> Unit) -> Unit, sheet: () -> Unit) {
     when {
         i.state == State.CHECK -> Btn("Done", go = true) { act { a.done(i) } }
         i.money -> cats(i).forEachIndexed { n, cat -> Btn(cat.cap(), go = n == 0) { act { a.file(i, cat) } } }
@@ -197,5 +205,6 @@ private fun RowScope.Buttons(i: Item, a: Acts, act: (() -> Unit) -> Unit) {
             TextBtn("Spam") { a.spam(i) }
         }
     }
+    TextBtn("This is…", color = pal.ink2) { sheet() }
     i.cal()?.let { CalBtn(it) }
 }

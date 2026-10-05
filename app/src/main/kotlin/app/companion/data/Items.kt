@@ -37,6 +37,7 @@ fun Item.move(): Event.Move? {
 }
 
 val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)
+val Item.moved get() = flow != null || cardPay
 
 fun Item.cal(): Suggestion.Cal? {
     val s = start ?: return null

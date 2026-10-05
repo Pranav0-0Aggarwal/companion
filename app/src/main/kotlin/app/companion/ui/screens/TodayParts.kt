@@ -20,6 +20,9 @@ import app.companion.data.Item
 import app.companion.data.Link
 import app.companion.data.Profile
 import app.companion.data.cardPay
+import app.companion.data.moved
+import app.companion.core.Flow as Route
+import app.companion.core.Flows
 import app.companion.data.credit
 import app.companion.data.dueDate
 import app.companion.data.money
@@ -34,7 +37,7 @@ import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
 import app.companion.ui.kit.PassLine
-import app.companion.ui.kit.Roll
+import app.companion.ui.kit.Amount
 import app.companion.ui.kit.StateStamp
 import app.companion.ui.kit.SwipeAccept
 import app.companion.ui.kit.Tone
@@ -82,9 +85,16 @@ fun Item.head() = if (money) "${amt(paise, currency)} · $title" else title
 
 fun Item.picks() = if (money) listOfNotNull(category, "bills", "other").distinct().take(3) else listOf("file")
 
-fun Item.stamp() = if (cardPay) "CARD PAYMENT" else null
+fun Item.stamp() = when {
+    flow == Route.Self.name -> "OWN ACCOUNT"
+    flow == Route.CardBill.name || cardPay -> "CARD PAYMENT"
+    flow == Route.Invest.name -> "INVESTMENT"
+    else -> null
+}
 
-fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit && !it.cardPay }.sumOf { it.paise }
+fun List<Item>.tot(credit: Boolean) = filter { it.currency == "INR" && it.credit == credit && if (credit) Flows.income(it.flow) else !it.moved }.sumOf { it.paise }
+
+fun List<Item>.away() = filter { it.currency == "INR" && !it.credit && it.moved }.sumOf { it.paise }
 
 @Composable
 fun rememberLinks(items: List<Item>): Links {
@@ -195,9 +205,9 @@ fun SpendHead(items: List<Item>, modifier: Modifier = Modifier) {
     val p = pal
     val spent = items.tot(false)
     val inn = items.tot(true)
-    val n = items.count { !it.credit && !it.cardPay }
+    val n = items.count { !it.credit && !it.moved }
     Column(modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-        Roll(amt(spent, "INR"), Ty.mono(40, FontWeight.Bold).copy(color = p.ink))
+        Amount(amt(spent, "INR"), Ty.mono(40, FontWeight.Bold).copy(color = p.ink))
         val parts = listOfNotNull(
             if (n == 0) "No payments yet" else "$n payment${if (n == 1) "" else "s"}",
             if (inn > 0) "${amt(inn, "INR")} in" else null,

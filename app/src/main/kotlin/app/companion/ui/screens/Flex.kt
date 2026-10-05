@@ -52,9 +52,10 @@ import app.companion.ui.inDays
 import app.companion.ui.kit.CardShape
 import app.companion.ui.kit.CodeCard
 import app.companion.ui.kit.Ic
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.Motion
 import app.companion.ui.kit.PassLine
-import app.companion.ui.kit.Roll
+import app.companion.ui.kit.Amount
 import app.companion.ui.kit.Section
 import app.companion.ui.kit.Tone
 import app.companion.ui.kit.lift
@@ -99,6 +100,7 @@ private fun Glance(d: Day, modifier: Modifier) {
     val p = pal
     val repo = LocalContext.current.sl.repo
     val scope = rememberCoroutineScope()
+    val snack = LocalSnack.current
     val now = rememberNow(1000, active = d.otps.isNotEmpty())
     val live by remember(d.otps) { derivedStateOf(structuralEqualityPolicy()) { d.otps.filter { (it.expires ?: 0) > now.value } } }
     val bill = d.bills.filter { it.dueDate != null }.minByOrNull { it.due ?: Long.MAX_VALUE }
@@ -109,10 +111,10 @@ private fun Glance(d: Day, modifier: Modifier) {
     ) {
         Text(d.hello, Modifier.padding(start = 8.dp), style = Ty.ui(15, FontWeight.Medium).copy(color = p.ink2))
         val o = live.firstOrNull()
-        if (o != null) CodeCard(o, { scope.launch { repo.notOtp(o.id) } }, big = true)
+        if (o != null) CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, big = true)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Spent today", Modifier.weight(1f)) {
-                Roll(amt(d.printed.tot(false), "INR"), Ty.mono(if (o == null) 40 else 28, FontWeight.Bold).copy(color = p.ink))
+                Amount(amt(d.printed.tot(false), "INR"), Ty.mono(if (o == null) 40 else 28, FontWeight.Bold).copy(color = p.ink))
                 Text("${d.printed.count { it.paise > 0 }} payments", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
             }
             Tile("Next bill", Modifier.weight(1f)) {
@@ -142,6 +144,7 @@ private fun Controls(d: Day, go: (String) -> Unit, modifier: Modifier) {
     val p = pal
     val repo = LocalContext.current.sl.repo
     val scope = rememberCoroutineScope()
+    val snack = LocalSnack.current
     val i = d.need.firstOrNull()
     Column(modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(top = 20.dp, bottom = 12.dp)) {
         AskPill()
@@ -152,7 +155,7 @@ private fun Controls(d: Day, go: (String) -> Unit, modifier: Modifier) {
                     PassLine("All clear", "Nothing needs you right now", lead = Ic.Check, tone = Tone.Green, lines = 1)
                 } else {
                     androidx.compose.runtime.key(i.id) {
-                        NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> scope.launch { repo.file(i.id, c) } }
+                        NeedRow(i, d, { scope.launch { repo.pay(i.id) } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }
                     }
                 }
             }

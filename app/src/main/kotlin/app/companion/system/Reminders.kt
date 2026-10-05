@@ -33,7 +33,7 @@ class Reminders(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
             }
             if (b.ping and bit != 0) continue
             val full = Face(Voice.due(name, b.title, days), if (b.paise > 0) money(b.paise, b.currency) else null)
-            nm.notify(Ping.BILL, b.id.toInt(), Ping.bill(c, b, full, Hidden.due, o))
+            nm.notify(Ping.BILL, b.id.toInt(), Ping.bill(c, b, full, Hidden.due, o, false))
             repo.addPing(b.id, bit)
         }
         Live.widgets(c)

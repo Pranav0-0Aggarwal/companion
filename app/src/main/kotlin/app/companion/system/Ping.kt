@@ -109,12 +109,13 @@ object Ping {
         nm.notify(SPEND, SUMMARY, sum)
     }
 
-    fun bill(c: Context, b: Item, full: Face, hidden: Face, o: Opts): Notification {
+    fun bill(c: Context, b: Item, full: Face, hidden: Face, o: Opts, once: Boolean = true): Notification {
         val cred = c.packageManager.getLaunchIntentForPackage(CRED)
         val pay = if (cred != null) PendingIntent.getActivity(c, b.id.toInt(), cred, PendingIntent.FLAG_IMMUTABLE) else Notes.to(c, "bills", b.id)
         return base(c, Live.BILLS, full, hidden, o)
             .setLargeIcon(mark(c, b.merchant ?: b.title))
             .setCategory(Notification.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(once)
             .setAutoCancel(true)
             .setContentIntent(Notes.to(c, "bills", b.id))
             .addAction(action(c, "Pay", pay))
@@ -158,9 +159,10 @@ object Ping {
         val bit = Alerts.bit(Chan.Delivery)
         for (r in orders(c, since, now)) {
             val id = r.key.hashCode() and 0xFFFF
+            val out = r.stage == Stage.Out
             when {
-                r.stage == Stage.Out -> nm.notify(ORDER, id, ship(c, r, o, now))
-                r.stage == Stage.Delivered && r.ping and bit == 0 && Alerts.fresh(r.at, now) -> {
+                r.ping and bit != 0 -> if (out && live(nm, ORDER, id)) nm.notify(ORDER, id, ship(c, r, o, now))
+                out || r.stage == Stage.Delivered && Alerts.fresh(r.at, now) -> {
                     nm.notify(ORDER, id, ship(c, r, o, now))
                     repo.addPing(r.id, bit)
                 }

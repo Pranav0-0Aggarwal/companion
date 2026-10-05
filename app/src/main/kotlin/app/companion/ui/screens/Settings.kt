@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Profile
 import app.companion.sl
+import app.companion.system.Prefs
 import app.companion.ui.Recent
 import app.companion.ui.Ty
 import app.companion.ui.kit.Group
@@ -57,6 +58,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "vip-form") { VipForm(p) { v -> save { it.copy(vip = v) } } }
             item(key = "reads") { Section("What Gmail reads") }
             item(key = "reads-list") { Group { Reads() } }
+            item(key = "notify") { NotifySettings() }
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "ai") { AiSettings() }
             item(key = "proc") { ProcessingSection() }
@@ -81,6 +83,7 @@ fun SettingsScreen(back: () -> Unit) {
             "Wipe",
             {
                 Recent.clear(c)
+                Prefs.clear(c)
                 c.sl.wipe()
             },
             { wipe = false },

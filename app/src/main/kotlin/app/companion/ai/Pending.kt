@@ -71,7 +71,7 @@ class Pending(
         delay(WINDOW)
         val todo = take(id, more)
         if (todo.isEmpty()) return
-        var changed = false
+        val moved = LinkedHashSet<Long>()
         try {
             val now = Guard.take(vitals(app), todo.size, Active.bert(app) != null)
             if (now < todo.size) later(todo, now)
@@ -101,13 +101,13 @@ class Pending(
                     val (i, t) = it.next()
                     currentCoroutineContext().ensureActive()
                     val v = out[i]
-                    if (v != null) changed = soft { repo.refine(i, raws.getValue(i), v, p, t.state).moved } == true || changed
+                    if (v != null && soft { repo.refine(i, raws.getValue(i), v, p, t.state).moved } == true) moved += i
                     it.remove()
                 }
             }
         } finally {
             release(todo)
-            if (changed) withContext(NonCancellable) { Live.refresh(app) }
+            if (moved.isNotEmpty()) withContext(NonCancellable) { Live.refresh(app, moved) }
         }
     }
 

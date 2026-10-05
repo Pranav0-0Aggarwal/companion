@@ -3,4 +3,5 @@
     <string name="app_name">Companion</string>
     <string name="tile_label">Latest OTP</string>
     <string name="widget_desc">Newest code and next bill</string>
+    <string name="cover_desc">Delivery code, bill and spend on the cover screen</string>
 </resources>

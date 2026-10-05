@@ -48,7 +48,7 @@ private val ink = ColorProvider(Color(0xFF111317), Color(0xFFF2F3F5))
 private val ink2 = ColorProvider(Color(0xFF5D626B), Color(0xFFA3A8B0))
 private val accent = ColorProvider(Color(0xFF2A62DB), Color(0xFF7EA6FF))
 private val red = ColorProvider(Color(0xFFC0302A), Color(0xFFFF6B61))
-private val codeKey = ActionParameters.Key<String>("code")
+internal val codeKey = ActionParameters.Key<String>("code")
 
 class OtpWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {

@@ -11,9 +11,9 @@ import app.companion.core.Labels
 import app.companion.core.Mode
 import app.companion.core.Raw
 import app.companion.core.Slip
-import app.companion.core.Stage
 import app.companion.core.Suggest
 import app.companion.core.Suggestion
+import app.companion.core.Track
 import app.companion.core.Verdict
 import java.time.LocalDate
 import java.time.ZoneId
@@ -65,8 +65,6 @@ fun Fingerprint.kinds() = when (group) {
 }
 
 object Items {
-    private val stage = mapOf(Stage.Placed to "placed", Stage.Shipped to "shipped", Stage.Out to "out for delivery", Stage.Delivered to "delivered", Stage.Update to "update")
-
     fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE): Item {
         val unsure = v is Verdict.Unsure
         val base = Item(
@@ -98,7 +96,7 @@ object Items {
                 title = "${e.bank ?: "Card"} card bill", paise = e.paise, last4 = e.last4, bank = e.bank, merchant = e.bank,
                 due = e.due?.toEpochDay(), minPaise = e.minPaise, category = Category.Bills.label,
             )
-            is Event.Delivery -> base.copy(title = "${e.merchant ?: "Order"} ${stage.getValue(e.stage)}", merchant = e.merchant)
+            is Event.Delivery -> base.copy(title = "${e.merchant ?: "Order"} ${Track.word(e.stage)}", merchant = e.merchant)
             is Event.Travel -> {
                 val c = Suggest.travel(e, r.title + "\n" + r.body, r.at, ZoneId.systemDefault())
                 base.copy(title = "${e.what} booking", due = e.date?.toEpochDay(), note = c?.note.orEmpty(), start = c?.start, end = c?.end)

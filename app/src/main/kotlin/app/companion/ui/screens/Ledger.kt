@@ -66,6 +66,7 @@ import app.companion.ui.kit.Stamp
 import app.companion.ui.kit.ToolButton
 import app.companion.ui.kit.empty
 import app.companion.ui.kit.part
+import app.companion.ui.Pick
 import app.companion.ui.monthName
 import app.companion.ui.pal
 import app.companion.ui.shortDay
@@ -135,6 +136,14 @@ fun LedgerScreen(go: (String) -> Unit) {
             acct = cards.firstOrNull { it.last4 == d.last4 }?.id ?: 0L
             back = ChronoUnit.MONTHS.between(YearMonth.from(d.start), YearMonth.from(today())).toInt()
             DrillBox.pending.value = null
+        }
+    }
+    val pick by Pick.item.collectAsStateWithLifecycle()
+    LaunchedEffect(pick) {
+        pick?.let {
+            back = 0
+            open = it
+            Pick.item.value = null
         }
     }
     val now = today()

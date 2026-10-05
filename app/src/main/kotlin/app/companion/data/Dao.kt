@@ -130,6 +130,21 @@ interface Dao {
     @Query("UPDATE items SET ping = :ping WHERE id = :id")
     suspend fun setPing(id: Long, ping: Int)
 
+    @Query("UPDATE items SET ping = ping | :bit WHERE id = :id")
+    suspend fun addPing(id: Long, bit: Int)
+
+    @Query("SELECT * FROM items WHERE kind IN (:kinds) AND dup IS NULL AND state != 'ask' AND at >= :since AND (ping & :bit) = 0 ORDER BY at")
+    suspend fun unpinged(kinds: List<String>, since: Long, bit: Int): List<Item>
+
+    @Query("SELECT * FROM items WHERE kind IN ('Debit', 'CardSpend') AND dup IS NULL AND at >= :from")
+    suspend fun spentSince(from: Long): List<Item>
+
+    @Query("SELECT * FROM items WHERE kind = 'Delivery' AND dup IS NULL AND state != 'ask' AND at >= :since ORDER BY at")
+    suspend fun deliveriesSince(since: Long): List<Item>
+
+    @Query("SELECT COUNT(*) FROM items WHERE state IN ('ask', 'check') AND kind NOT IN ('Otp', 'Spam') AND dup IS NULL AND at >= :since")
+    suspend fun needs(since: Long): Int
+
     @Query("SELECT * FROM cards ORDER BY id")
     fun cards(): Flow<List<Card>>
 

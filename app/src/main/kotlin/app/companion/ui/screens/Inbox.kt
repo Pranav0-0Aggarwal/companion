@@ -102,6 +102,8 @@ fun InboxScreen(go: (String) -> Unit) {
     val items by remember { repo.inbox(System.currentTimeMillis() - 3.days.inWholeMilliseconds) }.collectAsStateWithLifecycle(emptyList<Item>())
     val tally by remember { repo.tally(today().toEpochDay()) }.collectAsStateWithLifecycle(emptyList<Tally>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
+    val links by remember(items) { repo.links(items.map { it.id }) }.collectAsStateWithLifecycle(emptyList())
+    val from = remember(links) { links.groupBy { it.itemId }.mapValues { it.value.first().sender } }
     var seg by rememberSaveable { mutableStateOf(InboxSeg.All) }
     val shown = remember(items, seg) { items.filter { seg == InboxSeg.All || it.src in seg.src || (seg == InboxSeg.Alerts && it.kind == "Spam") } }
     val (waiting, filed) = remember(shown) { shown.partition { it.open } }
@@ -126,26 +128,27 @@ fun InboxScreen(go: (String) -> Unit) {
             }
         }
         if (shown.isEmpty()) {
-            empty(Ic.Inbox, if (seg == InboxSeg.All) "Inbox is clear" else "Nothing in ${seg.label}", Voice.addr(profile.name, "nothing needs you here."))
+            val (t, b) = if (seg == InboxSeg.All) "All clear" to "you're all caught up. Anything that needs a look will wait for you here." else "Nothing in ${seg.label}" to "no ${seg.label} messages need a look right now."
+            empty(Ic.Inbox, t, Voice.addr(profile.name, b))
         }
-        group("Needs you", waiting, acts)
-        group("Filed", filed, acts)
+        group("Needs you", waiting, acts, from)
+        group("Filed", filed, acts, from)
         folded(tally)?.let { f ->
             item(key = "folded") { Text(f, Modifier.padding(horizontal = 28.dp, vertical = 16.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2)) }
         }
     }
 }
 
-private fun LazyListScope.group(title: String, list: List<Item>, acts: Acts) {
+private fun LazyListScope.group(title: String, list: List<Item>, acts: Acts, from: Map<Long, String>) {
     if (list.isEmpty()) return
     item(key = "g$title") { Section(title) }
     itemsIndexed(list, key = { _, i -> "i${i.id}" }) { k, i ->
-        Box(Modifier.animateItem().part(pal, k == 0, k == list.lastIndex)) { Entry(i, acts) }
+        Box(Modifier.animateItem().part(pal, k == 0, k == list.lastIndex)) { Entry(i, acts, from[i.id]) }
     }
 }
 
 @Composable
-internal fun Entry(i: Item, a: Acts) {
+internal fun Entry(i: Item, a: Acts, sender: String? = null) {
     val haptic = rememberHaptic()
     val scope = rememberCoroutineScope()
     val on = motion()
@@ -165,7 +168,7 @@ internal fun Entry(i: Item, a: Acts) {
     SwipeAccept(if (first != null) "File as ${first.cap()}" else "File", { act { if (first != null) a.file(i, first) else a.done(i) } }, enabled = swipe && !settled) {
         PassLine(
             i.title,
-            listOfNotNull(srcWord(i.src), stamped(i.at), i.takeIf { it.paise > 0 }?.let { money(it.paise, it.currency) }, i.note.take(80).ifBlank { null }).joinToString(" · "),
+            listOfNotNull(sender?.takeIf { i.src == "Sms" && it != i.title && !i.money } ?: srcWord(i.src), stamped(i.at), i.takeIf { it.paise > 0 }?.let { money(it.paise, it.currency) }, i.note.take(80).ifBlank { null }).joinToString(" · "),
             tags = i.tagList,
             onClick = { sheet = true },
             lead = Ic.src(i.src),
@@ -201,7 +204,7 @@ internal fun Entry(i: Item, a: Acts) {
 private fun RowScope.Buttons(i: Item, a: Acts, act: (() -> Unit) -> Unit, sheet: () -> Unit) {
     when {
         i.state == State.CHECK -> Btn("Done", go = true) { act { a.done(i) } }
-        i.money -> cats(i).forEachIndexed { n, cat -> Btn(cat.cap(), go = n == 0) { act { a.file(i, cat) } } }
+        i.money -> cats(i).first().let { cat -> Btn(cat.cap(), go = true) { act { a.file(i, cat) } } }
         else -> {
             Btn("File", go = true) { act { a.done(i) } }
             TextBtn("Spam") { a.spam(i) }

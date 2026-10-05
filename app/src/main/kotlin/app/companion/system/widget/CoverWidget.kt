@@ -128,10 +128,10 @@ private fun Secondary(s: Small) {
 private fun line(c: Context, s: Seen, lane: Lane): Line = when (lane) {
     Lane.Out -> {
         val o = s.out!!
-        val code = o.code
+        val code = o.code?.takeIf { s.opts.lock }
         Line("${o.merchant ?: "Order"} · out for delivery", code?.let(::codeText) ?: "On the way", code?.let { "Tap to copy · share with the rider" }, if (code != null) copy(code) else open(c, "today"))
     }
-    Lane.Code -> {
+    Lane.Code -> if (!s.opts.lock) Line("Code ready", "Open to view", null, open(c, "today")) else {
         val i = s.otp!!
         Line("${i.title} code · until ${clock(i.expires ?: i.at)}", codeText(i.code.orEmpty()), "Tap to copy", copy(i.code.orEmpty()))
     }
@@ -145,7 +145,7 @@ private fun line(c: Context, s: Seen, lane: Lane): Line = when (lane) {
 
 private fun small(c: Context, s: Seen, lane: Lane): Small = when (lane) {
     Lane.Out -> Small("${s.out!!.merchant ?: "Order"} out for delivery", open(c, "today"))
-    Lane.Code -> Small("${s.otp!!.title} ${codeText(s.otp.code.orEmpty())}", copy(s.otp.code.orEmpty()))
+    Lane.Code -> if (!s.opts.lock) Small("Code ready · open to view", open(c, "today")) else Small("${s.otp!!.title} ${codeText(s.otp.code.orEmpty())}", copy(s.otp.code.orEmpty()))
     Lane.Due -> Small("${s.bill!!.title} · ${Cover.due(s.days!!)}", open(c, "bills"), s.days < 0)
     Lane.Spent -> Small("${Cover.amount(s.opts, inr(s.total))} spent · ${s.n}", open(c, "ledger"))
 }

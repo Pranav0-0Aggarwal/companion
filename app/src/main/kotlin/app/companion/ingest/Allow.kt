@@ -16,7 +16,9 @@ object Allow {
         "com.phonepe.app" to Source.Notif,
         "net.one97.paytm" to Source.Notif,
         "com.whatsapp" to Source.Wa,
+        "com.whatsapp.w4b" to Source.Wa,
         "com.instagram.android" to Source.Ig,
+        "com.instagram.lite" to Source.Ig,
     )
 
     fun of(pkg: String) = apps[pkg]

@@ -22,9 +22,11 @@ import app.companion.core.ObjEnd
 import app.companion.core.Prompt
 import app.companion.core.Registry
 import app.companion.core.Role
+import app.companion.core.Route
 import app.companion.core.SayStream
 import app.companion.core.Step
 import app.companion.core.ToolOut
+import app.companion.core.ToolSpecs
 import app.companion.core.Turn
 import app.companion.data.Repo
 import java.time.LocalDate
@@ -232,73 +234,58 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
 
     private suspend fun ProducerScope<Out>.run(text: String, bg: Boolean) {
         foods.answer(text)?.let { return settle(text, it) }
+        Route.of(text)?.let { registry.parse(it) as? Step.Call }?.let { return act(text, it, Json.write(mapOf("tool" to it.tool.name, "args" to it.args))) }
         val b = brain() ?: return fail("model")
         val first = Turn(Role.User, Prompt.user(text, stamp.format(ZonedDateTime.now(zone))))
-        val local = mutableListOf(first)
-        var calls = 0
-        var got = false
-        var nudged = false
-        val seen = mutableSetOf<Pair<String, Map<String, Any?>>>()
-        while (true) {
-            val turns = hist.fit(local) { b.tpl.render(system, it).length <= MAX_PROMPT }
-            val spoke = StringBuilder()
-            val d = try {
-                Decode.run(registry) { strict -> generate(b, turns, strict, bg, spoke) }
-            } catch (_: LowMemory) {
-                return fail("memory")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                null
-            } ?: return fail("model")
-            when (val s = d.step) {
-                is Step.Say -> {
-                    val rest = if (s.text.startsWith(spoke.toString())) s.text.substring(spoke.length) else ""
-                    if (rest.isNotEmpty()) send(Out.Say(rest))
-                    hist.add(first)
-                    hist.add(Role.Assistant, d.raw)
-                    return send(Out.Done)
-                }
-                is Step.Call -> {
-                    if (!seen.add(s.tool.name to s.args)) {
-                        if (nudged) return quiet(first, got)
-                        nudged = true
-                        local += Turn(Role.Assistant, d.raw)
-                        local += Turn(Role.Tool, Prompt.ANSWER)
-                        continue
-                    }
-                    if (++calls > MAX_CALLS) return quiet(first, got)
-                    send(Out.Used(s.tool.name))
-                    local += Turn(Role.Assistant, d.raw)
-                    val r = try {
-                        s.tool.run(s.args)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        ToolOut.Fail("tool failed")
-                    }
-                    when (r) {
-                        is ToolOut.Ok -> {
-                            got = true
-                            local += Turn(Role.Tool, r.text.take(MAX_RESULT))
-                        }
-                        is ToolOut.Fail -> local += Turn(Role.Tool, "error: ${r.why}".take(MAX_RESULT))
-                        is ToolOut.Ask -> {
-                            hist.add(first)
-                            hist.add(Role.Assistant, said(r.question))
-                            send(Out.Ask(r.question))
-                            return send(Out.Done)
-                        }
-                    }
-                }
-                is Step.Bad -> return fail("format")
+        val turns = hist.fit(listOf(first)) { b.tpl.render(system, it).length <= MAX_PROMPT }
+        val spoke = StringBuilder()
+        val d = try {
+            Decode.run(registry) { strict -> generate(b, turns, strict, bg, spoke) }
+        } catch (_: LowMemory) {
+            return fail("memory")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        } ?: return fail("model")
+        when (val s = d.step) {
+            is Step.Say -> {
+                val rest = if (s.text.startsWith(spoke.toString())) s.text.substring(spoke.length) else ""
+                if (rest.isNotEmpty()) send(Out.Say(rest))
+                hist.add(first)
+                hist.add(Role.Assistant, d.raw)
+                send(Out.Done)
             }
+            is Step.Call -> {
+                val call = if (s.tool.name == ToolSpecs.logMeal.name && Route.asks(text)) registry.parse(Route.SUGGEST) as? Step.Call ?: s else s
+                act(text, call, d.raw)
+            }
+            is Step.Bad -> fail("format")
         }
     }
 
-    private suspend fun ProducerScope<Out>.quiet(first: Turn, got: Boolean) {
-        if (!got) return fail("steps")
-        hist.add(first)
+    private suspend fun ProducerScope<Out>.act(text: String, s: Step.Call, raw: String) {
+        send(Out.Used(s.tool.name))
+        val r = try {
+            s.tool.run(s.args)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            ToolOut.Fail("tool failed")
+        }
+        hist.add(Turn(Role.User, Prompt.user(text, stamp.format(ZonedDateTime.now(zone)))))
+        hist.add(Role.Assistant, raw)
+        when (r) {
+            is ToolOut.Ok -> {
+                hist.add(Role.Tool, r.text.take(MAX_RESULT))
+                if (!shown && !r.text.trimStart().startsWith("{") && !r.text.trimStart().startsWith("[")) send(Out.Say(r.text))
+            }
+            is ToolOut.Ask -> {
+                hist.add(Role.Tool, r.question)
+                send(Out.Ask(r.question))
+            }
+            is ToolOut.Fail -> send(Out.Fail(if (' ' in r.why) r.why else "tool"))
+        }
         send(Out.Done)
     }
 
@@ -308,7 +295,6 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     }
 
     private companion object {
-        const val MAX_CALLS = 4
         const val MAX_TOKENS = 384
         const val WARM_MS = 10_000L
         const val MAX_PROMPT = 8000

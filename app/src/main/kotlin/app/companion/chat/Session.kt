@@ -197,7 +197,7 @@ class ChatSession(private val sl: Services) {
                     when (o.why) {
                         "model" -> msgs += Msg.Need(id())
                         "memory" -> msgs += Msg.Note(id(), "Not enough free memory for the chat model right now. Try again in a moment.")
-                        else -> msgs += Msg.Note(id(), "I couldn't work that out. Try saying it another way.")
+                        else -> msgs += Msg.Note(id(), if (' ' in o.why) o.why else "I couldn't work that out. Try saying it another way.")
                     }
                 }
                 Out.Done -> idle()

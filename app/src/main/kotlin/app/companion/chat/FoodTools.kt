@@ -34,10 +34,13 @@ class FoodToday(private val foods: Foods) : Base(ToolSpecs.foodToday) {
 
 class SuggestMeal(private val foods: Foods) : Base(ToolSpecs.suggestMeal) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
-        val p = foods.plates(a.d("kcal")?.toInt()?.takeIf { it in 100..3000 }, a["veg"] == true)
-        if (p.isEmpty()) return ToolOut.Ok("No plate in the food list fits that.")
-        val left = foods.target()?.let { t -> " Goal $t kcal a day." }.orEmpty()
-        return ToolOut.Ok("Ideas from the food list: " + p.joinToString("; ") { it.line() } + "." + left)
+        val cap = a.d("kcal")?.toInt()?.takeIf { it in 100..3000 }
+        val veg = a["veg"] == true
+        val p = foods.plates(cap, veg)
+        if (p.isEmpty()) return ToolOut.Ok("Nothing in my food list fits under ${cap ?: 700} kcal. Try a higher limit.")
+        val head = listOfNotNull("under ${cap ?: 700} kcal", "vegetarian".takeIf { veg }, "most protein first").joinToString(", ")
+        val goal = foods.target()?.let { "\nYour goal is $it kcal a day." }.orEmpty()
+        return ToolOut.Ok("Ideas $head:\n" + p.joinToString("\n") { "• " + it.line() } + goal + "\nSay what you pick and I'll log it.")
     }
 }
 

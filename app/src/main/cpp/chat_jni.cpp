@@ -180,6 +180,7 @@ bool gen(C *h, const std::string &prompt, const std::string &pin, const std::str
         }
         llama_sampler_chain_add(s, gr);
     }
+    llama_sampler_chain_add(s, llama_sampler_init_penalties(llama_vocab_n_tokens(v), 64, 1.1f, 0.0f, 0.0f));
     if (temp > 0.0f) {
         llama_sampler_chain_add(s, llama_sampler_init_top_k(40));
         llama_sampler_chain_add(s, llama_sampler_init_temp(temp));

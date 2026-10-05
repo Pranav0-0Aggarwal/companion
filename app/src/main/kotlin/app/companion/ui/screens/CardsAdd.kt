@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.companion.core.BankNames
+import app.companion.core.Found
 import app.companion.data.Card
 import app.companion.ui.Ty
 import app.companion.ui.kit.Btn
@@ -42,7 +43,7 @@ import app.companion.ui.kit.Ic
 import app.companion.ui.kit.IconRow
 import app.companion.ui.pal
 
-private fun ord(n: Int) = "$n" + if (n in 11..13) "th" else when (n % 10) {
+internal fun ord(n: Int) = "$n" + if (n in 11..13) "th" else when (n % 10) {
     1 -> "st"
     2 -> "nd"
     3 -> "rd"
@@ -53,14 +54,14 @@ private val days = (1..31).toList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCard(onDismiss: () -> Unit, onAdd: (Card) -> Unit) {
+fun AddCard(onDismiss: () -> Unit, from: Found? = null, onAdd: (Card) -> Unit) {
     val p = pal
-    var bank by remember { mutableStateOf<String?>(null) }
+    var bank by remember { mutableStateOf(from?.bank) }
     var nick by remember { mutableStateOf("") }
-    var last4 by remember { mutableStateOf("") }
-    var stmt by remember { mutableStateOf<Int?>(null) }
-    var due by remember { mutableStateOf<Int?>(null) }
-    var limit by remember { mutableStateOf("") }
+    var last4 by remember { mutableStateOf(from?.last4.orEmpty()) }
+    var stmt by remember { mutableStateOf(from?.stmtDay) }
+    var due by remember { mutableStateOf(from?.dueDay) }
+    var limit by remember { mutableStateOf(from?.limit?.takeIf { it >= 100 }?.div(100)?.toString().orEmpty()) }
     val b = bank
     val s = stmt
     val d = due

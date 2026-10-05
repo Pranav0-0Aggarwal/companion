@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Cycle
+import app.companion.core.Found
 import app.companion.data.Card
 import app.companion.data.brand
 import app.companion.data.Item
@@ -54,15 +56,21 @@ import app.companion.ui.Voice
 import app.companion.ui.dateOf
 import app.companion.ui.inr
 import app.companion.ui.kit.Btn
+import app.companion.ui.kit.Group
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.Ink
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.MoneyRow
 import app.companion.ui.kit.Motion
 import app.companion.ui.kit.Amount
+import app.companion.ui.kit.PassLine
+import app.companion.ui.kit.Rule
 import app.companion.ui.kit.Screen
+import app.companion.ui.kit.Section
 import app.companion.ui.kit.Stamp
 import app.companion.ui.kit.TextBtn
 import app.companion.ui.kit.ToolButton
+import app.companion.ui.kit.Tone
 import app.companion.ui.kit.empty
 import app.companion.ui.kit.part
 import app.companion.ui.money
@@ -105,16 +113,28 @@ fun CardsScreen(go: (String) -> Unit) {
     val spends by repo.money.collectAsStateWithLifecycle(emptyList<Item>())
     val bills by repo.bills.collectAsStateWithLifecycle(emptyList<Item>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
+    val found by repo.found.collectAsStateWithLifecycle(emptyList<Found>())
+    val snack = LocalSnack.current
     val day = remember { today() }
     val cycles = remember(cards, spends, bills) { cards.map { cycle(it, spends, bills, day) } }
     val pager = rememberPagerState { cycles.size }
     var adding by remember { mutableStateOf(false) }
+    var setup by remember { mutableStateOf<Found?>(null) }
     var deleting by remember { mutableStateOf<Card?>(null) }
-    val sub = if (cards.isEmpty()) "No cards yet" else "${inr(cycles.sumOf { it.spent })} this cycle · ${cards.size} card${if (cards.size == 1) "" else "s"}"
+    val sub = if (cards.isEmpty()) found.size.takeIf { it > 0 }?.let { "Found $it in your messages" } ?: "No cards yet" else "${inr(cycles.sumOf { it.spent })} this cycle · ${cards.size} card${if (cards.size == 1) "" else "s"}"
     Screen("Cards", sub, tools = { ToolButton(Ic.Add, "Add a card") { adding = true } }) {
         val sel = cycles.getOrNull(pager.currentPage)
+        val suggest = {
+            suggestions(
+                found, { f -> if (f.ready) scope.launch { repo.addFound(f) } else setup = f },
+                { scope.launch { repo.atomic { found.filter { it.ready }.forEach { repo.addFound(it) } } } },
+                { f -> scope.launch { repo.dismissFound(f) }; snack.offer(f, "Won't suggest ${f.bank} ··${f.last4} again") { repo.restoreFound(it) } },
+            )
+        }
         if (sel == null) {
-            empty(Ic.Cards, "No cards yet", Voice.addr(profile.name, "add a credit card to see its cycle, limit and due date.")) {
+            if (found.isNotEmpty()) suggest()
+            val (t, b) = if (found.isEmpty()) "No cards yet" to "add a credit card to see its cycle, limit and due date." else "Not on the list?" to "add another card by hand to see its cycle, limit and due date."
+            empty(Ic.Cards, t, Voice.addr(profile.name, b)) {
                 Btn("Add a card", go = true, icon = Ic.Add) { adding = true }
             }
         } else {
@@ -132,8 +152,10 @@ fun CardsScreen(go: (String) -> Unit) {
                     Modifier.animateItem().part(p, k == 0, k == sel.rows.lastIndex), lead = Ic.of(t.category), brand = t.brand,
                 )
             }
+            if (found.isNotEmpty()) suggest()
         }
     }
+    setup?.let { f -> AddCard({ setup = null }, f) { card -> scope.launch { repo.addCard(card) }; setup = null } }
     if (adding) AddCard({ adding = false }) { card -> scope.launch { repo.addCard(card) }; adding = false }
     deleting?.let { d ->
         PassConfirm(
@@ -144,6 +166,32 @@ fun CardsScreen(go: (String) -> Unit) {
             { deleting = null },
         )
     }
+}
+
+private fun LazyListScope.suggestions(found: List<Found>, add: (Found) -> Unit, addAll: () -> Unit, skip: (Found) -> Unit) {
+    item(key = "foundh") { Section("Found ${found.size} ${if (found.size == 1) "card" else "cards"} in your messages", if (found.count { it.ready } > 1) "Add all" else null, addAll) }
+    item(key = "found") {
+        Group {
+            found.forEachIndexed { k, f ->
+                if (k > 0) Rule(72.dp)
+                Suggest(f, { add(f) }) { skip(f) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Suggest(f: Found, add: () -> Unit, skip: () -> Unit) {
+    val cycle = if (f.ready) "Statement on the ${ord(f.stmtDay!!)} · due the ${ord(f.dueDay!!)}" else "Cycle not in your messages yet"
+    val limit = f.limit?.takeIf { it > 0 }?.let { "${inr(it)} limit" } ?: f.avail?.takeIf { it > 0 }?.let { "${inr(it)} available" }
+    PassLine(
+        "${f.bank} ··${f.last4}",
+        listOfNotNull(cycle, limit).joinToString(" · "),
+        brand = f.bank,
+        tone = Tone.Plain,
+        trailing = { Btn(if (f.ready) "Add" else "Set up", dense = true, go = true, onClick = add) },
+        actions = { TextBtn("Not mine", color = pal.ink2, onClick = skip) },
+    )
 }
 
 @Composable

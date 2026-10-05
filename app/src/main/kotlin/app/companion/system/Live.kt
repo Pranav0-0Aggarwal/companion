@@ -34,6 +34,8 @@ object Live {
                 NotificationChannel(Ping.SPENDS, "Spending", NotificationManager.IMPORTANCE_LOW),
                 NotificationChannel(Ping.DELIVERIES, "Deliveries", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(Ping.DIGEST, "Daily summary", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(Meetings.CHAN, "Meetings", NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(Meetings.LIVE, "Meeting countdown", NotificationManager.IMPORTANCE_LOW),
             ),
         )
         val daily = PeriodicWorkRequestBuilder<Reminders>(1, TimeUnit.DAYS).build()

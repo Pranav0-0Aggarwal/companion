@@ -59,6 +59,7 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "reads") { Section("What Gmail reads") }
             item(key = "reads-list") { Group { Reads() } }
             item(key = "notify") { NotifySettings() }
+            item(key = "meet") { MeetSettings() }
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "ai") { AiSettings() }
             item(key = "proc") { ProcessingSection() }

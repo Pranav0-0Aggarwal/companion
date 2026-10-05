@@ -29,6 +29,7 @@ import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
 import app.companion.system.Live
+import app.companion.system.Meetings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -47,7 +48,10 @@ class Services(val app: Application) {
     val gtasks by lazy { GTasks(app, repo) }
 
     fun wipe() {
-        runBlocking(Dispatchers.IO) { repo.allTasks().forEach { Alarms.cancel(app, it.id) } }
+        runBlocking(Dispatchers.IO) {
+            repo.allTasks().forEach { Alarms.cancel(app, it.id) }
+            Meetings.stop(app)
+        }
         WorkManager.getInstance(app).cancelAllWork()
         ModelJobs.kill(app)
         app.getSystemService(NotificationManager::class.java).cancelAll()
@@ -69,6 +73,7 @@ class CompanionApp : Application() {
         Proc.watch(this)
         Export.sweep(this)
         Upgrade.boot(this)
+        Meetings.watch(this)
     }
 
     override fun onTrimMemory(level: Int) {

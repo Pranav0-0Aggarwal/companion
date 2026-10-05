@@ -113,7 +113,9 @@ object Brief {
 
     fun orders(merchant: String?, n: Int) = if (n == 1) "${merchant?.let { "$it order" } ?: "Order"} arriving" else "$n orders arriving"
 
-    fun due(n: Int) = "$n ${if (n == 1) "bill" else "bills"} due today"
+    fun bills(n: Int) = "$n ${if (n == 1) "bill" else "bills"}"
+
+    fun due(n: Int) = "${bills(n)} due today"
 }
 
 object Track {

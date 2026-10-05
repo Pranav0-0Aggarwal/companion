@@ -30,13 +30,18 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import app.companion.core.Brief
 import app.companion.core.Cover
 import app.companion.core.Lane
+import app.companion.core.Meeting
+import app.companion.core.Meets
 import app.companion.core.Opts
 import app.companion.core.Stage
 import app.companion.data.Item
 import app.companion.data.dueDate
 import app.companion.sl
+import app.companion.system.Joined
+import app.companion.system.Meetings
 import app.companion.system.Notes
 import app.companion.system.Ping
 import app.companion.system.Prefs
@@ -44,8 +49,12 @@ import app.companion.ui.Voice
 import app.companion.ui.clock
 import app.companion.ui.codeText
 import app.companion.ui.daysTo
+import app.companion.ui.hm
 import app.companion.ui.inr
 import app.companion.ui.money
+import java.time.LocalTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val ground = ColorProvider(Color(0xFF000000))
 private val card = ColorProvider(Color(0xFF17171A))
@@ -54,18 +63,26 @@ private val ink2 = ColorProvider(Color(0xFFA3A8B0))
 private val accent = ColorProvider(Color(0xFF7EA6FF))
 private val red = ColorProvider(Color(0xFFFF6B61))
 
-internal class Seen(val out: Ping.Order?, val otp: Item?, val bill: Item?, val days: Int?, val total: Long, val n: Int, val name: String, val opts: Opts)
+internal class Seen(
+    val out: Ping.Order?, val otp: Item?, val bill: Item?, val days: Int?, val total: Long, val n: Int, val name: String, val opts: Opts,
+    val meet: Meeting?, val first: Meeting?, val due0: Int, val brief: Boolean, val now: Long,
+)
 
 class CoverWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val repo = context.sl.repo
         val now = System.currentTimeMillis()
-        val bill = repo.billsNow().firstOrNull { it.due != null }
+        val bills = repo.billsNow()
+        val bill = bills.firstOrNull { it.due != null }
+        val due0 = bills.count { it.dueDate?.let { d -> daysTo(d) } == 0 }
         val (total, n) = repo.spentToday(now)
+        val soon = withContext(Dispatchers.IO) { Meetings.soon(context, now) }
+        val minute = LocalTime.now().let { it.hour * 60 + it.minute }
         val seen = Seen(
             Ping.orders(context, 0, now).firstOrNull { it.stage == Stage.Out },
             repo.otpsNow(now).firstOrNull { Cover.code(it.at, now) },
             bill, bill?.dueDate?.let { daysTo(it) }, total, n, repo.profileNow().name, Prefs.get(context),
+            soon.next?.takeIf { Cover.meet(Meets.mins(it.start, now)) }, soon.first, due0, Cover.brief(minute, soon.first != null, due0), now,
         )
         provideContent { Face(context, seen) }
     }
@@ -73,6 +90,10 @@ class CoverWidget : GlanceAppWidget() {
 
 private fun open(c: Context, route: String): Action =
     actionStartActivity(Notes.intent(c, route).setData(Uri.parse("app.companion://$route")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+
+private fun join(c: Context, m: Meeting): Action = actionStartActivity(
+    Intent(c, Joined::class.java).putExtra(Joined.KEY, Meetings.key(m)).putExtra(Joined.URL, m.join?.url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+)
 
 private fun copy(code: String): Action = actionRunCallback<CopyAction>(actionParametersOf(codeKey to code))
 
@@ -83,7 +104,7 @@ private class Small(val text: String, val tap: Action, val warn: Boolean = false
 @Composable
 private fun Face(c: Context, s: Seen) {
     val o = s.opts
-    val lanes = Cover.lanes(s.out != null, s.otp != null, s.days, s.n)
+    val lanes = Cover.lanes(s.out != null, s.otp != null, s.days, s.n, s.meet != null, s.brief)
     val lines = lanes.map { lane -> line(c, s, lane) to small(c, s, lane) }
     Column(
         GlanceModifier.fillMaxSize().background(ground).cornerRadius(28.dp).padding(14.dp),
@@ -135,6 +156,18 @@ private fun line(c: Context, s: Seen, lane: Lane): Line = when (lane) {
         val i = s.otp!!
         Line("${i.title} code · until ${clock(i.expires ?: i.at)}", codeText(i.code.orEmpty()), "Tap to copy", copy(i.code.orEmpty()))
     }
+    Lane.Meet -> {
+        val m = s.meet!!
+        Line(
+            if (s.opts.lock) m.title.ifBlank { "Meeting" } else "Meeting", Meets.until(m.start, s.now),
+            if (m.join != null) "Tap to join" else m.place?.takeIf { s.opts.lock },
+            if (m.join != null) join(c, m) else open(c, "today"),
+        )
+    }
+    Lane.Brief -> {
+        val f = s.first
+        if (f != null) Line("First meeting", hm(f.start), Brief.due(s.due0).takeIf { s.due0 > 0 }, open(c, "today")) else Line("Due today", Brief.bills(s.due0), null, open(c, "bills"))
+    }
     Lane.Due -> {
         val b = s.bill!!
         val d = s.days!!
@@ -146,6 +179,11 @@ private fun line(c: Context, s: Seen, lane: Lane): Line = when (lane) {
 private fun small(c: Context, s: Seen, lane: Lane): Small = when (lane) {
     Lane.Out -> Small("${s.out!!.merchant ?: "Order"} out for delivery", open(c, "today"))
     Lane.Code -> if (!s.opts.lock) Small("Code ready · open to view", open(c, "today")) else Small("${s.otp!!.title} ${codeText(s.otp.code.orEmpty())}", copy(s.otp.code.orEmpty()))
+    Lane.Meet -> {
+        val m = s.meet!!
+        Small(if (s.opts.lock) "${m.title.ifBlank { "Meeting" }} · ${Meets.until(m.start, s.now)}" else "Meeting ${Meets.until(m.start, s.now)}", if (m.join != null) join(c, m) else open(c, "today"))
+    }
+    Lane.Brief -> Small(listOfNotNull(s.first?.let { Brief.meeting(hm(it.start)) }, Brief.due(s.due0).takeIf { s.due0 > 0 }).joinToString(" · "), open(c, "today"))
     Lane.Due -> Small("${s.bill!!.title} · ${Cover.due(s.days!!)}", open(c, "bills"), s.days < 0)
     Lane.Spent -> Small("${Cover.amount(s.opts, inr(s.total))} spent · ${s.n}", open(c, "ledger"))
 }

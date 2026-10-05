@@ -49,12 +49,14 @@ sealed class Ev(val key: String, val at: Long?, val rank: Int = 0) {
 
 class Fig(val label: String, val figure: String, val sub: String, val over: Boolean)
 
+private fun whole(paise: Long) = inr(Math.round(paise / 100.0) * 100)
+
 fun Tl.fig(live: Boolean): Fig {
     val m = safe
     val pay = payIn?.let { " · payday ${inDays(it)}" }.orEmpty()
     return when (m) {
-        is Margin.Over -> Fig("Over budget", "${inr(m.by)} over", "${inr(month)} spent of ${inr(budget)} budget$pay", true)
-        is Margin.Safe -> Fig("Safe to spend", inr(m.perDay), "a day$pay", false)
+        is Margin.Over -> Fig("Over budget", "${whole(m.by)} over", "${whole(month)} spent of ${whole(budget)} budget$pay", true)
+        is Margin.Safe -> Fig("Safe to spend", whole(m.perDay), "a day$pay", false)
         null -> Fig(if (live) "Spent today" else "Spent", inr(spent), "$n ${if (n == 1) "payment" else "payments"}", false)
     }
 }

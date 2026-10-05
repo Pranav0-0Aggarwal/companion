@@ -63,6 +63,11 @@ class TemplateTest {
     }
 
     @Test
+    fun `a redacted code hashes like the digits it replaced`() {
+        assertEquals(Template.of(sms("VM-ACMEBK", "Your ACME code is 123456")), Template.of(sms("VM-ACMEBK", "Your ACME code is [redacted]")))
+    }
+
+    @Test
     fun `digit runs with separators collapse to a single zero`() {
         assertEquals("rs 0 on 0 time 0 cr", m("rs 2,450.50 on 04/10/2026 time 13:45:10 cr"))
         assertEquals("0 and 0", m("04-10-26 and 1.5"))

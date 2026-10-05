@@ -18,13 +18,10 @@ object Manifest {
     val schema = Spec("Schema", "schema_prefix.json", 3396, "58d7211b245e5a45260190b4edb5d29df62c0d7897e6d0359f8a8a566c4140d5")
     val calibration = Spec("Calibration", "calibration.json", 938, "37e2bcaf993b8a44b0c87f6391ef1a45c9a4fff00991cb09ae4dd12380ca0ae1")
     val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", 60_000, "models-v2")
-    private const val UNSET_BYTES = 0L
-    private const val UNSET_SHA = ""
-    val chat = Spec("Conversation (Qwen3.5-2B)", "qwen3.5-2b-q4_0.gguf", UNSET_BYTES, UNSET_SHA, 60_000, "models-v3")
-    val chatLfm = Spec("Conversation (LFM2.5-1.2B)", "lfm2.5-1.2b-instruct-q4_0.gguf", UNSET_BYTES, UNSET_SHA, 60_000, "models-v3")
+    val chat = Spec("Conversation (Qwen3.5-2B)", "qwen3.5-2b-q4_0.gguf", 1_236_740_608, "b58f077d816cc565b2d6ae55e2da5997b3837a1bd79ec70a014801c582fa627b", 60_000, "models-v3")
     val all = listOf(tokenizer, schema, calibration, decide, nux, chat)
-    val every = all + chatLfm
-    val llama = setOf(nux, chat, chatLfm)
+    val every = all
+    val llama = setOf(nux, chat)
     val wanted get() = all.filter { it !in llama || Chip.nux }
 }
 

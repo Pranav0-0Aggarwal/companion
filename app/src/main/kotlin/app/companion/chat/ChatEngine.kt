@@ -50,7 +50,7 @@ class Reply(val text: String, val ask: String?, val route: String?, val failed: 
 class ChatEngine(private val c: Context, private val repo: Repo, private val gov: Governor) {
     private class Brain(val spec: Spec, val tpl: ChatTemplate)
 
-    private val brains = listOf(Brain(Manifest.chat, ChatTemplate.Qwen), Brain(Manifest.chatLfm, ChatTemplate.Lfm))
+    private val brains = listOf(Brain(Manifest.chat, ChatTemplate.Qwen))
     val foods = Foods(c, repo)
 
     @Volatile private var sink: SendChannel<Out>? = null

@@ -6,6 +6,8 @@ object CardPay {
             "(?:hdfc|icici|axis|kotak|sbi|yes|idfc|rbl|indusind|au|hsbc|citi|federal|bob|pnb|canara|standard\\s*chartered)\\s*(?:bank\\s*)?cards?\\b",
     )
 
+    fun title(bank: String?) = "${bank?.removeSuffix(" Bank")?.trim()?.takeIf { it.isNotEmpty() } ?: "Card"} card payment"
+
     fun of(kind: String, category: String?, who: String?) =
         kind == Kind.Debit.name && category == Category.Bills.label && who != null && payee.containsMatchIn(who)
 }

@@ -13,4 +13,12 @@ object Targets {
     }
 
     fun protein(kg: Double): Int = (kg * 1.2).roundToInt()
+
+    fun macros(kcal: Int, kg: Double?, protein: Int? = null): Macros {
+        val p = protein ?: kg?.let(::protein) ?: (kcal * 0.2 / 4).roundToInt()
+        val f = (kcal * 0.28 / 9).roundToInt()
+        return Macros(p, ((kcal - p * 4 - f * 9) / 4.0).roundToInt().coerceAtLeast(0), f)
+    }
 }
+
+data class Macros(val protein: Int, val carbs: Int, val fat: Int)

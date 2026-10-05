@@ -3,7 +3,7 @@ package app.companion.core
 data class ToolSpec(val name: String, val desc: String, val args: List<Arg> = emptyList())
 
 object ToolSpecs {
-    val screens = listOf("today", "ledger", "cards", "bills", "inbox", "settings", "plan")
+    val screens = listOf("today", "money", "food", "inbox", "you", "ledger", "bills", "cards", "trips", "vault", "learn", "settings")
 
     val spend = ToolSpec(
         "spend", "Money spent in a period, optionally for a category or merchant, optionally compared with a second period.",

@@ -62,7 +62,8 @@ class ToolSpecsTest {
         assertIs<Step.Bad>(step("""{"tool":"vault_add","args":{"kind":"Passport"}}"""))
         assertIs<Step.Call>(step("""{"tool":"remind","args":{"text":"pay rent","when":"5th at 9am"}}"""))
         assertIs<Step.Call>(step("""{"tool":"open","args":{"screen":"bills"}}"""))
-        assertIs<Step.Bad>(step("""{"tool":"open","args":{"screen":"vault"}}"""))
+        assertIs<Step.Call>(step("""{"tool":"open","args":{"screen":"vault"}}"""))
+        assertIs<Step.Bad>(step("""{"tool":"open","args":{"screen":"nowhere"}}"""))
     }
 
     @Test

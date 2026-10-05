@@ -32,6 +32,12 @@ data class Sku(
 enum class Origin(val label: String) {
     Sku("sku"), Brand("brand"), Db("db"), Asked("asked"), Estimate("estimate");
 
+    val badge get() = when (this) {
+        Sku, Asked -> "your food"
+        Brand, Db -> "menu value"
+        Estimate -> "estimate"
+    }
+
     companion object {
         fun of(label: String) = entries.firstOrNull { it.label == label }
     }

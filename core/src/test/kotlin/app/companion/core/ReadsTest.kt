@@ -110,6 +110,20 @@ class ReadsTest {
         assertTrue(emoji.removeSuffix("…").let { it.isEmpty() || !Character.isHighSurrogate(it.last()) })
     }
 
+    @Test
+    fun `names resolve exactly first then by containment`() {
+        val all = listOf("Swiggy", "SWIGGY", "Swiggy Instamart", "Zerodha Broking", "Amazon Pay", "Amazon")
+        assertEquals(listOf("Swiggy"), Names.find("swiggy", all))
+        assertEquals(listOf("Swiggy"), Names.find(" SWIGGY! ", all))
+        assertEquals(listOf("Zerodha Broking"), Names.find("zerodha", all))
+        assertEquals(listOf("Amazon"), Names.find("amazon", all))
+        assertEquals(listOf("Swiggy Instamart"), Names.find("instamart", all))
+        assertEquals(listOf("Amazon Pay", "Amazon"), Names.find("amaz", all))
+        assertEquals(emptyList(), Names.find("uber", all))
+        assertEquals(emptyList(), Names.find("  ", all))
+        assertEquals(emptyList(), Names.find("swiggy", emptyList()))
+    }
+
     private fun due(id: Long, title: String, name: String?, last4: String?, d: LocalDate?, paid: Boolean = false, paise: Long = 713_400) = DueRow(id, title, name, last4, d, paise, 36_000, paid)
 
     @Test

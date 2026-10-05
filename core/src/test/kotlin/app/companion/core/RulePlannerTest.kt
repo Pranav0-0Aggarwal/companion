@@ -213,4 +213,15 @@ class RulePlannerTest {
         assertFalse(explicit("food"))
         assertFalse(explicit("coffee"))
     }
+
+    @Test
+    fun `agent phrasings go to the chat model`() {
+        listOf(
+            "Mark my HDFC bill paid", "mark ICICI card bill as paid", "What needs me today?", "Swiggy vs last month", "compare food this month with last month",
+            "rename Swiggy Ltd to Swiggy", "file the Zomato payment under food", "set budget to 50000", "stop counting Zerodha as spending", "dismiss that",
+        ).forEach { assertFalse(p.plan(it, NOW).explicit, it) }
+        assertTrue(p.plan("Swiggy this week", NOW).explicit)
+        assertTrue(p.plan("bills due this week", NOW).explicit)
+        assertTrue(p.plan("how much did I spend on food last month", NOW).explicit)
+    }
 }

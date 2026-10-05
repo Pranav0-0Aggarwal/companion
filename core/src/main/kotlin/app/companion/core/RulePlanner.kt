@@ -27,6 +27,8 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
         "netflix" to "Netflix", "spotify" to "Spotify", "airtel" to "Airtel", "jio" to "Jio", "irctc" to "IRCTC", "paytm" to "Paytm",
     )
 
+    private val agent = Regex("^(mark|file|retype|rename|dismiss|undo|stop|set|add)\\b|\\b(vs|versus|compare|compared|comparison)\\b|\\bwhat needs\\b")
+
     private val months = listOf("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
     private val longMonths = setOf("january", "february", "march", "april", "june", "july", "august", "september", "sept", "october", "november", "december")
     private val stop = (
@@ -40,6 +42,7 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
         val t = text.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").replace(Regex("\\s+"), " ").trim()
         write(text, t, now)?.let { return it }
+        if (agent.containsMatchIn(t)) return Plan(emptyList(), false)
         val words = t.split(' ').filter { it.isNotEmpty() }
         val has = { re: String -> Regex(re).containsMatchIn(t) }
         val money = has("\\b(spend|spent|spending|kharcha|kharch|total|how much|kitna|kitne|paid|expense|expenses|owe|owed|card|bill|bills|due|rs|inr)\\b") || '₹' in text

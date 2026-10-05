@@ -89,6 +89,19 @@ object Snip {
     }
 }
 
+object Names {
+    private val word = Regex("[a-z0-9]+")
+
+    private fun key(s: String) = word.findAll(s.lowercase()).joinToString(" ") { it.value }
+
+    fun find(q: String, all: List<String>): List<String> {
+        val k = key(q)
+        if (k.isEmpty()) return emptyList()
+        val names = all.distinctBy(::key)
+        return names.filter { key(it) == k }.ifEmpty { names.filter { k in key(it) } }
+    }
+}
+
 class DueRow(val id: Long, val title: String, val name: String?, val last4: String?, val due: LocalDate?, val paise: Long, val min: Long?, val paid: Boolean)
 
 object Dues {

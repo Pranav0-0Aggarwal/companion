@@ -63,5 +63,39 @@ object ToolSpecs {
     val calendarAdd = ToolSpec("calendar_add", "Add a calendar event.", listOf(Arg("title", Ty.Str), Arg("start", Ty.Str), Arg("end", Ty.Str, false)))
     val open = ToolSpec("open", "Open a screen of the app.", listOf(Arg("screen", Ty.Pick(screens))))
 
-    val all = listOf(spend, bills, cards, balance, logMeal, foodToday, setKcal, logWeight, startTrip, endTrip, tripSummary, vaultFind, vaultAdd, remind, calendarAdd, open)
+    private val categories = Ty.Pick(Category.entries.map { it.label })
+
+    val searchMessages = ToolSpec("search_messages", "Search messages and notifications.", listOf(Arg("q", Ty.Str), Arg("from", Ty.Str, false, "sender name"), Arg("days", Ty.Int, false, "look back this many days")))
+    val ledger = ToolSpec(
+        "ledger", "List spends with a total.",
+        listOf(Arg("merchant", Ty.Str, false), Arg("category", categories, false), Arg("card", Ty.Str, false, "bank or last four"), Arg("min", Ty.Num, false, "rupees"), Arg("max", Ty.Num, false, "rupees"), Arg("period", Ty.Str, false, "period as said")),
+    )
+    val topMerchants = ToolSpec("top_merchants", "Top merchants by spend.", listOf(Arg("period", Ty.Str, false, "period as said"), Arg("n", Ty.Int, false)))
+    val compare = ToolSpec(
+        "compare", "Compare spending across two periods.",
+        listOf(Arg("period_a", Ty.Str), Arg("period_b", Ty.Str), Arg("category", categories, false), Arg("merchant", Ty.Str, false)),
+    )
+    val needsYou = ToolSpec("needs_you", "Inbox items waiting for you.", listOf(Arg("n", Ty.Int, false)))
+    val billCycle = ToolSpec("bill_cycle", "Bill amount, due date and paid status.", listOf(Arg("card", Ty.Str, false, "bank or last four"), Arg("biller", Ty.Str, false)))
+    val bestCard = ToolSpec("best_card", "Card with the longest interest free window.")
+    val meals = ToolSpec("meals", "Meals eaten on a day.", listOf(Arg("date", Ty.Str, false)))
+    val weightTrend = ToolSpec("weight_trend", "Weight trend over recent weeks.", listOf(Arg("weeks", Ty.Int, false)))
+    val meetings = ToolSpec("meetings", "Calendar meetings on a day.", listOf(Arg("day", Ty.Str, false)))
+    val trips = ToolSpec("trips", "All trips with their spend.")
+
+    val markPaid = ToolSpec("mark_paid", "Mark a bill paid, after confirm.", listOf(Arg("bill", Ty.Str, desc = "item id or bill name")))
+    val file = ToolSpec("file", "File a spend under a category.", listOf(Arg("item", Ty.Str, desc = "item id like i:12"), Arg("category", categories)))
+    val retype = ToolSpec("retype", "Change what kind an item is.", listOf(Arg("item", Ty.Str, desc = "item id like i:12"), Arg("label", Ty.Pick(Labels.pick))))
+    val markDup = ToolSpec("mark_dup", "Mark an item as a duplicate.", listOf(Arg("item", Ty.Str, desc = "the duplicate id"), Arg("keep", Ty.Str, desc = "the id to keep")))
+    val renameMerchant = ToolSpec("rename_merchant", "Rename a merchant everywhere.", listOf(Arg("from", Ty.Str), Arg("to", Ty.Str)))
+    val notSpending = ToolSpec("not_spending", "Stop counting a merchant as spending.", listOf(Arg("merchant", Ty.Str)))
+    val addCard = ToolSpec("add_card", "Add a card found in messages.", listOf(Arg("bank", Ty.Str), Arg("last4", Ty.Str, desc = "last four digits")))
+    val setBudget = ToolSpec("set_budget", "Set the monthly budget in rupees.", listOf(Arg("amount", Ty.Num)))
+    val dismiss = ToolSpec("dismiss", "Dismiss an inbox item.", listOf(Arg("item", Ty.Str, desc = "item id like i:12")))
+
+    val all = listOf(
+        spend, bills, cards, balance, logMeal, foodToday, setKcal, logWeight, startTrip, endTrip, tripSummary, vaultFind, vaultAdd, remind, calendarAdd, open,
+        searchMessages, ledger, topMerchants, compare, needsYou, billCycle, bestCard, meals, weightTrend, meetings, trips,
+        markPaid, file, retype, markDup, renameMerchant, notSpending, addCard, setBudget, dismiss,
+    )
 }

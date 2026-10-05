@@ -26,6 +26,11 @@ object Cycle {
         return if (cur >= today) cur else dueAfter(s.to.plusDays(1), dueDay)
     }
 
+    fun window(stmtDay: Int, dueDay: Int, today: LocalDate): Span {
+        val stmt = span(stmtDay, today).to.plusDays(1)
+        return Span(stmt, dueAfter(stmt, dueDay))
+    }
+
     fun payday(day: Int, today: LocalDate): LocalDate {
         val here = at(YearMonth.from(today), day)
         return if (here >= today) here else at(YearMonth.from(today).plusMonths(1), day)

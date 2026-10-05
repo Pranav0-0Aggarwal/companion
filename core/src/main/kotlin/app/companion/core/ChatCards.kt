@@ -8,6 +8,8 @@ data class MealLine(val name: String, val qty: String, val kcal: Int, val est: B
 
 data class DocLine(val id: Long, val kind: String, val title: String, val mask: String?, val days: Int?)
 
+data class Fact(val title: String, val sub: String = "", val value: String = "")
+
 sealed interface Card {
     data class Spend(val label: String, val total: Long, val count: Int, val bars: List<Bar>, val versus: Bar? = null) : Card
     data class Bills(val label: String, val total: Long, val rows: List<Row>) : Card
@@ -16,6 +18,8 @@ sealed interface Card {
     data class Weight(val kg: Double, val day: Long, val perWeek: Double?, val avg7: Double?) : Card
     data class Trip(val id: Long, val name: String, val total: Long, val perDay: Long, val days: Int, val top: List<Bar>) : Card
     data class Docs(val rows: List<DocLine>) : Card
+    data class Facts(val label: String, val big: String?, val rows: List<Fact>, val more: Int = 0, val open: String? = null) : Card
+    data class Confirm(val key: Long, val text: String) : Card
 }
 
 object Bars {

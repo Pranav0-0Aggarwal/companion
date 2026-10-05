@@ -2,7 +2,9 @@ package app.companion.core
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -14,16 +16,25 @@ class RulesTest {
     private val notice = RulesClassifier(IST).classify(sms("VM-ACMEBK-S", "Your plan renewal summary"))
 
     @Test
-    fun `a rule needs two consistent corrections`() {
+    fun `one correction teaches a rule and repeats keep counting`() {
         var count = 0
         var label: String? = null
         listOf("food", "food").forEach {
             count = Rules.bump(label, count, it)
             label = it
         }
-        assertEquals(Rules.MIN, count)
+        assertEquals(1, Rules.MIN)
+        assertEquals(2, count)
         assertEquals(2, Rules.bump("food", 1, "food"))
         assertEquals(1, Rules.bump(null, 0, "food"))
+    }
+
+    @Test
+    fun `merged rules keep the higher count or sum the same label`() {
+        assertEquals("promo" to 5, Rules.merge("promo" to 2, "promo" to 3))
+        assertEquals("spam" to 4, Rules.merge("promo" to 2, "spam" to 4))
+        assertEquals("promo" to 4, Rules.merge("promo" to 4, "spam" to 2))
+        assertEquals("promo" to 3, Rules.merge("promo" to 3, "spam" to 3))
     }
 
     @Test
@@ -106,5 +117,100 @@ class RulesTest {
         val (w, _) = Rules.apply(u, mapOf("type" to "promo"))
         assertEquals(Guess("promo", 0.93f), w.guess)
         assertTrue(w is Verdict.Sure)
+    }
+
+    private val debit = Event.Debit(10000, "INR", "1234", "Acme Bank", "ACME STORE", Mode.Upi)
+    private val unknown = Verdict.Unsure(Event.Unknown, 0.4f)
+    private val raw = sms("VM-ACMEBK", "Your order from ACME has shipped")
+
+    private fun typed(v: Verdict, label: String, r: Raw? = null) = Rules.apply(v, mapOf("type" to label), r).first
+
+    @Test
+    fun `a delivery rule files an unsure notice as a delivery`() {
+        val v = typed(unknown, "delivery", raw)
+        assertIs<Verdict.Sure>(v)
+        assertIs<Event.Delivery>(v.event)
+    }
+
+    @Test
+    fun `a delivery rule without text does nothing`() {
+        assertSame(unknown, typed(unknown, "delivery"))
+    }
+
+    @Test
+    fun `a personal rule turns notices into personal but not money or bills`() {
+        assertEquals(Event.Personal, typed(unknown, "personal").event)
+        assertEquals(Event.Personal, typed(Verdict.Sure(Event.Promo, 1f), "personal").event)
+        val m = Verdict.Sure(debit, 1f)
+        assertSame(m, typed(m, "personal"))
+        val b = Verdict.Sure(Event.Bill(100, "INR", null, null, "ACME", null), 1f)
+        assertSame(b, typed(b, "personal"))
+    }
+
+    @Test
+    fun `a bill rule turns a debit into a bill and a notice stays put`() {
+        val v = typed(Verdict.Sure(debit, 1f), "bill")
+        assertIs<Event.Bill>(v.event)
+        assertSame(unknown, typed(unknown, "bill"))
+    }
+
+    @Test
+    fun `expense and income rules flip money only`() {
+        assertIs<Event.Credit>(typed(Verdict.Sure(debit, 1f), "income").event)
+        val credit = Event.Credit(100, "INR", null, null, null, Mode.Other)
+        assertIs<Event.Debit>(typed(Verdict.Sure(credit, 1f), "expense").event)
+        assertSame(unknown, typed(unknown, "expense"))
+        assertSame(unknown, typed(unknown, "income"))
+    }
+
+    @Test
+    fun `no type rule ever creates a code or touches one with the new labels`() {
+        listOf("delivery", "bill", "expense", "income", "personal").forEach { assertSame(otp, typed(otp, it, raw)) }
+        assertSame(unknown, typed(unknown, "otp"))
+    }
+
+    @Test
+    fun `a money event is never turned into promo spam or alert`() {
+        val m = Verdict.Sure(debit, 1f)
+        listOf("promo", "spam", "alert", "delivery").forEach { assertSame(m, typed(m, it, raw)) }
+    }
+
+    @Test
+    fun `sender rules need three in a row`() {
+        var n = 0
+        var l: String? = null
+        listOf("promo", "promo", "promo").forEach {
+            n = Senders.bump(l, n, it)
+            l = it
+        }
+        assertEquals(Senders.MIN, n)
+        assertEquals(1, Senders.bump("promo", 2, "spam"))
+    }
+
+    @Test
+    fun `sender keys follow the brand and ignore route prefixes`() {
+        assertEquals(Senders.key("VM-ACMEBK-S"), Senders.key("AX-ACMEBK"))
+        assertNotEquals(Senders.key("VM-ACMEBK"), Senders.key("VM-ZETABK"))
+        assertEquals("Acmebk", Senders.name("acmebk"))
+    }
+
+    @Test
+    fun `only soft labels count for a sender`() {
+        listOf("promo", "spam", "alert", "personal", "delivery").forEach { assertTrue(Senders.counts(it), it) }
+        listOf("expense", "income", "bill", "otp").forEach { assertFalse(Senders.counts(it), it) }
+    }
+
+    @Test
+    fun `a sender rule files soft notices and never money codes or bills`() {
+        val v = Senders.apply(unknown, "promo")
+        assertIs<Verdict.Sure>(v)
+        assertEquals(Event.Promo, v.event)
+        assertSame(otp, Senders.apply(otp, "promo"))
+        val m = Verdict.Sure(debit, 1f)
+        assertSame(m, Senders.apply(m, "promo"))
+        val b = Verdict.Sure(Event.Bill(100, "INR", null, null, "ACME", null), 1f)
+        assertSame(b, Senders.apply(b, "alert"))
+        assertSame(unknown, Senders.apply(unknown, "expense"))
+        assertSame(unknown, Senders.apply(unknown, null))
     }
 }

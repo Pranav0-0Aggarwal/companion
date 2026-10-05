@@ -10,6 +10,42 @@ fun interface Scorer {
 
 object Labels {
     val money = setOf("expense", "income")
+    val pick = listOf("delivery", "bill", "expense", "income", "alert", "promo", "spam", "personal")
+    private val amount = setOf("expense", "income", "bill")
+    private val moves = setOf(Kind.Debit, Kind.Credit, Kind.CardSpend)
+    private val bills = setOf(Kind.Bill, Kind.Statement)
+
+    fun retype(label: String, cur: Kind, paise: Long): Kind? {
+        val move = cur in moves
+        return when {
+            cur == Kind.Otp -> null
+            label == "delivery" -> Kind.Delivery.takeUnless { move }
+            label == "personal" -> Kind.Personal.takeUnless { move }
+            label == "alert" -> Kind.Alert.takeUnless { move }
+            label == "promo" -> Kind.Promo.takeUnless { move }
+            label == "spam" -> Kind.Spam.takeUnless { move }
+            label == "bill" -> if (cur in bills) cur else if (move || paise > 0) Kind.Bill else null
+            !move && paise <= 0 -> null
+            label == "expense" -> if (cur == Kind.CardSpend) cur else Kind.Debit
+            label == "income" -> Kind.Credit
+            else -> null
+        }
+    }
+
+    fun needsAmount(label: String, cur: Kind, paise: Long) = label in amount && cur != Kind.Otp && retype(label, cur, paise) == null && paise <= 0
+
+    fun refile(label: String, cur: Filed, paise: Long, pick: String? = null): Filed? {
+        val k = retype(label, Kind.valueOf(cur.kind), paise) ?: return null
+        val c = Category.entries.firstOrNull { it.label == pick }
+        val old = cur.category?.takeIf { it != Category.Income.label }
+        val cat = when (k) {
+            Kind.Credit -> (c ?: Category.Income).label
+            Kind.Debit, Kind.CardSpend -> (c?.takeIf { it != Category.Income }?.label ?: old ?: Category.Other.label)
+            Kind.Bill, Kind.Statement -> Category.Bills.label
+            else -> null
+        }
+        return Filed(k.name, cur.tags, cat, Refile.SETTLED)
+    }
 
     fun kind(label: String, rules: Event): Kind? = when (label) {
         "otp" -> Kind.Otp

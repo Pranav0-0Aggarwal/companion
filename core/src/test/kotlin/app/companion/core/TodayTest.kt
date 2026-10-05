@@ -65,7 +65,7 @@ class TodayTest {
     @Test
     fun `around keeps the last past item and the next ones`() {
         val l = Timeline.order((1..8).map { E("e$it", it * 10L) }, at)
-        assertEquals(listOf("e3", "e4", "e5", "e6"), Timeline.around(l, at, 45, 4).map { it.k })
+        assertEquals(listOf("e4", "e5", "e6", "e7"), Timeline.around(l, at, 45, 4).map { it.k })
         assertEquals(listOf("e5", "e6", "e7", "e8"), Timeline.around(l, at, 99, 4).map { it.k })
         assertEquals(listOf("e1", "e2", "e3", "e4"), Timeline.around(l, at, 0, 4).map { it.k })
         assertEquals(2, Timeline.around(l.take(2), at, 15, 4).size)

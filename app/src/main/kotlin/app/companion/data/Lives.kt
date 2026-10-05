@@ -8,6 +8,7 @@ import app.companion.core.Meal
 import app.companion.core.Sku
 import app.companion.core.TItem
 import app.companion.core.TSpan
+import app.companion.core.TSpend
 import app.companion.core.TravelHint
 import app.companion.core.Trips
 import app.companion.core.TripSummary
@@ -123,6 +124,18 @@ class Lives(private val db: Db) {
         val inr = if (item.currency == "INR") null else Forex.parse(text)?.let { Forex.inr(item.paise, it) }
         d.tag(TripItemRow(trip, item.id, 1.0, inr))
     }
+
+    suspend fun trip(id: Long) = d.trip(id)
+
+    suspend fun spends(t: TripRow): List<TSpend> {
+        val by = d.shares(t.id).associateBy { it.itemId }
+        return d.tripItems(t.id).filter { it.kind != "Credit" && (it.currency == "INR" || by[it.id]?.inr != null) }.map { i ->
+            val s = by[i.id]
+            TSpend(i.id, i.at, i.title, i.category, s?.inr ?: i.paise, s?.share ?: 1.0)
+        }
+    }
+
+    suspend fun untag(trip: Long, item: Long) = d.untag(trip, item)
 
     suspend fun setShare(trip: Long, item: Long, share: Double) {
         val cur = d.shares(trip).firstOrNull { it.itemId == item } ?: return

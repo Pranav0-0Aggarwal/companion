@@ -34,7 +34,7 @@ fun MoneyScreen(go: (String) -> Unit) {
             MoneySeg.Ledger -> LedgerScreen(go, lead)
             MoneySeg.Bills -> BillsScreen(go, lead)
             MoneySeg.Cards -> CardsScreen(go, lead)
-            MoneySeg.Trips -> TripsScreen(lead)
+            MoneySeg.Trips -> TripsScreen(go, lead)
         }
     }
 }

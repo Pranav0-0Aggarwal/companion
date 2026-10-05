@@ -7,8 +7,9 @@ import app.companion.core.Gaps
 import app.companion.core.Raw
 import app.companion.data.Repo
 import app.companion.system.Live
+import kotlin.coroutines.cancellation.CancellationException
 
-class Ingest(private val app: Context, private val repo: Repo, private val rules: Classifier, private val pending: Pending) {
+class Ingest(private val app: Context, private val repo: Repo, private val rules: Classifier, private val pending: Pending, private val hooks: Hooks) {
     private val seen = LinkedHashSet<String>()
 
     private fun first(key: String) = synchronized(seen) {
@@ -22,6 +23,7 @@ class Ingest(private val app: Context, private val repo: Repo, private val rules
         val v = rules.classify(raw)
         val added = repo.add(raw, v, p, true) ?: return
         if (refresh && (added.fresh || added.item.kind == "Otp")) Live.refresh(app)
+        runCatching { hooks.after(raw, added) }.onFailure { if (it is CancellationException) throw it }
         if (added.fresh && Gaps.needs(raw, v)) pending.submit(added.item.id, raw, added.item.state)
     }
 

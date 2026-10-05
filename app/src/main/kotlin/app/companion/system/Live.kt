@@ -34,12 +34,16 @@ object Live {
                 NotificationChannel(Ping.SPENDS, "Spending", NotificationManager.IMPORTANCE_LOW),
                 NotificationChannel(Ping.DELIVERIES, "Deliveries", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(Ping.DIGEST, "Daily summary", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(FoodNotes.CHAN, "Food", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(ExpiryNotes.CHAN, "Documents", NotificationManager.IMPORTANCE_DEFAULT),
             ),
         )
         val daily = PeriodicWorkRequestBuilder<Reminders>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("reminders", ExistingPeriodicWorkPolicy.KEEP, daily)
         Prefs.since(app)
         digest(app)
+        Nudges.boot(app)
+        ExpiryWork.boot(app)
         val retain = PeriodicWorkRequestBuilder<Sweep>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("retain", ExistingPeriodicWorkPolicy.KEEP, retain)
     }

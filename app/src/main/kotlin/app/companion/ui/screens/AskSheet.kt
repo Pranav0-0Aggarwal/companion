@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.ai.Answer
 import app.companion.ai.Answers
+import app.companion.chat.Reply
 import app.companion.data.Card
 import app.companion.data.Item
 import app.companion.data.credit
@@ -96,7 +97,7 @@ import app.companion.ui.money as amt
 
 private sealed interface Res {
     data object Busy : Res
-    class Done(val answers: List<Answer>, val lost: Boolean) : Res
+    class Done(val answers: List<Answer>, val lost: Boolean, val chat: Reply? = null) : Res
 }
 
 internal fun tries(cards: List<Card>) = listOf(
@@ -163,13 +164,16 @@ fun AskSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit, 
         value = Res.Busy
         value = withContext(Dispatchers.Default) {
             val plan = sl.planner.plan(a, System.currentTimeMillis())
-            Res.Done(plan.takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, repo) }, plan.lost)
+            val answers = plan.takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, repo) }
+            val chat = if (answers.isEmpty() && sl.chat.ready()) sl.chat.reply(a) else null
+            Res.Done(answers, plan.lost && chat == null, chat)
         }
     }
     val leave = { route: String ->
         close()
         go(route)
     }
+    LaunchedEffect(res) { (res as? Res.Done)?.chat?.route?.let(leave) }
     Column(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } }) {
         Box(
             Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
@@ -212,7 +216,12 @@ fun AskSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit, 
                             itemsIndexed(x.answers, key = { i, _ -> "a$asked$i" }) { i, a ->
                                 AnswerCard(a, leave, Modifier.rise(i))
                             }
-                            if (x.answers.isEmpty()) {
+                            x.chat?.let { r ->
+                                item(key = "chat") {
+                                    Text(r.ask ?: r.text.ifBlank { "I couldn't work that out." }, Modifier.padding(horizontal = 28.dp, vertical = 12.dp).rise(), style = Ty.ui(16, FontWeight.Normal).copy(color = p.ink))
+                                }
+                            }
+                            if (x.answers.isEmpty() && x.chat == null) {
                                 item(key = "none") {
                                     val msg = if (x.lost) "I couldn't work that out. Try \"food last month\" or \"bills due this week\"." else "No direct answer. Matching messages are below."
                                     Text(msg, Modifier.padding(horizontal = 28.dp, vertical = 12.dp).rise(), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2))

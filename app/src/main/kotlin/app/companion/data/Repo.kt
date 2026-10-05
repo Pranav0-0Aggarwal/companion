@@ -64,9 +64,10 @@ class Renamed(internal val items: List<Item>, internal val before: List<Alias>, 
 
 class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, val note: String? = null)
 
-class Repo(private val db: Db) {
+class Repo(private val db: Db, c: android.content.Context) {
     private val d = db.dao()
     val life = Lives(db)
+    val docs = Docs(c.applicationContext, db)
     val fresh = ConcurrentHashMap<Long, Long>()
 
     val profile: Flow<Profile> = d.profile().map { it ?: Profile() }

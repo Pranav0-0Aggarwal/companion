@@ -45,7 +45,7 @@ class Lives(private val db: Db) {
 
     suspend fun meal(id: Long) = d.meal(id)
 
-    suspend fun orderMeal(key: String) = d.orderMeal(key)
+    suspend fun orderAt(at: Long) = d.orderAt(at)
 
     suspend fun bareOrders() = d.bareOrders()
 
@@ -98,7 +98,7 @@ class Lives(private val db: Db) {
     suspend fun dropTrip(id: Long) = d.dropTrip(id)
 
     suspend fun tagLive(item: Item, text: String) {
-        val spans = d.tripsNow().map { it.id to TSpan(it.start, it.end) }
+        val spans = d.tripsNow().map { it.id to TSpan(it.start, if (it.active) Long.MAX_VALUE else it.end) }
         val trip = Trips.tag(item.at, spans) ?: return
         val inr = if (item.currency == "INR") null else Forex.parse(text)?.let { Forex.inr(item.paise, it) }
         d.tag(TripItemRow(trip, item.id, 1.0, inr))

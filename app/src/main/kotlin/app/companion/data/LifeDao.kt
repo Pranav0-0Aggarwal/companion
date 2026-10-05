@@ -48,8 +48,8 @@ interface LifeDao {
     @Query("SELECT at FROM items WHERE kind IN ('Debit', 'CardSpend') AND category = 'food' AND dup IS NULL AND at BETWEEN :lo AND :hi ORDER BY at")
     suspend fun foodPaid(lo: Long, hi: Long): List<Long>
 
-    @Query("SELECT * FROM meals WHERE src = 'order' AND note = :key LIMIT 1")
-    suspend fun orderMeal(key: String): MealRow?
+    @Query("SELECT * FROM meals WHERE src = 'order' AND at = :at LIMIT 1")
+    suspend fun orderAt(at: Long): MealRow?
 
     @Query("SELECT * FROM meals WHERE src = 'order' AND NOT EXISTS (SELECT 1 FROM meal_items WHERE meal_id = meals.id) ORDER BY at DESC")
     suspend fun bareOrders(): List<MealRow>

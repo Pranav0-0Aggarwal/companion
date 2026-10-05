@@ -80,7 +80,7 @@ data class TripItemRow(
 )
 
 @Entity(tableName = "docs", indices = [Index("expires")])
-class DocRow(
+data class DocRow(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val kind: String,
     val title: String,

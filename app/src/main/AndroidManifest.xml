@@ -187,6 +187,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".system.FoodReply"
+            android:exported="false" />
+
+        <receiver
             android:name=".system.Remind"
             android:exported="false" />
 

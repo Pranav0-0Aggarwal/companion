@@ -31,6 +31,7 @@ object Vault {
         c.deleteDatabase(DB)
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().commit()
         keystore().deleteEntry(ALIAS)
+        VaultCrypto.wipe(c)
     }
 
     private fun keystore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }

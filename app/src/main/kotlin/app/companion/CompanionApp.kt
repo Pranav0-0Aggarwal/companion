@@ -6,7 +6,9 @@ import android.content.Context
 import android.os.Process
 import androidx.work.WorkManager
 import app.companion.ai.BertScorer
+import app.companion.chat.ChatEngine
 import app.companion.ai.DecideScorer
+import app.companion.ai.DocIngest
 import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
 import app.companion.ai.Models
@@ -25,6 +27,7 @@ import app.companion.data.Repo
 import app.companion.data.Upgrade
 import app.companion.data.Vault
 import app.companion.ingest.Gmail
+import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
 import app.companion.system.Alarms
 import app.companion.system.Export
@@ -35,7 +38,7 @@ import kotlinx.coroutines.runBlocking
 
 class Services(val app: Application) {
     val db by lazy { Vault.open(app) }
-    val repo by lazy { Repo(db) }
+    val repo by lazy { Repo(db, app) }
     val gov by lazy { Governor(app) }
     val scorer by lazy { Scorers(app, DecideScorer(app, gov), BertScorer(app, gov)) }
     val rules by lazy { RulesClassifier() }
@@ -43,7 +46,10 @@ class Services(val app: Application) {
     val nux by lazy { NuExtractor(app, gov) }
     val pending by lazy { Pending(app, repo, refine, gov, scorer, nux) }
     val planner: Planner by lazy { RulePlanner() }
-    val ingest by lazy { Ingest(app, repo, rules, pending) }
+    val chat by lazy { ChatEngine(app, repo, gov) }
+    val docs by lazy { DocIngest(repo, nux) }
+    val hooks by lazy { Hooks(app, repo, { chat.foods }, docs) }
+    val ingest by lazy { Ingest(app, repo, rules, pending, hooks) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
 

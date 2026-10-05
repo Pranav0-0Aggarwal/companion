@@ -13,6 +13,8 @@ import android.os.Messenger
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.RemoteException
+import app.companion.core.DocKind
+import app.companion.core.DocNux
 import app.companion.core.Extractor
 import app.companion.core.Field
 import app.companion.core.Nux
@@ -29,6 +31,9 @@ object NuxWire {
     const val MODEL = "model"
     const val THREADS = "threads"
     const val TEXT = "text"
+    const val PREFIX = "prefix"
+    const val SUFFIX = "suffix"
+    const val GRAMMAR = "grammar"
     const val JSON = "json"
     const val MB = "mb"
     const val ERROR = "error"
@@ -57,7 +62,10 @@ class NuxService : Service() {
                     check(handle != 0L)
                     out.putLong(NuxWire.MB, Debug.getPss() / 1024)
                 }
-                NuxWire.RUN -> out.putString(NuxWire.JSON, NuxJni.run(handle, Nux.PREFIX, d.getString(NuxWire.TEXT).orEmpty(), Nux.SUFFIX, Nux.GRAMMAR, Nux.MAX_TOKENS))
+                NuxWire.RUN -> out.putString(
+                    NuxWire.JSON,
+                    NuxJni.run(handle, d.getString(NuxWire.PREFIX) ?: Nux.PREFIX, d.getString(NuxWire.TEXT).orEmpty(), d.getString(NuxWire.SUFFIX) ?: Nux.SUFFIX, d.getString(NuxWire.GRAMMAR) ?: Nux.GRAMMAR, Nux.MAX_TOKENS),
+                )
             }
         } catch (_: Throwable) {
             out.putString(NuxWire.ERROR, "failed")
@@ -83,9 +91,16 @@ class NuxClient private constructor(private val c: Context, private val link: Li
     override val accel = "CPU"
     override val alive get() = !link.dead
 
-    fun run(text: String): String? {
+    fun run(text: String, tpl: Triple<String, String, String>? = null): String? {
         val r = try {
-            ask(to, NuxWire.RUN, Bundle().apply { putString(NuxWire.TEXT, text) }, RUN_SECS)
+            ask(to, NuxWire.RUN, Bundle().apply {
+                putString(NuxWire.TEXT, text)
+                tpl?.let { (p, s, g) ->
+                    putString(NuxWire.PREFIX, p)
+                    putString(NuxWire.SUFFIX, s)
+                    putString(NuxWire.GRAMMAR, g)
+                }
+            }, RUN_SECS)
         } catch (_: RemoteException) {
             null
         }
@@ -137,6 +152,18 @@ class NuExtractor(private val c: Context, private val gov: Governor) : Extractor
             null
         }
         return json?.let(Nux::parse).orEmpty().filterKeys { it in f }
+    }
+
+    fun doc(kind: DocKind, text: String): String? {
+        if (!on) return null
+        val model = Models.file(c, Manifest.nux) ?: return null
+        return try {
+            runBlocking {
+                gov.run(Manifest.nux, { open(model) }) { it.run(Nux.clip(text), Triple(DocNux.prefix(kind), DocNux.SUFFIX, DocNux.grammar(kind))) }
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun open(model: File) = try {

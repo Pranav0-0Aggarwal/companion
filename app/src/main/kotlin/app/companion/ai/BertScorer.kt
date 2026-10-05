@@ -26,13 +26,9 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
         val plan = Active.bert(app) ?: return null
         val key = plan.key(null)
         cache?.takeIf { it.first == key }?.let { return it.second }
-        val d = Models.custom(app)
         val l = runCatching {
-            val specs = listOf(Calibration.TYPE, Calibration.CATEGORY).filter(plan.spec::has).associateWith {
-                val f = plan.spec.file(it)
-                Spec("ModernBERT $it", f, 0, plan.shas.getValue(f), 30_000)
-            }
-            Loaded(plan, Bpe.fromJson(File(d, plan.spec.tokenizer).readText()), specs)
+            val specs = listOf(Calibration.TYPE, Calibration.CATEGORY).filter(plan.spec::has).associateWith { t -> Manifest.bert.first { it.file == plan.spec.file(t) } }
+            Loaded(plan, Bpe.fromJson(File(Models.dir(app), plan.spec.tokenizer).readText()), specs)
         }.onFailure { warn("load", it) }.getOrNull()
         cache = key to l
         Xnn.prune(app)
@@ -52,7 +48,7 @@ class BertScorer(private val app: Application, private val gov: Governor) : Scor
     private fun open(l: Loaded, task: String): () -> DecideRunner = {
         val f = l.plan.spec.file(task)
         val cache = Xnn.path(app, Weights.bert(task, l.plan.shas.getValue(f)))
-        DecideRunner.open(app, File(Models.custom(app), f).path, cache, Guard.threads(vitals(app)), false)
+        DecideRunner.open(app, File(Models.dir(app), f).path, cache, Guard.threads(vitals(app)), false)
     }
 
     private fun run(r: DecideRunner, l: Loaded, task: String, x: DecideInput): FloatArray {

@@ -126,7 +126,7 @@ object Dl {
     }
 
     private fun go(c: Context, alive: () -> Boolean, ping: (DlState) -> Unit): Pull {
-        val todo = pins.filter { Models.have(c, it) == Have.No }
+        val todo = pins.filterNot { Models.has(c, it) }
         var ready = total - todo.sumOf { it.bytes }
         val rate = Rate()
         val at = AtomicLong()

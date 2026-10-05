@@ -8,7 +8,7 @@ android
 
 ## Stack
 
-Native Android: Kotlin + Jetpack Compose, minSdk 34, target Samsung Galaxy Z Flip 7 (6.9" inner screen, 4.1" cover screen). On-device model: a fine-tuned, calibrated GLiNER2.5-Decide (486M) exported to ONNX and run with ONNX Runtime, loaded on demand. Local encrypted database with full-text search. Personal sideload install, not the Play Store.
+Native Android: Kotlin + Jetpack Compose, minSdk 34, target Samsung Galaxy Z Flip 7 (6.9" inner screen, 4.1" cover screen). On-device model: a fine-tuned, calibrated ModernBERT classifier (int8, LiteRT), downloaded from a pinned release and loaded on demand. Local encrypted database with full-text search. Personal sideload install, not the Play Store.
 
 ## Users
 

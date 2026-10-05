@@ -27,6 +27,8 @@ class BertSpec(
 
     fun has(task: String) = task in tasks
 
+    fun keep(ok: (String) -> Boolean) = BertSpec(model, template, maxLen, buckets, pad, cls, sep, tokenizer, calibration, inputs, tasks.filter { (t, v) -> t == Calibration.TYPE || ok(v.file) })
+
     fun labels(task: String) = tasks.getValue(task).labels
 
     fun file(task: String) = tasks.getValue(task).file
@@ -37,6 +39,8 @@ class BertSpec(
         const val ARCH = "modernbert-classifier"
         const val TEMPLATE = "{sender}: {text}"
         const val CAL = "calibration.json"
+
+        private fun plain(raw: String) = raw.isNotEmpty() && raw.length <= 128 && ".." !in raw && raw.none { it == '/' || it == '\\' || it < ' ' }
 
         private fun name(v: Any?, key: String? = null): String? =
             (if (key != null && v is Map<*, *>) v[key] else v) as? String
@@ -81,7 +85,7 @@ class BertSpec(
                 inputs = (m["inputs"] as? List<*>)?.map { it as String } ?: listOf("input_ids", "attention_mask"),
                 tasks = tasks,
             )
-            require((spec.files + spec.calibration).all { PrivateFiles.plain(it) != null })
+            require((spec.files + spec.calibration).all { plain(it) })
             return spec
         }
     }
@@ -95,7 +99,9 @@ class BertPlan(val spec: BertSpec, val shas: Map<String, String>) {
 
     companion object {
         fun of(spec: String?, listed: Map<String, String>, ok: (String, String) -> Boolean): BertPlan? {
-            val s = runCatching { BertSpec.fromJson(spec ?: return null) }.getOrNull() ?: return null
+            val all = runCatching { BertSpec.fromJson(spec ?: return null) }.getOrNull() ?: return null
+            val s = all.keep { f -> listed[f]?.let { ok(f, it) } == true }
+            if (!s.has(Calibration.TYPE)) return null
             val shas = s.files.associateWith { f -> listed[f]?.takeIf { ok(f, it) } ?: return null }
             return BertPlan(s, shas)
         }

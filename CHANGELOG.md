@@ -12,6 +12,8 @@ Backend only; the new screens land separately.
 - Trips. Spends in a trip's dates are tagged, forex card charges are converted at the rate in the message, with a summary.
 - Document vault. Insurance, registration, pollution certificate, FASTag, loans and warranties are read from messages or photos (offline text recognition), stored encrypted with a hardware-backed key, and remind you 30, 7 and 1 day before expiry.
 - Database version 9.
+- New message classifier. ModernBERT is now the only classifier that sorts your messages by type; spend categories come from the rules, the brand list and your corrections. It is downloaded once over Wi-Fi from the project's models-v4 release (about 413 MB, every file checked against a pinned checksum) and runs only on your phone. Until it is downloaded, messages are filed by the rules alone, and Settings, On-device AI shows a download prompt. When it finishes, Companion offers to reprocess your messages.
+- Removed GLiNER, the older classifier, and the private model import. Old GLiNER files and any imported private models are deleted from the phone on upgrade, which frees up to about 520 MB.
 
 ## 0.5.0 (2026-10-05)
 

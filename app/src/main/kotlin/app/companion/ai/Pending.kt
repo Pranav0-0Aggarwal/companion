@@ -25,7 +25,6 @@ import app.companion.data.Repo
 import app.companion.ingest.SmsImport
 import app.companion.sl
 import app.companion.system.Live
-import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +48,7 @@ class Pending(
     private val queue = LinkedHashMap<Long, Todo>()
     private val claimed = LinkedHashSet<Long>()
 
-    private fun model() = Active.bert(app) != null || listOf(Models.base(app, Manifest.decide), File(Models.custom(app), Manifest.decide.file)).any { it.isFile }
+    private fun model() = Active.bert(app) != null
 
     suspend fun submit(id: Long, raw: Raw, state: String) {
         if (!model()) return

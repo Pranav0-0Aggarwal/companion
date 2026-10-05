@@ -208,10 +208,25 @@ class BertTest {
     fun `plan needs every file listed and verified`() {
         val p = assertNotNull(BertPlan.of(specJson(), listed) { _, _ -> true })
         assertEquals(files.toSet(), p.shas.keys)
-        assertNull(BertPlan.of(specJson(), listed - "category.tflite") { _, _ -> true })
+        val t = assertNotNull(BertPlan.of(specJson(), listed - "category.tflite") { _, _ -> true })
+        assertFalse(t.spec.has(Calibration.CATEGORY))
+        assertFalse("category.tflite" in t.shas)
+        assertNull(BertPlan.of(specJson(), listed) { f, _ -> f != "tokenizer.json" })
         assertNull(BertPlan.of(specJson(), listed) { f, _ -> f != "type.tflite" })
         assertNull(BertPlan.of(specJson(), listed) { _, _ -> false })
         assertNull(BertPlan.of(specJson(), emptyMap()) { _, _ -> true })
+    }
+
+    @Test
+    fun `the published models-v4 spec runs the type model only`() {
+        val json = res("model_spec_v4.json")
+        val s = BertSpec.fromJson(json)
+        assertTrue(s.has(Calibration.TYPE))
+        assertFalse(s.has(Calibration.CATEGORY))
+        assertEquals(listOf(64, 96, 128), s.buckets)
+        val four = mapOf("tokenizer.json" to "a", "type.tflite" to "b", "calibration.json" to "c")
+        val p = assertNotNull(BertPlan.of(json, four) { _, _ -> true })
+        assertEquals(setOf("tokenizer.json", "type.tflite"), p.shas.keys)
     }
 
     @Test

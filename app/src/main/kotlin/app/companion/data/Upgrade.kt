@@ -47,7 +47,7 @@ class Upgrade(private val c: Context, private val db: Db) {
             val rows = d.page(pos, cap, PAGE)
             if (rows.isEmpty()) break
             val from = d.senders(rows.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender }
-            val raws = rows.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source.name in Refile.SOURCES_SET } }
+            val raws = rows.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source == Source.Sms } }
             db.withTransaction {
                 val keys = HashMap<String, HashMap<String, Int>>()
                 rows.forEach { i ->
@@ -83,7 +83,7 @@ class Upgrade(private val c: Context, private val db: Db) {
             val held = d.aliasNames().toSet()
             val ruled = rows.filter { it.tpl in taught }
             val from = if (ruled.isEmpty()) emptyMap() else d.senders(ruled.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender }
-            val raws = ruled.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source.name in Refile.SOURCES_SET } }
+            val raws = ruled.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source == Source.Sms } }
             db.withTransaction {
                 val keys = HashMap<String, HashMap<String, Int>>()
                 rows.forEach { i ->

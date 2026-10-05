@@ -7,6 +7,7 @@ import app.companion.core.Calibration
 import app.companion.core.CardFind
 import app.companion.core.Category
 import app.companion.core.Chan
+import app.companion.core.Corrections
 import app.companion.core.Cycles
 import app.companion.core.Dup
 import app.companion.core.Event
@@ -241,8 +242,15 @@ class Repo(private val db: Db) {
     suspend fun spending(id: Long, off: Boolean) = db.withTransaction {
         val key = d.item(id)?.merchant?.let { Fingerprint.norm(it) } ?: return@withTransaction
         if (off) d.putMoved(Moved(key)) else d.dropMoved(key)
-        d.merchantRows(0).filter { Fingerprint.norm(it.merchant) == key && (off && it.flow == null || !off && it.flow == Route.Self.name) }
-            .forEach { d.setFlow(it.id, if (off) Route.Self.name else null) }
+        val own = own()
+        d.merchantRows(0).filter { Fingerprint.norm(it.merchant) == key }.forEach { i ->
+            val flow = when {
+                off -> if (i.kind == Kind.Debit.name && i.flow == null) Route.Self.name else i.flow
+                i.flow == Route.Self.name -> i.move()?.let { Flows.of(it, Corrections.text(i.title, i.note, i.body), own)?.name }
+                else -> i.flow
+            }
+            if (flow != i.flow) d.setFlow(i.id, flow)
+        }
     }
 
     private suspend fun settle(i: Item): Taught {
@@ -265,10 +273,7 @@ class Repo(private val db: Db) {
 
     private suspend fun sender(i: Item, chosen: String): Pair<String, String>? {
         val key = d.senders(listOf(i.id)).firstOrNull()?.sender?.let(Senders::key)?.takeIf { it.isNotEmpty() } ?: return null
-        if (!Senders.counts(chosen)) {
-            d.deleteSender(key)
-            return null
-        }
+        if (!Senders.counts(chosen)) return null
         val r = d.senderRow(key)
         val n = Senders.bump(r?.label, r?.count ?: 0, chosen)
         d.putSender(SenderRule(key, chosen, n))

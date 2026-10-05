@@ -76,5 +76,6 @@ val Migrate6to7 = object : Migration(6, 7) {
 val Migrate7to8 = object : Migration(7, 8) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `dismissed` (`key` TEXT NOT NULL, PRIMARY KEY(`key`))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_items_tpl` ON `items` (`tpl`)")
     }
 }

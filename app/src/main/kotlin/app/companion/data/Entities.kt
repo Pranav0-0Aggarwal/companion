@@ -46,7 +46,7 @@ data class Profile(
     }
 }
 
-@Entity(tableName = "items", indices = [Index("kind"), Index("at"), Index("state")])
+@Entity(tableName = "items", indices = [Index("kind"), Index("at"), Index("state"), Index("tpl")])
 data class Item(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val kind: String,

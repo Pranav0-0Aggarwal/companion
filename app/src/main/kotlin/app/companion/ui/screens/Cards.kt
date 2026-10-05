@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Cycle
 import app.companion.data.Card
+import app.companion.data.brand
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.credit
@@ -128,7 +129,7 @@ fun CardsScreen(go: (String) -> Unit) {
             itemsIndexed(sel.rows, key = { _, t -> "t${t.id}" }) { k, t ->
                 MoneyRow(
                     t.title, listOfNotNull(shortDay(dateOf(t.at)), t.category, srcWord(t.src)).joinToString(" · "), money(t.paise, t.currency), t.credit,
-                    Modifier.animateItem().part(p, k == 0, k == sel.rows.lastIndex), lead = Ic.of(t.category),
+                    Modifier.animateItem().part(p, k == 0, k == sel.rows.lastIndex), lead = Ic.of(t.category), brand = t.brand,
                 )
             }
         }

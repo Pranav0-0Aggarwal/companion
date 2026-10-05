@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Cycle
 import app.companion.data.Item
+import app.companion.data.brand
 import app.companion.data.Link
 import app.companion.data.Profile
 import app.companion.data.cardPay
@@ -161,7 +162,7 @@ fun AskNeed(i: Item, links: Links, file: (String) -> Unit) {
     val first = i.picks().first()
     SwipeAccept("File as ${first.cap()}", { choose(first) }, enabled = !done) {
         PassLine(
-            i.head(), i.srcLine(links), lead = Ic.of(i.category), tone = Tone.Accent, lines = 1, fill = true,
+            i.head(), i.srcLine(links), lead = Ic.of(i.category), brand = i.brand, tone = Tone.Accent, lines = 1, fill = true,
             trailing = { StateStamp(if (done) "SETTLED" else "ASK", if (done) Ink.Green else Ink.Red) },
             actions = { if (!done) i.picks().forEachIndexed { k, c -> Btn(c.cap(), Modifier.weight(1f), go = k == 0, dense = true) { choose(c) } } },
         )
@@ -181,7 +182,7 @@ fun BillNeed(i: Item, today: LocalDate, pay: () -> Unit) {
         days?.let { inDays(it) },
     ).joinToString(" · ")
     PassLine(
-        i.title, sub, lead = Ic.Bolt, tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent, lines = 1, fill = true,
+        i.title, sub, lead = Ic.Bolt, brand = i.brand, tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent, lines = 1, fill = true,
         trailing = {
             val label = when {
                 done -> "PAID"

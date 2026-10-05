@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
+import app.companion.data.brand
 import app.companion.data.Profile
 import app.companion.data.State
 import app.companion.data.Taught
@@ -168,6 +169,7 @@ internal fun Entry(i: Item, a: Acts) {
             tags = i.tagList,
             onClick = { sheet = true },
             lead = Ic.src(i.src),
+            brand = i.brand,
             tone = if (i.open) Tone.Accent else Tone.Plain,
             trailing = {
                 val (t, ink) = when {

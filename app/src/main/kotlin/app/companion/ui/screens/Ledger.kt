@@ -41,6 +41,7 @@ import app.companion.core.Category
 import app.companion.core.Fingerprint
 import app.companion.core.Span
 import app.companion.data.Card
+import app.companion.data.brand
 import app.companion.data.Item
 import app.companion.data.Profile
 import app.companion.data.moved
@@ -198,7 +199,7 @@ fun LedgerScreen(go: (String) -> Unit) {
                     Column(Modifier.animateItem().part(p, k == 0, k == list.lastIndex)) {
                         MoneyRow(
                             i.title, i.srcLine(links), amt(i.paise, i.currency), i.credit,
-                            lead = Ic.of(i.category), stamp = i.stamp(), tags = i.tagList,
+                            lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagList,
                             onClick = { open = if (open == i.id) -1 else i.id },
                         )
                         AnimatedVisibility(open == i.id, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
@@ -254,6 +255,7 @@ internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, away:
 private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpend: (Boolean) -> Unit, onFile: (String) -> Unit) {
     val p = pal
     var sheet by remember { mutableStateOf(false) }
+    var rename by remember { mutableStateOf(false) }
     val key = i.merchant?.let { Fingerprint.norm(it) }
     val d = dateOf(i.at)
     val lines = listOf(
@@ -271,6 +273,7 @@ private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpe
         }
         FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Btn("This is…", dense = true) { sheet = true }
+            if (i.merchant != null) Btn("Rename merchant", dense = true) { rename = true }
             if (key != null && i.kind == "Debit") Chip("Not spending", key in moved) { onSpend(key !in moved) }
         }
         if (key != null && key in moved) {
@@ -279,4 +282,5 @@ private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpe
         DupPanel(i, Modifier.padding(top = 12.dp))
     }
     if (sheet) TypeSheet(i) { sheet = false }
+    if (rename) RenameSheet(i) { rename = false }
 }

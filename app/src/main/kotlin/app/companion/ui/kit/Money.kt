@@ -44,6 +44,7 @@ fun MoneyRow(
     credit: Boolean,
     modifier: Modifier = Modifier,
     lead: ImageVector? = null,
+    brand: String? = null,
     time: String? = null,
     stamp: String? = null,
     tags: List<String> = emptyList(),
@@ -54,7 +55,10 @@ fun MoneyRow(
         modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (lead != null) {
+        if (brand != null) {
+            BrandMark(brand)
+            Box(Modifier.size(14.dp))
+        } else if (lead != null) {
             Lead(lead, if (credit) Tone.Green else Tone.Accent)
             Box(Modifier.size(14.dp))
         } else if (time != null) {

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
+import app.companion.data.brand
 import app.companion.data.Owed
 import app.companion.data.Profile
 import app.companion.data.dueDate
@@ -111,6 +112,7 @@ private fun BillLine(o: Owed, day: LocalDate, cred: Intent?, onPay: () -> Unit, 
         b.title,
         sub,
         lead = Ic.Bolt,
+        brand = b.brand,
         tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent,
         onLong = {
             haptic(HapticFeedbackType.LongPress)

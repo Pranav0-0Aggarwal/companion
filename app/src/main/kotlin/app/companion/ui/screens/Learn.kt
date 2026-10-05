@@ -55,6 +55,7 @@ fun LearnSettings() {
     val rules by repo.rules.collectAsStateWithLifecycle(emptyList())
     val merchants by repo.learned.collectAsStateWithLifecycle(emptyList())
     val senders by repo.senderRules.collectAsStateWithLifecycle(emptyList())
+    val names by repo.aliases.collectAsStateWithLifecycle(emptyList())
     val share = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { Export.discard(c) }
     val ver by produceState<Pair<String?, String?>>(null to null) {
         value = withContext(Dispatchers.IO) { Active.version(c) to Models.version(c, Manifest.calibration) }
@@ -104,6 +105,17 @@ fun LearnSettings() {
         merchants.forEachIndexed { i, m ->
             if (i > 0) Rule()
             PassLine(m.key.cap(), "→ ${m.category.cap()}", actions = { Btn("Delete") { scope.launch { repo.deleteLearned(m.key) } } })
+        }
+    }
+    Section("Merchant names")
+    Group {
+        if (names.isEmpty()) PassLine("None yet", "Rename a merchant once and it is named that way from then on")
+        names.forEachIndexed { i, a ->
+            if (i > 0) Rule()
+            PassLine(
+                a.raw.cap(), "→ ${a.name}${if (a.auto) " · learned" else ""}", brand = a.name,
+                actions = { Btn("Delete") { scope.launch { repo.deleteAlias(a.raw) } } },
+            )
         }
     }
     Section("Sender rules")

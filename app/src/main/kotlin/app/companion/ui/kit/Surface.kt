@@ -192,6 +192,7 @@ fun PassLine(
     modifier: Modifier = Modifier,
     tags: List<String> = emptyList(),
     lead: ImageVector? = null,
+    brand: String? = null,
     tone: Tone = Tone.Accent,
     lines: Int = 2,
     fill: Boolean = false,
@@ -204,7 +205,10 @@ fun PassLine(
     val p = pal
     Column(modifier.fillMaxWidth().let { if (onClick != null || onLong != null) it.combinedClickable(onLongClickLabel = longLabel, onLongClick = onLong, onClick = onClick ?: {}) else it }) {
         Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (lead != null) {
+            if (brand != null) {
+                BrandMark(brand)
+                Box(Modifier.size(14.dp))
+            } else if (lead != null) {
                 Lead(lead, tone)
                 Box(Modifier.size(14.dp))
             }
@@ -222,7 +226,7 @@ fun PassLine(
                 Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
             } else {
                 androidx.compose.foundation.layout.FlowRow(
-                    Modifier.padding(start = if (lead != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
+                    Modifier.padding(start = if (lead != null || brand != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) { actions() }
             }

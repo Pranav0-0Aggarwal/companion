@@ -80,7 +80,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
         go(route)
     }
     val submit = { t: String ->
-        if (t.isNotBlank() && !s.busy) {
+        if (t.isNotBlank()) {
             q = TextFieldValue()
             hint = "Ask or say what you ate"
             kb?.hide()
@@ -134,7 +134,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
                 val list = rememberLazyListState()
                 LaunchedEffect(s.msgs.size, s.typing) { list.animateScrollToItem(0) }
                 LazyColumn(Modifier.fillMaxSize(), list, reverseLayout = true, contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (s.typing) item(key = "typing") { Typing() }
+                    if (s.typing) item(key = "typing") { Typing(s.working) }
                     items(s.msgs.asReversed(), key = { it.id }) { m ->
                         when (m) {
                             is Msg.User -> UserBubble(m.text)

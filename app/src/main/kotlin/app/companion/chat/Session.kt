@@ -14,6 +14,7 @@ import app.companion.core.Opt
 import app.companion.data.Item
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -57,6 +58,8 @@ class ChatSession(private val sl: Services) {
         private set
     var typing by mutableStateOf(false)
         private set
+    var working by mutableStateOf(false)
+        private set
     var ctx by mutableStateOf<LogReq?>(null)
 
     val pending get() = (msgs.lastOrNull() as? Msg.Pick)?.takeIf { !it.done }
@@ -65,14 +68,13 @@ class ChatSession(private val sl: Services) {
 
     fun send(raw: String, go: (String) -> Unit = {}) {
         val text = raw.trim()
-        if (text.isEmpty() || busy) return
+        if (text.isEmpty()) return
         (msgs.lastOrNull() as? Msg.Pick)?.done = true
         msgs += Msg.User(id(), text)
         run(go) { turn(text, go) }
     }
 
     fun today(day: LocalDate = LocalDate.now()) {
-        if (busy) return
         (msgs.lastOrNull() as? Msg.Pick)?.done = true
         msgs += Msg.User(id(), "What did I eat today?")
         run({}) { collect(sl.chat.dayCard(day), {}) }
@@ -81,7 +83,12 @@ class ChatSession(private val sl: Services) {
     fun stop() {
         job?.cancel()
         busy = false
+        idle()
+    }
+
+    private fun idle() {
         typing = false
+        working = false
     }
 
     fun reset() {
@@ -92,16 +99,23 @@ class ChatSession(private val sl: Services) {
     }
 
     private fun run(go: (String) -> Unit, block: suspend () -> Unit) {
+        val prev = job
+        prev?.cancel()
         busy = true
         typing = true
-        job = scope.launch {
+        val me = scope.launch(start = CoroutineStart.LAZY) {
+            prev?.join()
             try {
                 block()
             } finally {
-                busy = false
-                typing = false
+                if (job === coroutineContext[Job]) {
+                    busy = false
+                    idle()
+                }
             }
         }
+        job = me
+        me.start()
     }
 
     private suspend fun turn(text: String, go: (String) -> Unit) {
@@ -133,33 +147,34 @@ class ChatSession(private val sl: Services) {
         flow.collect { o ->
             when (o) {
                 is Out.Say -> {
-                    typing = false
+                    idle()
                     val b = bot ?: Msg.Bot(id()).also { msgs += it; bot = it }
                     b.text += o.delta
                 }
                 is Out.Used -> {
                     typing = true
+                    working = true
                     bot = null
                 }
                 is Out.Show -> {
-                    typing = false
+                    idle()
                     msgs += Msg.Res(id(), o.card)
                     if (o.card is Card.Meal) ctx = null
                 }
                 is Out.Ask -> {
-                    typing = false
+                    idle()
                     msgs += Msg.Pick(id(), o.question, ChatOpts.of(o.question))
                 }
                 is Out.Open -> go(o.route)
                 is Out.Fail -> {
-                    typing = false
+                    idle()
                     when (o.why) {
                         "model" -> msgs += Msg.Need(id())
                         "memory" -> msgs += Msg.Note(id(), "Not enough free memory for the chat model right now. Try again in a moment.")
                         else -> msgs += Msg.Note(id(), "I couldn't work that out. Try saying it another way.")
                     }
                 }
-                Out.Done -> typing = false
+                Out.Done -> idle()
             }
         }
     }

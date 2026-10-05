@@ -108,16 +108,17 @@ internal fun BotBubble(text: String) {
 }
 
 @Composable
-internal fun Typing() {
+internal fun Typing(working: Boolean) {
     val p = pal
     val on = motion()
     val t = rememberInfiniteTransition(label = "typing")
     Row(Modifier.padding(start = 16.dp)) {
-        Row(Modifier.clip(RoundedCornerShape(6.dp, 22.dp, 22.dp, 22.dp)).background(p.card).padding(horizontal = 18.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.clip(RoundedCornerShape(6.dp, 22.dp, 22.dp, 22.dp)).background(p.card).padding(horizontal = 18.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             repeat(3) { i ->
                 val a = if (on) t.animateFloat(0.3f, 1f, infiniteRepeatable(tween(520, delayMillis = i * 140), RepeatMode.Reverse), label = "d$i").value else 0.6f
                 Box(Modifier.size(7.dp).graphicsLayer { alpha = a }.background(p.ink2, CircleShape))
             }
+            if (working) Text("Working…", Modifier.padding(start = 4.dp), style = Ty.ui(14).copy(color = p.ink2))
         }
     }
 }

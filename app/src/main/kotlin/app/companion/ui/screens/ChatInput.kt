@@ -59,7 +59,7 @@ internal fun ChatInput(q: TextFieldValue, set: (TextFieldValue) -> Unit, send: (
             )
         }
         when {
-            busy -> Round(Ic.Stop, "Stop", p.accentBox, p.onAccentBox, stop)
+            busy && q.text.isBlank() -> Round(Ic.Stop, "Stop", p.accentBox, p.onAccentBox, stop)
             q.text.isBlank() -> if (listen != null) Mic(listening, listen)
             else -> Round(Ic.Send, "Send", p.accent, p.onAccent, send)
         }

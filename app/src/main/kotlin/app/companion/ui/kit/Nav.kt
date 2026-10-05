@@ -53,10 +53,10 @@ import app.companion.ui.pal
 
 enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     Today("today", "Today", Ic.Today),
-    Ledger("ledger", "Ledger", Ic.Ledger),
-    Cards("cards", "Cards", Ic.Cards),
-    Bills("bills", "Bills", Ic.Bills),
+    Money("money", "Money", Ic.Money),
+    Food("food", "Food", Ic.Food),
     Inbox("inbox", "Inbox", Ic.Inbox),
+    You("you", "You", Ic.User),
 }
 
 private val PillShape = RoundedCornerShape(32.dp)

@@ -196,6 +196,9 @@ interface Dao {
     @Query("SELECT * FROM tally WHERE day >= :from")
     fun tally(from: Long): Flow<List<Tally>>
 
+    @Query("SELECT (SELECT COUNT(*) FROM links WHERE at >= :from) + COALESCE((SELECT SUM(n) FROM tally WHERE day = :day), 0)")
+    fun read(from: Long, day: Long): Flow<Int>
+
     @Query("SELECT category FROM learned WHERE key = :key")
     suspend fun learned(key: String): String?
 

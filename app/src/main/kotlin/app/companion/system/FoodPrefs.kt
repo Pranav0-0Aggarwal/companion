@@ -42,4 +42,8 @@ object FoodPrefs {
     fun weighed(c: Context) = p(c).getLong("weighed", -1L)
 
     fun weighed(c: Context, day: Long) = p(c).edit().putLong("weighed", day).apply()
+
+    fun sure(c: Context): Set<Long> = p(c).getString("sure", "").orEmpty().split(',').mapNotNull(String::toLongOrNull).toSet()
+
+    fun sure(c: Context, id: Long) = p(c).edit().putString("sure", (sure(c) + id).toList().takeLast(200).joinToString(",")).apply()
 }

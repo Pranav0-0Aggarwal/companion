@@ -63,7 +63,6 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }
             item(key = "ai") { AiSettings() }
             item(key = "proc") { ProcessingSection() }
-            item(key = "learn") { LearnSettings() }
             item(key = "privacy") { Section("Privacy") }
             item(key = "privacy-row") {
                 Group {

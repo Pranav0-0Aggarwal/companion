@@ -26,7 +26,7 @@ import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Ic
 import app.companion.ui.pal
 
-private fun prompt(a: FragmentActivity, onOk: () -> Unit) {
+internal fun prompt(a: FragmentActivity, onOk: () -> Unit) {
     val info = BiometricPrompt.PromptInfo.Builder()
         .setTitle("Unlock Companion")
         .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)

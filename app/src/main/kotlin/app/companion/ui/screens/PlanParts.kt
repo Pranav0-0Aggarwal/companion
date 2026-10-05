@@ -88,47 +88,6 @@ fun RemindBtn(title: String, due: LocalDate, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun NextUp(go: (String) -> Unit) {
-    val c = LocalContext.current
-    val repo = c.sl.repo
-    val p by repo.profile.collectAsStateWithLifecycle(Profile())
-    val next by repo.next().collectAsStateWithLifecycle(null)
-    val now by rememberNow(30_000)
-    var tick by remember { mutableIntStateOf(0) }
-    val events by produceState(emptyList<CalEvent>(), tick) { value = withContext(Dispatchers.IO) { Cals.today(c) } }
-    val ask = rememberPerms(*calPerms) { tick++ }
-    val scope = rememberCoroutineScope()
-    Section("Next up", "Plan") { go("plan") }
-    Group {
-        val n = next
-        if (n != null) {
-            val mins = ((n.remindAt ?: now) - now) / 60_000
-            PassLine(
-                title = n.title,
-                sub = Voice.addr(p.name, if (mins < 60) "in ${mins.coerceAtLeast(0)} min" else "at ${clock(n.remindAt ?: now)}"),
-                trailing = { if (mins < 60) Stamp("SOON", ink = app.companion.ui.kit.Ink.Amber) },
-                actions = { Btn("Done") { scope.launch { Plan.finish(c, n.id) } } },
-            )
-            Rule()
-        }
-        events.forEach { e ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (e.allDay) "all day" else clock(e.start), Modifier.width(64.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = pal.ink2))
-                Column {
-                    Text(e.title, style = Ty.ui(16, FontWeight.Medium).copy(color = pal.ink))
-                    if (e.place.isNotBlank()) Text(e.place, style = Ty.ui(13, FontWeight.Normal).copy(color = pal.ink2))
-                }
-            }
-        }
-        if (!c.has(Manifest.permission.READ_CALENDAR)) {
-            PassLine("Show today's calendar", "Read only on this phone", actions = { Btn("Allow") { ask() } })
-        } else if (n == null && events.isEmpty()) {
-            PassLine("Nothing planned", Voice.addr(p.name, "your day is open"))
-        }
-    }
-}
-
-@Composable
 fun Suggested() {
     val repo = LocalContext.current.sl.repo
     val items by repo.suggested().collectAsStateWithLifecycle(emptyList())

@@ -17,6 +17,8 @@ private fun group(n: Long): String {
     return "$head,${s.takeLast(3)}"
 }
 
+fun num(n: Int) = group(n.toLong())
+
 fun plain(paise: Long): String {
     val a = kotlin.math.abs(paise)
     return "${group(a / 100)}.${(a % 100).toString().padStart(2, '0')}"

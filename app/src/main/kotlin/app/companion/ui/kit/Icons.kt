@@ -69,6 +69,10 @@ object Ic {
     val User = icon("user", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 21a8 8 0 0 1 16 0")
     val Download = icon("download", "M12 4v12M6 10l6 6 6-6M5 20h14")
     val Calendar = Today
+    val Money = icon("money", "M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11", "M16 13.5h.01")
+    val Trip = icon("trip", "M21 3L3 11l7 3 3 7z", "M10 14l11-11")
+    val Vault = icon("vault", "M9 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M12 11h9M18 11v3")
+    val Scale = icon("scale", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z", "M8 10a4 4 0 0 1 8 0M12 10l2-2")
 
     fun of(category: String?) = when (category) {
         "food" -> Food

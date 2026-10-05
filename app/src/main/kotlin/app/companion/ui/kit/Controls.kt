@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
@@ -200,5 +202,29 @@ fun IconRow(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
     Row(modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, Modifier.size(18.dp), tint = p.green)
         Text(text, Modifier.padding(start = 8.dp), style = Ty.ui(13, FontWeight.Medium).copy(color = p.green, fontSize = 13.sp))
+    }
+}
+
+@Composable
+fun Segmented(options: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+    val p = pal
+    val x = remember { androidx.compose.animation.core.Animatable(selected.toFloat()) }
+    androidx.compose.runtime.LaunchedEffect(selected) { x.animateTo(selected.toFloat(), Motion.snappy()) }
+    Row(
+        modifier.fillMaxWidth().height(44.dp).clip(PillShape).background(p.raised).padding(3.dp)
+            .drawBehind {
+                val w = size.width / options.size
+                drawRoundRect(p.accentBox, androidx.compose.ui.geometry.Offset(w * x.value, 0f), androidx.compose.ui.geometry.Size(w, size.height), androidx.compose.ui.geometry.CornerRadius(size.height / 2))
+            },
+    ) {
+        options.forEachIndexed { i, o ->
+            val on = i == selected
+            Box(
+                Modifier.weight(1f).fillMaxHeight().clip(PillShape).semantics { this.selected = on }.clickable(role = Role.Tab) { onSelect(i) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(o, style = Ty.ui(14, if (on) FontWeight.SemiBold else FontWeight.Medium).copy(color = if (on) p.onAccentBox else p.ink2), maxLines = 1)
+            }
+        }
     }
 }

@@ -55,6 +55,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".CoverActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode|keyboard|keyboardHidden|navigation|layoutDirection"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:showWhenLocked="true"
+            android:taskAffinity="app.companion.cover"
+            android:theme="@style/Theme.Cover" />
+
         <activity-alias
             android:name=".HealthRationale"
             android:exported="true"

@@ -68,7 +68,7 @@ private fun bucket(b: Owed, day: LocalDate) = when (b.item.dueDate?.let { daysTo
 }
 
 @Composable
-fun BillsScreen(go: (String) -> Unit) {
+fun BillsScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
     val c = LocalContext.current
     val repo = c.sl.repo
     val scope = rememberCoroutineScope()
@@ -88,7 +88,7 @@ fun BillsScreen(go: (String) -> Unit) {
     } + if (stale.isEmpty()) "" else " · ${stale.size} older to check"
     val groups = remember(bills, day) { bills.groupBy { bucket(it, day) } }
     val pay = { id: Long -> scope.launch { repo.pay(id) }; Unit }
-    Screen("Bills", sub, tools = { ToolButton(Ic.Plan, "Plan and reminders") { go("plan") } }) {
+    Screen("Money", sub, lead = lead, tools = { ToolButton(Ic.Plan, "Plan and reminders") { go("plan") } }) {
         if (bills.isEmpty()) {
             val body = if (stale.isEmpty()) "nothing is waiting to be paid." else "nothing new is waiting. The older ones below are probably paid."
             empty(Ic.Bills, "You're all paid up", Voice.addr(profile.name, body))

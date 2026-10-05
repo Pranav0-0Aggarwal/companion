@@ -112,7 +112,7 @@ private fun pacing(money: List<Item>, ym: YearMonth, now: LocalDate): Pacing? {
 }
 
 @Composable
-fun LedgerScreen(go: (String) -> Unit) {
+fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
     val p = pal
     val repo = LocalContext.current.sl.repo
     val prof by repo.profile.collectAsStateWithLifecycle(Profile())
@@ -164,8 +164,9 @@ fun LedgerScreen(go: (String) -> Unit) {
     val pace = remember(money, ym, all) { if (all) pacing(money, ym, now) else null }
     val span = Span(ym.atDay(1), if (back == 0) now else ym.atEndOfMonth())
     Screen(
-        "Ledger",
+        "Money",
         "${shortDay(span.from)} to ${shortDay(span.to)} · ${inr(spent)} ${if (parked) "moved" else "spent"}",
+        lead = lead,
         tools = { ToolButton(Ic.Search, "Search or ask") { ask(AskReq(null)) } },
     ) {
         item(key = "ask") { AskPill(hint = "Ask about your spending") }

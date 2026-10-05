@@ -137,6 +137,8 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     fun tally(fromDay: Long) = d.tally(fromDay)
 
+    fun read(from: Long, day: Long) = d.read(from, day)
+
     fun chats(since: Long) = d.chats(since)
 
     suspend fun important(name: String) = db.withTransaction {

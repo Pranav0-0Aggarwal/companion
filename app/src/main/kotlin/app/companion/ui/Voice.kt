@@ -10,9 +10,9 @@ object Voice {
 
     fun hello(name: String, hour: Int): String {
         val part = when (hour) {
-            in 5..11 -> "Good morning"
-            in 12..16 -> "Good afternoon"
-            else -> "Good evening"
+            in 5..11 -> "Morning"
+            in 12..16 -> "Afternoon"
+            else -> "Evening"
         }
         return if (name.isBlank()) part else "$part, $name"
     }
@@ -22,4 +22,12 @@ object Voice {
     fun due(name: String, title: String, days: Int) = addr(name, "$title due ${inDays(days)}")
 
     fun otp(name: String, service: String) = addr(name, "$service code")
+
+    fun rel(n: Int) = when {
+        n == 0 -> "Today"
+        n == -1 -> "Yesterday"
+        n == 1 -> "Tomorrow"
+        n < 0 -> "${-n} days ago"
+        else -> "In $n days"
+    }
 }

@@ -2,11 +2,11 @@ package app.companion.system.widget
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ExperimentalGlanceApi
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.Action
@@ -30,6 +30,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import app.companion.CoverActivity
 import app.companion.core.Brief
 import app.companion.core.Cover
 import app.companion.core.Lane
@@ -88,8 +89,11 @@ class CoverWidget : GlanceAppWidget() {
     }
 }
 
-private fun open(c: Context, route: String): Action =
-    actionStartActivity(Notes.intent(c, route).setData(Uri.parse("app.companion://$route")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+@OptIn(ExperimentalGlanceApi::class)
+private fun open(c: Context, route: String): Action {
+    val i = CoverActivity.intent(c, when (route) { "bills" -> 4; "ledger" -> 1; else -> 0 })
+    return CoverActivity.options(c)?.let { actionStartActivity(i, actionParametersOf(), it) } ?: actionStartActivity(i)
+}
 
 private fun join(c: Context, m: Meeting): Action = actionStartActivity(
     Intent(c, Joined::class.java).putExtra(Joined.KEY, Meetings.key(m)).putExtra(Joined.URL, m.join?.url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -119,6 +123,7 @@ private fun Face(c: Context, s: Seen) {
         } else {
             Primary(first.first)
             lines.drop(1).take(2).forEach { Row(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) { Secondary(it.second) } }
+            if (lines.size <= 2) Text("Open", GlanceModifier.fillMaxWidth().padding(top = 10.dp, start = 8.dp).clickable(open(c, "today")), style = TextStyle(color = accent, fontSize = 16.sp, fontWeight = FontWeight.Medium))
         }
     }
 }

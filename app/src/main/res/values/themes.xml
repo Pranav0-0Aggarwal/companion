@@ -6,4 +6,7 @@
         <item name="android:windowSplashScreenIconBackgroundColor">@color/brand</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
+    <style name="Theme.Cover" parent="Theme.Companion">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

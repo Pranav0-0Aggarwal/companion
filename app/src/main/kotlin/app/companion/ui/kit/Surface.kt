@@ -94,7 +94,9 @@ fun Screen(
     back: (() -> Unit)? = null,
     tall: Boolean = true,
     nav: Boolean = true,
+    foot: Dp = 0.dp,
     state: LazyListState = rememberLazyListState(),
+    lead: (@Composable () -> Unit)? = null,
     tools: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
@@ -107,8 +109,9 @@ fun Screen(
         derivedStateOf { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / span).coerceIn(0f, 1f) }
     }
     Box(modifier.fillMaxSize().background(p.bg)) {
-        LazyColumn(Modifier.fillMaxSize(), state, PaddingValues(bottom = bottom + if (nav) 112.dp else 32.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), state, PaddingValues(bottom = bottom + foot + if (nav) 112.dp else 32.dp)) {
             item(key = "head", contentType = "head") { Head(title, sub, top, head, t) }
+            if (lead != null) item(key = "lead", contentType = "lead") { lead() }
             content()
         }
         Row(

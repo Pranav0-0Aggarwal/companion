@@ -80,8 +80,8 @@ private val shapes = Shapes(
 )
 
 @Composable
-fun CompanionTheme(content: @Composable () -> Unit) {
-    val p = if (isSystemInDarkTheme()) Night else Light
+fun CompanionTheme(dark: Boolean? = null, content: @Composable () -> Unit) {
+    val p = if (dark ?: isSystemInDarkTheme()) Night else Light
     val base = if (p.dark) darkColorScheme() else lightColorScheme()
     val scheme = base.copy(
         primary = p.accent, onPrimary = p.onAccent, primaryContainer = p.accentBox, onPrimaryContainer = p.onAccentBox,

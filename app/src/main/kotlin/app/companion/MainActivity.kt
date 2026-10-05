@@ -50,12 +50,19 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.navigation.NavBackStackEntry
-import app.companion.ui.screens.BillsScreen
+import app.companion.ui.screens.FoodScreen
+import app.companion.ui.screens.LearnScreen
+import app.companion.ui.screens.MoneyScreen
+import app.companion.ui.screens.MoneySeg
+import app.companion.ui.screens.VaultScreen
+import app.companion.ui.screens.YouScreen
+import app.companion.ui.cover.CoverPager
+import app.companion.core.Fit
+import app.companion.core.Reveal
+import androidx.compose.ui.platform.LocalConfiguration
 import app.companion.ui.screens.CaptureSheet
-import app.companion.ui.screens.CardsScreen
 import app.companion.ui.screens.FlexScreen
 import app.companion.ui.screens.InboxScreen
-import app.companion.ui.screens.LedgerScreen
 import app.companion.ui.screens.LocalCapture
 import app.companion.ui.screens.LockScreen
 import app.companion.ui.screens.OnboardingScreen
@@ -72,7 +79,11 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         take(intent)
-        setContent { CompanionTheme { Root(this, unlocked, capture, { capture = it }, dest, { dest = null }) { unlocked = true } } }
+        setContent {
+            val cfg = LocalConfiguration.current
+            val small = Fit.cover(cfg.screenWidthDp, cfg.screenHeightDp)
+            CompanionTheme(dark = if (small) true else null) { Root(this, unlocked, capture, { capture = it }, dest, { dest = null }, small) { unlocked = true } }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -87,7 +98,7 @@ class MainActivity : FragmentActivity() {
             else -> capture
         }
         if (i?.action == OPEN) {
-            val route = i.getStringExtra(ROUTE)?.takeIf { it in tabs }
+            val route = i.getStringExtra(ROUTE)?.takeIf { it in tabs || it in MoneySeg.routes }
             if (route != null) dest = Dest(route, i.getLongExtra(ITEM, 0), System.nanoTime())
         }
     }
@@ -108,13 +119,14 @@ class MainActivity : FragmentActivity() {
 private class Dest(val route: String, val item: Long, val n: Long)
 
 @Composable
-private fun Root(a: FragmentActivity, unlocked: Boolean, capture: String?, setCapture: (String?) -> Unit, dest: Dest?, took: () -> Unit, onUnlock: () -> Unit) {
+private fun Root(a: FragmentActivity, unlocked: Boolean, capture: String?, setCapture: (String?) -> Unit, dest: Dest?, took: () -> Unit, small: Boolean, onUnlock: () -> Unit) {
     val p by a.sl.repo.profile.collectAsStateWithLifecycle<Profile?>(null)
     val pr = p
     when {
         pr == null -> Box(Modifier.fillMaxSize().background(pal.bg))
         !pr.done -> OnboardingScreen()
         pr.lock && !unlocked -> LockScreen(a, onUnlock)
+        small -> CoverPager(Reveal.of(false, true, false, true), null)
         else -> Shell(a, capture, setCapture, dest, took)
     }
 }
@@ -138,7 +150,10 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
     var ask by remember { mutableStateOf<AskReq?>(null) }
     val on = motion()
     val snack = remember { SnackbarHostState() }.let { h -> Snack(h, rememberCoroutineScope()) }
-    val go: (String) -> Unit = { r ->
+    val go: (String) -> Unit = { to ->
+        val seg = MoneySeg.routes[to]
+        if (seg != null) MoneySeg.flow.value = seg
+        val r = if (seg != null) "money" else to
         nav.navigate(r) {
             if (r in tabs) {
                 popUpTo("today") { saveState = true }
@@ -180,10 +195,12 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                             popExitTransition = { if (pop()) slideOut else exit },
                         ) {
                             composable("today") { TodayScreen(go) }
-                            composable("ledger") { LedgerScreen(go) }
-                            composable("cards") { CardsScreen(go) }
-                            composable("bills") { BillsScreen(go) }
+                            composable("money") { MoneyScreen(go) }
+                            composable("food") { FoodScreen(go) }
                             composable("inbox") { InboxScreen(go) }
+                            composable("you") { YouScreen(go) }
+                            composable("vault") { VaultScreen { nav.popBackStack() } }
+                            composable("learn") { LearnScreen { nav.popBackStack() } }
                             composable("settings") { SettingsScreen { nav.popBackStack() } }
                             composable("plan") { PlanScreen({ nav.popBackStack() }) }
                         }

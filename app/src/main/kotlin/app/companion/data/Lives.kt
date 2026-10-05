@@ -15,6 +15,8 @@ import app.companion.core.Wen
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 class Eaten(val meal: MealRow, val items: List<MealItemRow>) {
     val kcal get() = items.sumOf { it.kcal }
@@ -56,6 +58,17 @@ class Lives(private val db: Db) {
         if (ms.isEmpty()) return emptyList()
         val by = d.mealItems(ms.map { it.id }).groupBy { it.mealId }
         return ms.map { Eaten(it, by[it.id].orEmpty()) }
+    }
+
+    fun eatenOn(day: LocalDate): Flow<List<Eaten>> = combine(d.mealsBetween(day.toEpochDay(), day.toEpochDay()), d.itemsBetween(day.toEpochDay(), day.toEpochDay())) { ms, its ->
+        val by = its.groupBy { it.mealId }
+        ms.map { Eaten(it, by[it.id].orEmpty()) }
+    }
+
+    suspend fun scale(id: Long, f: Double) = db.withTransaction {
+        val rows = d.mealItems(listOf(id))
+        d.clearMeal(id)
+        d.addMealItems(rows.map { it.copy(id = 0, qty = it.qty * f, kcal = it.kcal * f, protein = it.protein?.times(f), carbs = it.carbs?.times(f), fat = it.fat?.times(f)) })
     }
 
     suspend fun kcalOn(day: LocalDate) = eaten(day).sumOf { it.kcal }

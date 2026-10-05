@@ -12,36 +12,6 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-abstract class FetchNeedle : DefaultTask() {
-    @get:Input abstract val rev: Property<String>
-
-    @get:Input abstract val pins: MapProperty<String, String>
-
-    @get:OutputDirectory abstract val dir: DirectoryProperty
-
-    private fun sha(f: File) = MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString("") { "%02x".format(it) }
-
-    @TaskAction
-    fun fetch() {
-        val out = dir.get().asFile.also { it.mkdirs() }
-        pins.get().forEach { (name, want) ->
-            val f = File(out, name)
-            if (f.isFile && sha(f) == want) return@forEach
-            val tmp = File(out, "$name.part")
-            val c = URI("https://huggingface.co/Cactus-Compute/needle3/resolve/${rev.get()}/android-arm64/$name").toURL().openConnection()
-            c.connectTimeout = 30_000
-            c.readTimeout = 60_000
-            c.getInputStream().use { i -> tmp.outputStream().use { i.copyTo(it) } }
-            if (sha(tmp) != want) {
-                tmp.delete()
-                throw GradleException("$name does not match its pinned SHA-256")
-            }
-            f.delete()
-            tmp.renameTo(f)
-        }
-    }
-}
-
 abstract class FetchLlama : DefaultTask() {
     @get:Input abstract val urls: MapProperty<String, String>
 
@@ -96,15 +66,6 @@ abstract class FetchLlama : DefaultTask() {
     }
 }
 
-val needleDir = layout.buildDirectory.dir("needle")
-val fetchNeedle = tasks.register<FetchNeedle>("fetchNeedle") {
-    rev = "27c0a9a5b3ca835e0b7dbeaccf555df03dac493d"
-    pins = mapOf(
-        "libneedle.a" to "b8e73952054686f68e4319dcf69ad72a3de57faab73b73d9a67898f2c9d66110",
-        "needle.h" to "3aa713942528d944598458cecb4a262f2cc49349bec63355f91df0b159964e55",
-    )
-    dir = needleDir
-}
 val llamaDir = layout.buildDirectory.dir("llama")
 val fetchLlama = tasks.register<FetchLlama>("fetchLlama") {
     urls = mapOf(
@@ -117,7 +78,7 @@ val fetchLlama = tasks.register<FetchLlama>("fetchLlama") {
     )
     dir = llamaDir
 }
-tasks.matching { t -> listOf("generateJsonModel", "configureCMake", "buildCMake", "externalNativeBuild").any(t.name::startsWith) }.configureEach { dependsOn(fetchNeedle, fetchLlama) }
+tasks.matching { t -> listOf("generateJsonModel", "configureCMake", "buildCMake", "externalNativeBuild").any(t.name::startsWith) }.configureEach { dependsOn(fetchLlama) }
 
 val ver = System.getenv("COMPANION_VERSION") ?: "0.1.0"
 val local = Properties().apply {
@@ -139,7 +100,6 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += listOf(
-                    "-DNEEDLE_DIR=${needleDir.get().asFile}",
                     "-DLLAMA_DIR=${llamaDir.get().asFile}/llama.cpp",
                     "-DKLEIDIAI_DIR=${llamaDir.get().asFile}/kleidiai",
                     "-DANDROID_STL=c++_static",

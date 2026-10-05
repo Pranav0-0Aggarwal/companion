@@ -94,7 +94,7 @@ object PrivateImport {
         }
         picks.filter { Pf.plain(it.name).let { n -> n == Pf.SPEC || n == Pf.MANIFEST } }.forEach { take(it, it.name!!, Pf.SMALL) }
         val spec = File(stage, Pf.SPEC).takeIf { it.isFile } ?: File(Models.custom(c), Pf.SPEC).takeIf { it.isFile }
-        val seen = Pf.screen(names, Pf.allowed(Manifest.all.map { it.file }.toSet(), spec?.readText()))
+        val seen = Pf.screen(names, Pf.allowed(Manifest.every.map { it.file }.toSet(), spec?.readText()))
         if (!Pf.commit(seen)) return seen
         picks.filter { Pf.plain(it.name).let { n -> n != Pf.SPEC && n != Pf.MANIFEST } }.forEach { take(it, it.name!!, Pf.CAP) }
         st.update { it.copy(note = "Verifying", done = total, total = total) }

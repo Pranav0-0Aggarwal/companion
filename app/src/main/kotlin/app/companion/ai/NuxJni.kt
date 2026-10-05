@@ -2,7 +2,7 @@ package app.companion.ai
 
 object NuxJni {
     init {
-        System.loadLibrary("nux_jni")
+        System.loadLibrary("llm_jni")
     }
 
     external fun load(fd: Int, threads: Int): Long

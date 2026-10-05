@@ -82,7 +82,7 @@ fun AiSettings() {
             val h = disk[f.file]?.first ?: Have.No
             val part = disk[f.file]?.second ?: 0
             val text = when {
-                f === Pins.nux && !Chip.nux -> "Not supported on this phone's CPU"
+                f in Pins.llama && !Chip.nux -> "Not supported on this phone's CPU"
                 !Models.pinned(f) -> "waiting for the pinned checksum"
                 h == Have.Custom -> "custom"
                 h == Have.Base -> "ready"
@@ -99,7 +99,7 @@ fun AiSettings() {
         }
         PassLine("Message classifier", if (live?.name?.startsWith("ModernBERT") == true) "$kind · loaded · ${live?.accel} · about ${live?.mb} MB" else kind)
         Rule()
-        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Classifier unloads after 30 s idle, Needle and Smart extraction after 60 s.")
+        PassLine("Memory", "Process about ${gov.rssMb()} MB. One model at a time. Classifier unloads after 30 s idle, Conversation and Smart extraction after 60 s.")
         Rule()
         Column(Modifier.padding(16.dp)) {
             if (missing || busy) {

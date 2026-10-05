@@ -7,7 +7,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PrivateFilesTest {
-    private val base = setOf("decide.tflite", "needle3.cact", "calibration.json")
+    private val base = setOf("decide.tflite", "tokenizer.dtk", "calibration.json")
     private val spec = """{"arch":"modernbert-classifier","buckets":[32],"tokenizer":"tokenizer.json","tasks":{"type":{"file":"type.tflite","labels":["a"]},"category":{"file":"category.tflite","labels":["b"]}}}"""
     private val a = "a".repeat(64)
     private val b = "b".repeat(64)

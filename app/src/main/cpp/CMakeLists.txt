@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(needle_jni C CXX)
+project(companion_jni C CXX)
 
 foreach(o BUILD_SHARED_LIBS GGML_LTO GGML_OPENMP GGML_NATIVE GGML_LLAMAFILE LLAMA_CURL LLAMA_OPENSSL LLAMA_BUILD_COMMON LLAMA_BUILD_TESTS LLAMA_BUILD_TOOLS LLAMA_BUILD_EXAMPLES LLAMA_BUILD_SERVER LLAMA_BUILD_APP)
     set(${o} OFF CACHE BOOL "" FORCE)
@@ -20,14 +20,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(${LLAMA_DIR} llama EXCLUDE_FROM_ALL)
 
-add_library(needle_jni SHARED needle_jni.c)
-target_include_directories(needle_jni PRIVATE ${NEEDLE_DIR})
-target_compile_options(needle_jni PRIVATE -Wall -Werror -fvisibility=hidden)
-target_link_libraries(needle_jni PRIVATE ${NEEDLE_DIR}/libneedle.a)
-target_link_options(needle_jni PRIVATE -Wl,--exclude-libs,ALL -Wl,-z,max-page-size=16384)
-set_target_properties(needle_jni PROPERTIES LINKER_LANGUAGE CXX)
-
-add_library(nux_jni SHARED nux_jni.cpp)
-target_compile_options(nux_jni PRIVATE -Wall -Werror -fvisibility=hidden -O3)
-target_link_libraries(nux_jni PRIVATE llama)
-target_link_options(nux_jni PRIVATE -Wl,--exclude-libs,ALL -Wl,-z,max-page-size=16384 -Wl,--gc-sections)
+add_library(llm_jni SHARED nux_jni.cpp chat_jni.cpp)
+target_compile_options(llm_jni PRIVATE -Wall -Werror -fvisibility=hidden -O3)
+target_link_libraries(llm_jni PRIVATE llama)
+target_link_options(llm_jni PRIVATE -Wl,--exclude-libs,ALL -Wl,-z,max-page-size=16384 -Wl,--gc-sections)

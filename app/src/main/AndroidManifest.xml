@@ -121,11 +121,6 @@
         </service>
 
         <service
-            android:name=".ai.NeedleService"
-            android:exported="false"
-            android:isolatedProcess="true" />
-
-        <service
             android:name=".ai.NuxService"
             android:exported="false"
             android:isolatedProcess="true" />

@@ -9,7 +9,7 @@ import app.companion.ai.BertScorer
 import app.companion.ai.DecideScorer
 import app.companion.ai.Governor
 import app.companion.ai.ModelJobs
-import app.companion.ai.NeedlePlanner
+import app.companion.ai.Models
 import app.companion.ai.NuExtractor
 import app.companion.ai.Pending
 import app.companion.ai.Processing
@@ -18,6 +18,7 @@ import app.companion.ui.Proc
 import app.companion.core.Merchant
 import app.companion.core.NoExtractor
 import app.companion.core.Planner
+import app.companion.core.RulePlanner
 import app.companion.core.Refine
 import app.companion.core.RulesClassifier
 import app.companion.data.Repo
@@ -41,7 +42,7 @@ class Services(val app: Application) {
     val refine by lazy { Refine(rules, NoExtractor, scorer::calibration, scorer) }
     val nux by lazy { NuExtractor(app, gov) }
     val pending by lazy { Pending(app, repo, refine, gov, scorer, nux) }
-    val planner: Planner by lazy { NeedlePlanner(app, gov) }
+    val planner: Planner by lazy { RulePlanner() }
     val ingest by lazy { Ingest(app, repo, rules, pending) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
@@ -69,6 +70,7 @@ class CompanionApp : Application() {
         Proc.watch(this)
         Export.sweep(this)
         Upgrade.boot(this)
+        Thread { Models.purge(this) }.start()
     }
 
     override fun onTrimMemory(level: Int) {

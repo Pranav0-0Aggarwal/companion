@@ -94,7 +94,7 @@ interface Dao {
     @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit') AND dup IS NULL AND at >= :since AND (flow = 'CardBill' OR category = 'Bills') ORDER BY at")
     suspend fun cardPays(since: Long): List<Item>
 
-    @Query("SELECT kind, bank, last4, at, due, COALESCE(body, '') AS text FROM items WHERE kind IN ('Statement', 'CardSpend') AND bank IS NOT NULL AND last4 IS NOT NULL AND dup IS NULL ORDER BY at DESC LIMIT 4000")
+    @Query("SELECT kind, bank, last4, at, due, COALESCE(body, '') AS text FROM items WHERE (kind IN ('Statement', 'CardSpend') OR kind = 'Credit' AND flow = 'CardBill') AND bank IS NOT NULL AND last4 IS NOT NULL AND dup IS NULL ORDER BY at DESC LIMIT 4000")
     fun cardRows(): Flow<List<CardRow>>
 
     @Query("SELECT key FROM dismissed")

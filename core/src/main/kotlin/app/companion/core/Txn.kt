@@ -6,7 +6,7 @@ internal object Txn {
     private val cr = Regex("(?i)\\b(credited|received|refund(?:ed)?|deposited|salary|reversed|added to|liquidated|matured|settlement)\\b")
     private val noDr = Regex("(?i)will be (?:debited|deducted|processed)|\\brequest(?:ed|s)?\\b|declined|failed|unsuccessful|not successful|unable|insufficient|could not|loan|pre-?approved")
     private val noCr = Regex("(?i)\\brequest(?:ed|s)?\\b|can be credited|loan|pre-?approved")
-    private val creditCard = Regex("(?i)credit\\s*card|\\bcc\\b|spent|used at")
+    private val creditCard = Regex("(?i)credit\\s*card|\\bcc\\b|spent|used at|\\bavl\\.?\\s*lim")
     private val debitCard = Regex("(?i)debit\\s*card")
     private val upi = Regex("(?i)\\bupi\\b|\\bvpa\\b|@(?:ok[a-z]+|ybl|ibl|axl|paytm|apl|upi|sbi|icici|hdfcbank|axisbank|axb|pthdfc|ptyes|yapl|slc|[a-z]{2,6}bank)(?!\\w|\\.[a-z])")
     private val net = Regex("(?i)neft|imps|rtgs|net\\s?banking")

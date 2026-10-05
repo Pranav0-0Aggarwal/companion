@@ -6,6 +6,8 @@ import app.companion.core.Category
 import app.companion.core.Event
 import app.companion.core.Filed
 import app.companion.core.Fingerprint
+import app.companion.core.Flow
+import app.companion.core.Flows
 import app.companion.core.Group
 import app.companion.core.Labels
 import app.companion.core.Merchant
@@ -17,6 +19,7 @@ import app.companion.core.Source
 import app.companion.core.Slip
 import app.companion.core.Suggest
 import app.companion.core.Suggestion
+import app.companion.core.text
 import app.companion.core.Track
 import app.companion.core.Verdict
 import java.time.LocalDate
@@ -94,16 +97,20 @@ object Items {
                     paise = e.paise, currency = e.currency, last4 = e.last4, bank = e.bank, merchant = e.merchant,
                     mode = e.mode.name, category = cat,
                     state = when {
+                        e is Event.Credit && Flows.of(e, r.text()) == Flow.CardBill -> State.SETTLED
                         unsure -> State.ASK
                         cat == Category.Other.label && e.merchant != null -> State.CHECK
                         else -> State.SETTLED
                     },
                 )
             }
-            is Event.Bill -> base.copy(
-                title = e.biller?.let { "$it bill" } ?: "Bill", paise = e.paise, currency = e.currency, last4 = e.last4,
-                merchant = e.biller, due = e.due?.toEpochDay(), minPaise = e.minPaise, category = Category.Bills.label,
-            )
+            is Event.Bill -> {
+                val biller = e.biller ?: Merchant.fromSender(r.sender)
+                base.copy(
+                    title = biller?.let { "$it bill" } ?: "Bill", paise = e.paise, currency = e.currency, last4 = e.last4,
+                    merchant = biller, due = e.due?.toEpochDay(), minPaise = e.minPaise, category = Category.Bills.label,
+                )
+            }
             is Event.Statement -> base.copy(
                 title = "${e.bank ?: "Card"} card bill", paise = e.paise, last4 = e.last4, bank = e.bank, merchant = e.bank,
                 due = e.due?.toEpochDay(), minPaise = e.minPaise, category = Category.Bills.label,

@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -340,6 +341,10 @@ private fun AskPage(v: Cov) {
     val s = LocalContext.current.sl.session
     val voice = rememberVoice { t -> t?.let { s.send(it) } }
     var q by remember { mutableStateOf("") }
+    DisposableEffect(Unit) {
+        s.warm()
+        onDispose { s.cool() }
+    }
     Head("Ask")
     if (!v.reveal) return Hidden(v)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {

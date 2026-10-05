@@ -80,6 +80,10 @@ class ChatSession(private val sl: Services) {
         run({}) { collect(sl.chat.dayCard(day), {}) }
     }
 
+    fun warm() = sl.chat.warm()
+
+    fun cool() = sl.chat.cool()
+
     fun stop() {
         job?.cancel()
         busy = false

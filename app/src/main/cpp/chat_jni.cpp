@@ -108,8 +108,8 @@ bool recall(C *h) {
 
 bool seed(C *h, Tokens &p) {
     if (!h->snap.empty() && h->pin == p) return true;
-    clear(h);
     h->snap.clear();
+    if (same(h->kv, p) != h->kv.size()) clear(h);
     return eval(h, p) && save(h);
 }
 

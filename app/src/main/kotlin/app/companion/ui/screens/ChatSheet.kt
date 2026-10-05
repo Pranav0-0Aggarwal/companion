@@ -99,6 +99,7 @@ fun ChatSheet(r: AskReq, open: Boolean, close: () -> Unit, go: (String) -> Unit,
         runCatching { focus.requestFocus() }
         Unit
     }
+    LaunchedEffect(open) { if (open) s.warm() else s.cool() }
     LaunchedEffect(r) {
         r.log?.let { s.ctx = it }
         if (r.voice && listen != null) {

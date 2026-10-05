@@ -2,6 +2,7 @@ package app.companion.chat
 
 import android.content.Context
 import android.os.Process
+import android.os.SystemClock
 import app.companion.ai.ChatClient
 import app.companion.ai.Chip
 import app.companion.ai.Governor
@@ -32,8 +33,11 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +84,9 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     @Volatile private var shown = false
 
     @Volatile private var live: ChatClient? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var warming: Job? = null
+    private var warmed = 0L
 
     private fun show(c: Card) {
         shown = true
@@ -138,6 +145,29 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         foods.cancel()
     }
 
+    fun warm() {
+        val b = brain() ?: return
+        if (warming?.isActive == true || Guard.hold(vitals(c)) != null) return
+        warmed = SystemClock.elapsedRealtime()
+        warming = scope.launch {
+            try {
+                abortable {
+                    gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
+                        live = cl
+                        cl.warm(b.tpl.head(system), pre(), Process.THREAD_PRIORITY_BACKGROUND)
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun cool() {
+        if (SystemClock.elapsedRealtime() - warmed < WARM_MS) warming?.cancel()
+    }
+
     private fun threads() = Guard.threads(vitals(c))
 
     private fun pre() = Guard.prefill(vitals(c))
@@ -160,7 +190,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         send(Out.Done)
     }
 
-    private suspend fun ProducerScope<Out>.abortable(block: suspend () -> Boolean): Boolean {
+    private suspend fun CoroutineScope.abortable(block: suspend () -> Boolean): Boolean {
         val on = AtomicBoolean(true)
         val watch = launch(start = CoroutineStart.UNDISPATCHED) {
             try {
@@ -260,6 +290,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     private companion object {
         const val MAX_CALLS = 4
         const val MAX_TOKENS = 384
+        const val WARM_MS = 10_000L
         const val MAX_PROMPT = 5200
         const val MAX_RESULT = 1200
         const val MAX_TEXT = 600

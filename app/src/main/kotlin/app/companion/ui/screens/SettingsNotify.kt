@@ -3,8 +3,10 @@ package app.companion.ui.screens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import android.Manifest
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import app.companion.core.BriefOpts
 import app.companion.core.Opts
 import app.companion.system.Live
 import app.companion.system.Prefs
+import app.companion.ui.dayTime
 import app.companion.ui.has
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Group
@@ -45,6 +49,12 @@ fun NotifySettings() {
         Prefs.set(c, n)
         scope.launch { Live.widgets(c) }
     }
+    var b by remember { mutableStateOf(Prefs.brief(c)) }
+    val setBrief: (BriefOpts) -> Unit = { n ->
+        b = n
+        Prefs.setBrief(c, n)
+        Live.brief(c)
+    }
     Column {
         Section("Notifications")
         Group {
@@ -61,6 +71,17 @@ fun NotifySettings() {
             Toggle("Deliveries", "Out for delivery with the code, and delivered", o.delivery, icon = Ic.Bolt) { set(o.copy(delivery = it)) }
             Rule(72.dp)
             Toggle("Daily summary", "At 8 pm, only when something is waiting", o.digest, icon = Ic.Plan) { set(o.copy(digest = it)) }
+            Rule(72.dp)
+            Toggle("Morning brief", "Your first meeting, bills and orders, only when there is something", b.on, icon = Ic.Sparkle) { setBrief(b.copy(on = it)) }
+            if (b.on) {
+                Rule(72.dp)
+                PassLine(
+                    "Brief time",
+                    dayTime(b.at),
+                    lead = Ic.Clock,
+                    onClick = { TimePickerDialog(c, { _, h, m -> setBrief(b.copy(at = h * 60 + m)) }, b.at / 60, b.at % 60, DateFormat.is24HourFormat(c)).show() },
+                )
+            }
             Rule(72.dp)
             Toggle("Show details on lock screen", "Amounts, merchants and codes stay hidden when off", o.lock, icon = Ic.Lock) { set(o.copy(lock = it)) }
             Rule(72.dp)

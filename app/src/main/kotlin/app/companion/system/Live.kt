@@ -10,6 +10,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -17,6 +18,7 @@ import app.companion.sl
 import app.companion.core.Alerts
 import app.companion.system.widget.CoverWidget
 import app.companion.system.widget.OtpWidget
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
@@ -42,16 +44,24 @@ object Live {
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("reminders", ExistingPeriodicWorkPolicy.KEEP, daily)
         Prefs.since(app)
         digest(app)
+        brief(app)
         val retain = PeriodicWorkRequestBuilder<Sweep>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("retain", ExistingPeriodicWorkPolicy.KEEP, retain)
     }
 
-    fun digest(c: Context) {
-        val req = OneTimeWorkRequestBuilder<Daily>()
-            .setInitialDelay(Alerts.untilDigest(System.currentTimeMillis(), ZoneId.systemDefault()), TimeUnit.MILLISECONDS)
+    private inline fun <reified W : ListenableWorker> daily(c: Context, name: String, at: LocalTime) {
+        val req = OneTimeWorkRequestBuilder<W>()
+            .setInitialDelay(Alerts.untilDigest(System.currentTimeMillis(), ZoneId.systemDefault(), at), TimeUnit.MILLISECONDS)
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .build()
-        WorkManager.getInstance(c).enqueueUniqueWork("digest", ExistingWorkPolicy.REPLACE, req)
+        WorkManager.getInstance(c).enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, req)
+    }
+
+    fun digest(c: Context) = daily<Daily>(c, "digest", LocalTime.of(20, 0))
+
+    fun brief(c: Context) {
+        val b = Prefs.brief(c)
+        if (b.on) daily<Morning>(c, "brief", LocalTime.of(b.at / 60, b.at % 60)) else WorkManager.getInstance(c).cancelUniqueWork("brief")
     }
 
     suspend fun widgets(c: Context) {

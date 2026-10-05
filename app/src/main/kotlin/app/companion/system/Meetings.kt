@@ -70,15 +70,17 @@ object Meetings {
 
     private fun active(c: Context, k: String) = c.getSystemService(NotificationManager::class.java).activeNotifications.firstOrNull { it.tag == tag(k) }
 
+    private var watcher: ContentObserver? = null
+
     fun watch(app: Application) {
         val h = Handler(Looper.getMainLooper())
         val run = Runnable { CoroutineScope(Dispatchers.IO).launch { sync(app); Live.widgets(app) } }
-        app.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, object : ContentObserver(h) {
+        watcher = object : ContentObserver(h) {
             override fun onChange(selfChange: Boolean) {
                 h.removeCallbacks(run)
                 h.postDelayed(run, 3_000)
             }
-        })
+        }.also { app.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, it) }
     }
 
     fun soon(c: Context, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Soon {

@@ -9,7 +9,7 @@ object Extract {
     fun from(r: Raw, zone: ZoneId = ZoneId.systemDefault()): Event {
         val t = listOf(r.title, r.body).filter { it.isNotBlank() }.joinToString("\n")
         val ref = Instant.ofEpochMilli(r.at).atZone(zone).toLocalDate()
-        if (r.source == Source.Wa || r.source == Source.Ig) return Event.Personal
+        if (Chats.chat(r.source) && Chats.brand(r.sender)?.name != r.sender) return Event.Personal
         Otp.parse(r, t)?.let { return it }
         val promo = Misc.promo(r.sender, t) && !(moved.containsMatchIn(t) && Txn.last4(t) != null)
         if (promo) return Event.Promo

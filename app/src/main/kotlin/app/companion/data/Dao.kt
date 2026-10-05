@@ -8,6 +8,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import app.companion.core.Refile
 import app.companion.core.Rules
+import app.companion.core.Senders
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -173,10 +174,80 @@ interface Dao {
     suspend fun putRule(r: TemplateRule)
 
     @Query(
-        "SELECT r.hash AS hash, r.task AS task, r.label AS label, r.count AS count, " +
-            "(SELECT title FROM items WHERE tpl = r.hash ORDER BY at DESC LIMIT 1) AS title FROM rules r ORDER BY r.count DESC, r.hash, r.task",
+        "SELECT r.hash AS hash, r.task AS task, r.label AS label, r.count AS count, (SELECT COUNT(*) FROM items WHERE tpl = r.hash) AS hits, " +
+            "i.title AS title, i.note AS note, i.body AS body, (SELECT sender FROM links WHERE itemId = i.id ORDER BY at, id LIMIT 1) AS sender " +
+            "FROM rules r LEFT JOIN items i ON i.id = (SELECT id FROM items WHERE tpl = r.hash ORDER BY at DESC LIMIT 1) ORDER BY r.count DESC, r.hash, r.task",
     )
     fun ruleRows(): Flow<List<RuleRow>>
+
+    @Query("SELECT * FROM rules")
+    suspend fun allRules(): List<TemplateRule>
+
+    @Query("DELETE FROM rules WHERE hash = :hash")
+    suspend fun dropRules(hash: String)
+
+    @Query("SELECT label FROM sender_rules WHERE sender = :key AND count >= ${Senders.MIN}")
+    suspend fun senderRule(key: String): String?
+
+    @Query("SELECT * FROM sender_rules WHERE sender = :key")
+    suspend fun senderRow(key: String): SenderRule?
+
+    @Upsert
+    suspend fun putSender(r: SenderRule)
+
+    @Query("SELECT * FROM sender_rules WHERE count >= ${Senders.MIN} ORDER BY sender")
+    fun senderRules(): Flow<List<SenderRule>>
+
+    @Query("DELETE FROM sender_rules WHERE sender = :key")
+    suspend fun deleteSender(key: String)
+
+    @Query("SELECT * FROM learned ORDER BY key")
+    fun learnedRows(): Flow<List<Learned>>
+
+    @Query("DELETE FROM learned WHERE key = :key")
+    suspend fun deleteLearned(key: String)
+
+    @Query("SELECT * FROM items WHERE tpl = :tpl AND id != :id AND kind != 'Otp' AND dup IS NULL")
+    suspend fun tplSiblings(tpl: String, id: Long): List<Item>
+
+    @Query("SELECT * FROM items WHERE merchant IS NOT NULL AND kind IN ('Debit', 'Credit', 'CardSpend') AND dup IS NULL AND id != :id")
+    suspend fun merchantRows(id: Long): List<Item>
+
+    @Query("UPDATE items SET kind = :kind, tags = :tags, category = :category, state = :state WHERE id = :id AND state != 'paid'")
+    suspend fun refiled(id: Long, kind: String, tags: String?, category: String?, state: String)
+
+    @Query("SELECT DISTINCT last4 FROM items WHERE last4 IS NOT NULL AND kind IN ('Debit', 'Credit', 'CardSpend', 'Statement')")
+    suspend fun ownLast4(): List<String>
+
+    @Query("SELECT last4 FROM cards")
+    suspend fun cardLast4(): List<String>
+
+    @Query("UPDATE items SET flow = :flow WHERE id = :id")
+    suspend fun setFlow(id: Long, flow: String?)
+
+    @Query("UPDATE items SET tpl = COALESCE(:tpl, tpl), flow = :flow WHERE id = :id")
+    suspend fun retag(id: Long, tpl: String?, flow: String?)
+
+    @Query("SELECT * FROM rules WHERE hash = :hash")
+    suspend fun rulesFor(hash: String): List<TemplateRule>
+
+    @Query("SELECT key FROM moved")
+    suspend fun movedNow(): List<String>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM moved WHERE key = :key)")
+    suspend fun isMoved(key: String): Boolean
+
+    @Query("SELECT key FROM moved")
+    fun movedKeys(): Flow<List<String>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun putMoved(m: Moved)
+
+    @Query("DELETE FROM moved WHERE key = :key")
+    suspend fun dropMoved(key: String)
+
+    @Query("SELECT * FROM items WHERE id > :after AND id <= :cap ORDER BY id LIMIT :n")
+    suspend fun page(after: Long, cap: Long, n: Int): List<Item>
 
     @Query("DELETE FROM rules WHERE hash = :hash AND task = :task")
     suspend fun deleteRule(hash: String, task: String)

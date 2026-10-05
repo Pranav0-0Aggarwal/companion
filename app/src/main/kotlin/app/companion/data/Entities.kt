@@ -76,6 +76,7 @@ data class Item(
     val body: String? = null,
     val tags: String? = null,
     val dup: Long? = null,
+    val flow: String? = null,
 )
 
 @Fts4(contentEntity = Item::class)
@@ -137,7 +138,13 @@ data class Correction(
 @Entity(tableName = "rules", primaryKeys = ["hash", "task"])
 data class TemplateRule(val hash: String, val task: String, val label: String, val count: Int)
 
-data class RuleRow(val hash: String, val task: String, val label: String, val count: Int, val title: String?)
+data class RuleRow(val hash: String, val task: String, val label: String, val count: Int, val hits: Int, val title: String?, val note: String?, val body: String?, val sender: String?)
+
+@Entity(tableName = "sender_rules")
+data class SenderRule(@PrimaryKey val sender: String, val label: String, val count: Int)
+
+@Entity(tableName = "moved")
+data class Moved(@PrimaryKey val key: String)
 
 data class ExportRow(val sender: String?, val title: String, val note: String, val body: String?, val task: String, val model: String?, val prob: Float?, val chosen: String)
 

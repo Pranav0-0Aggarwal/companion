@@ -16,7 +16,7 @@ object Template {
     private val name = Regex("\\b(to|from|at|by|towards|info|vpa)\\b[ \\t:/-]*($WORD(?:[ \\t]+$WORD){0,5})", i)
 
     fun mask(text: String) = name.replace(
-        num.replace(month.replace(ref.replace(id.replace(url.replace(text, "<u>"), "<id>"), "<ref>"), "<m>"), "0"),
+        num.replace(month.replace(ref.replace(id.replace(url.replace(text.replace("[redacted]", "0"), "<u>"), "<id>"), "<ref>"), "<m>"), "0"),
     ) { "${it.groupValues[1]} <n>" }
 
     fun of(r: Raw): String {

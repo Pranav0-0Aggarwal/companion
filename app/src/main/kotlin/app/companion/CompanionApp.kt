@@ -20,6 +20,7 @@ import app.companion.core.Planner
 import app.companion.core.Refine
 import app.companion.core.RulesClassifier
 import app.companion.data.Repo
+import app.companion.data.Upgrade
 import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Ingest
@@ -65,6 +66,7 @@ class CompanionApp : Application() {
         Processing.boot(this)
         Proc.watch(this)
         Export.sweep(this)
+        Upgrade.boot(this)
     }
 
     override fun onTrimMemory(level: Int) {

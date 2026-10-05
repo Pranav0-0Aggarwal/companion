@@ -8,6 +8,7 @@ object Refile {
     const val SETTLED = "settled"
     const val PAID = "paid"
     const val SOURCES = "'Sms', 'Wa', 'Ig'"
+    val SOURCES_SET = setOf("Sms", "Wa", "Ig")
 
     private val money = setOf(Kind.Debit.name, Kind.Credit.name, Kind.CardSpend.name)
 

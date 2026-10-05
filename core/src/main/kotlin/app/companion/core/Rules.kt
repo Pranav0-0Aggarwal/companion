@@ -44,7 +44,7 @@ object Senders {
     private val labels = setOf("promo", "spam", "alert", "personal", "delivery")
     private val open = setOf(Kind.Unknown, Kind.Alert, Kind.Promo, Kind.Spam, Kind.Personal, Kind.Delivery)
 
-    fun key(sender: String) = Fingerprint.norm(Template.brand(sender, ""))
+    fun key(sender: String) = Fingerprint.norm(Template.brand(sender, "")).orEmpty()
 
     fun name(key: String) = key.replaceFirstChar(Char::uppercase)
 

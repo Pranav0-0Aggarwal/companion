@@ -8,6 +8,7 @@ import app.companion.core.Filed
 import app.companion.core.Fingerprint
 import app.companion.core.Group
 import app.companion.core.Labels
+import app.companion.core.Mode
 import app.companion.core.Raw
 import app.companion.core.Slip
 import app.companion.core.Stage
@@ -24,6 +25,16 @@ val Item.dueDate: LocalDate? get() = due?.let(LocalDate::ofEpochDay)
 val Item.tagList get() = tags?.split(',')?.filter { it.isNotEmpty() }.orEmpty()
 fun Item.slip() = Slip(at, due, last4, merchant ?: bank)
 fun Item.filed() = Filed(kind, tags, category, state)
+
+fun Item.move(): Event.Move? {
+    val m = Mode.entries.firstOrNull { it.name == mode } ?: Mode.Other
+    return when (kind) {
+        "Debit" -> Event.Debit(paise, currency, last4, bank, merchant, m)
+        "Credit" -> Event.Credit(paise, currency, last4, bank, merchant, m)
+        "CardSpend" -> Event.CardSpend(paise, currency, last4, bank, merchant)
+        else -> null
+    }
+}
 
 val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)
 

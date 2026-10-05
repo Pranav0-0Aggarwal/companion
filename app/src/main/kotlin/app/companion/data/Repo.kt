@@ -3,10 +3,14 @@ package app.companion.data
 import androidx.room.withTransaction
 import app.companion.core.Body
 import app.companion.core.Calibration
+import app.companion.core.Category
 import app.companion.core.Cycles
 import app.companion.core.Dup
 import app.companion.core.Event
+import app.companion.core.Filed
 import app.companion.core.Fingerprint
+import app.companion.core.Flows
+import app.companion.core.Labels
 import app.companion.core.Group
 import app.companion.core.Kind
 import app.companion.core.Repeat
@@ -14,12 +18,15 @@ import app.companion.core.Rules
 import app.companion.core.Progress
 import app.companion.core.Raw
 import app.companion.core.Refile
+import app.companion.core.Senders
 import app.companion.core.Source
 import app.companion.core.Template
 import app.companion.core.Twin
 import app.companion.core.Types
 import app.companion.core.Verdict
+import app.companion.core.Flow as Route
 import app.companion.core.Worth
+import app.companion.core.text
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
@@ -33,6 +40,14 @@ data class Change(val moved: Boolean, val ask: Boolean)
 
 class Owed(val item: Item, val n: Int)
 
+class Also(internal val prev: List<Pair<Long, Filed>>) {
+    val n get() = prev.map { it.first }.distinct().size
+
+    operator fun plus(o: Also) = Also(prev + o.prev)
+}
+
+class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, val note: String? = null)
+
 class Repo(private val db: Db) {
     private val d = db.dao()
     val fresh = ConcurrentHashMap<Long, Long>()
@@ -45,6 +60,10 @@ class Repo(private val db: Db) {
     val asks = d.asks()
     val tasks = d.tasks()
     val rules = d.ruleRows()
+    val senderRules = d.senderRules()
+    val learned = d.learnedRows()
+    val moved = d.movedKeys().map { it.toSet() }
+    @Volatile private var own: Set<String>? = null
 
     suspend fun profileNow() = d.profileNow() ?: Profile()
 
@@ -52,9 +71,9 @@ class Repo(private val db: Db) {
 
     suspend fun edit(f: (Profile) -> Profile) = d.save(f(profileNow()))
 
-    suspend fun addCard(c: Card) = d.addCard(c)
+    suspend fun addCard(c: Card) = d.addCard(c).also { own = null }
 
-    suspend fun deleteCard(id: Long) = d.deleteCard(id)
+    suspend fun deleteCard(id: Long) = d.deleteCard(id).also { own = null }
 
     fun otps(now: Long = System.currentTimeMillis()) = d.otps(now)
 
@@ -92,15 +111,20 @@ class Repo(private val db: Db) {
 
     suspend fun deleteRule(hash: String, task: String) = d.deleteRule(hash, task)
 
-    suspend fun file(id: Long, category: String) = db.withTransaction {
-        val i = d.item(id) ?: return@withTransaction
+    suspend fun deleteLearned(key: String) = d.deleteLearned(key)
+
+    suspend fun deleteSender(key: String) = d.deleteSender(key)
+
+    suspend fun file(id: Long, category: String): Taught = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction Taught()
         if (!i.money) return@withTransaction settle(i)
-        correct(i, Calibration.CATEGORY, category, src(i))
+        val t = correct(i, Calibration.CATEGORY, category, src(i))
         d.file(id, category)
         i.merchant?.let { Fingerprint.norm(it) }?.let { d.learn(Learned(it, category)) }
+        t
     }
 
-    suspend fun confirm(id: Long) = db.withTransaction { d.item(id)?.let { settle(it) } }
+    suspend fun confirm(id: Long): Taught = db.withTransaction { d.item(id)?.let { settle(it) } ?: Taught() }
 
     suspend fun spam(id: Long) = mark(id, "spam", null)
 
@@ -108,28 +132,105 @@ class Repo(private val db: Db) {
 
     suspend fun notOtp(id: Long) = mark(id, "alert", Src.NOT_OTP)
 
-    private suspend fun mark(id: Long, label: String, src: String?) = db.withTransaction {
-        val i = d.item(id) ?: return@withTransaction
-        correct(i, Calibration.TYPE, label, src ?: src(i))
+    private suspend fun mark(id: Long, label: String, src: String?): Taught = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction Taught()
+        val t = correct(i, Calibration.TYPE, label, src ?: src(i))
         d.retype(id, if (label == "alert") Kind.Alert.name else Kind.Spam.name)
+        t
     }
 
-    private suspend fun settle(i: Item) {
-        correct(i, Calibration.TYPE, Types.of(Kind.valueOf(i.kind)), src(i))
+    suspend fun retype(id: Long, label: String, pick: String? = null): Taught = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction Taught()
+        val f = Labels.refile(label, i.filed(), i.paise, pick)
+            ?: return@withTransaction Taught(note = if (Labels.needsAmount(label, Kind.valueOf(i.kind), i.paise)) "Needs an amount" else "Can't be filed as $label")
+        d.refiled(id, f.kind, f.tags, f.category, f.state)
+        val t = correct(i, Calibration.TYPE, label, src(i))
+        val cat = f.category?.takeIf { pick != null && it == pick && it != i.category }
+        if (cat == null) return@withTransaction t
+        val moved = i.copy(kind = f.kind)
+        val c = correct(moved, Calibration.CATEGORY, cat, Src.EDIT)
+        i.merchant?.let { Fingerprint.norm(it) }?.let { d.learn(Learned(it, cat)) }
+        Taught(listOfNotNull(t.also, c.also).reduceOrNull { a, b -> a + b }, t.sender ?: c.sender)
+    }
+
+    suspend fun undo(a: Also) = db.withTransaction {
+        a.prev.asReversed().forEach { (id, f) -> d.refiled(id, f.kind, f.tags, f.category, f.state) }
+    }
+
+    suspend fun spending(id: Long, off: Boolean) = db.withTransaction {
+        val key = d.item(id)?.merchant?.let { Fingerprint.norm(it) } ?: return@withTransaction
+        if (off) d.putMoved(Moved(key)) else d.dropMoved(key)
+        d.merchantRows(0).filter { Fingerprint.norm(it.merchant) == key && (off && it.flow == null || !off && it.flow == Route.Self.name) }
+            .forEach { d.setFlow(it.id, if (off) Route.Self.name else null) }
+    }
+
+    private suspend fun settle(i: Item): Taught {
+        val t = correct(i, Calibration.TYPE, Types.of(Kind.valueOf(i.kind)), src(i))
         d.setState(i.id, State.SETTLED)
+        return t
     }
 
     private fun src(i: Item) = if (i.state == State.ASK) Src.ASK else Src.EDIT
 
-    private suspend fun correct(i: Item, task: String, chosen: String, src: String) {
+    private suspend fun correct(i: Item, task: String, chosen: String, src: String): Taught {
         val typed = task == Calibration.TYPE
         d.correction(Correction(itemId = i.id, at = System.currentTimeMillis(), task = task, model = i.model.takeIf { typed }, modelProb = i.mprob.takeIf { typed }, chosen = chosen, src = src))
-        val h = i.tpl ?: return
-        val r = d.rule(h, task)
-        d.putRule(TemplateRule(h, task, chosen, Rules.bump(r?.label, r?.count ?: 0, chosen)))
+        i.tpl?.takeIf { typed || i.merchant == null }?.let { h ->
+            val r = d.rule(h, task)
+            d.putRule(TemplateRule(h, task, chosen, Rules.bump(r?.label, r?.count ?: 0, chosen)))
+        }
+        return Taught(similar(i, task, chosen), if (typed) sender(i, chosen) else null)
     }
 
-    private suspend fun ruled(tpl: String, v: Verdict) = Rules.apply(v, d.ruled(tpl).associate { it.task to it.label })
+    private suspend fun sender(i: Item, chosen: String): Pair<String, String>? {
+        val key = d.senders(listOf(i.id)).firstOrNull()?.sender?.let(Senders::key)?.takeIf { it.isNotEmpty() } ?: return null
+        if (!Senders.counts(chosen)) {
+            d.deleteSender(key)
+            return null
+        }
+        val r = d.senderRow(key)
+        val n = Senders.bump(r?.label, r?.count ?: 0, chosen)
+        d.putSender(SenderRule(key, chosen, n))
+        return (key to chosen).takeIf { n == Senders.MIN }
+    }
+
+    private suspend fun similar(i: Item, task: String, chosen: String): Also? {
+        val typed = task == Calibration.TYPE
+        val key = i.merchant?.let { Fingerprint.norm(it) }
+        val rows = when {
+            !typed && key != null -> d.merchantRows(i.id).filter { Fingerprint.norm(it.merchant) == key }
+            else -> i.tpl?.let { d.tplSiblings(it, i.id) }.orEmpty()
+        }
+        if (rows.isEmpty()) return null
+        val corrected = d.corrected(rows.map { it.id }).toSet()
+        val taught = d.taught(rows.mapNotNull { it.tpl }).toSet() - i.tpl
+        val moves = rows.filter { !Refile.locked(it.filed(), it.merchant != null, it.id in corrected, it.tpl in taught) }.mapNotNull { r ->
+            val old = r.filed()
+            val new = when {
+                !typed -> old.copy(category = chosen, state = State.SETTLED).takeIf { r.money && (r.credit || chosen != Category.Income.label) }
+                Types.of(Kind.valueOf(r.kind)) == chosen -> old.copy(state = State.SETTLED)
+                else -> Labels.refile(chosen, old, r.paise)
+            }
+            new?.takeIf { it != old }?.let { r.id to (old to it) }
+        }
+        if (moves.isEmpty()) return null
+        moves.forEach { (id, p) -> d.refiled(id, p.second.kind, p.second.tags, p.second.category, p.second.state) }
+        return Also(moves.map { it.first to it.second.first })
+    }
+
+    private suspend fun ruled(tpl: String, v: Verdict, raw: Raw): Pair<Verdict, String?> {
+        val r = d.ruled(tpl).associate { it.task to it.label }
+        val (t, cat) = Rules.apply(v, r, raw)
+        return if (Calibration.TYPE in r) t to cat else Senders.apply(t, d.senderRule(Senders.key(raw.sender)), raw) to cat
+    }
+
+    private suspend fun own() = own ?: Flows.own(d.ownLast4() + d.cardLast4()).also { own = it }
+
+    private suspend fun flowOf(e: Event, raw: Raw): String? {
+        if (e !is Event.Move) return null
+        if (e.merchant?.let { Fingerprint.norm(it) }?.let { d.isMoved(it) } == true) return Route.Self.name
+        return Flows.of(e, raw.text(), own())?.name
+    }
 
     suspend fun dismiss(id: Long) = d.setState(id, State.SETTLED)
 
@@ -189,7 +290,7 @@ class Repo(private val db: Db) {
 
     suspend fun add(raw: Raw, verdict: Verdict, p: Profile, live: Boolean = false): Added? {
         val tpl = Template.of(raw)
-        val (v, learnedCat) = ruled(tpl, verdict)
+        val (v, learnedCat) = ruled(tpl, verdict, raw)
         val e = v.event
         val folded = foldKey(e, raw, v, p)
         if (folded != null) {
@@ -198,7 +299,7 @@ class Repo(private val db: Db) {
             return null
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob)
+        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         val fp = item.fp()
         val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
         if (twin != null) {
@@ -215,6 +316,7 @@ class Repo(private val db: Db) {
         }
         val id = d.add(item)
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
+        if (e is Event.Move || e is Event.Statement) item.last4?.let { l -> own = own?.plus(l) }
         fresh[id] = System.currentTimeMillis()
         return Added(item.copy(id = id), true)
     }
@@ -230,7 +332,7 @@ class Repo(private val db: Db) {
 
     suspend fun refine(id: Long, raw: Raw, verdict: Verdict, p: Profile, was: String?): Change = db.withTransaction {
         val cur = d.item(id)?.takeIf { (was == null || it.state == was) && frozen(listOf(it)).isEmpty() } ?: return@withTransaction Change(false, false)
-        val (v, cat) = ruled(cur.tpl ?: Template.of(raw), verdict)
+        val (v, cat) = ruled(cur.tpl ?: Template.of(raw), verdict, raw)
         val e = v.event
         val key = foldKey(e, raw, v, p)
         if (key != null) {
@@ -242,7 +344,7 @@ class Repo(private val db: Db) {
             return@withTransaction Change(true, false)
         }
         val learned = cat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob)
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         if (n == cur || Refile.lost(cur.filed(), n.filed())) return@withTransaction Change(false, false)
         d.update(n)
         Change(true, Refile.asks(cur.filed(), n.filed()))
@@ -295,6 +397,7 @@ class Repo(private val db: Db) {
         val go = Refile.moved(old, new)
         val f = if (go) new else old
         d.refile(id, f.kind, f.tags, f.category, f.state, n.conf, v.guess?.label, v.guess?.prob)
+        d.setFlow(id, flowOf(e, raw))
         return Change(go, Refile.asks(old, new))
     }
 

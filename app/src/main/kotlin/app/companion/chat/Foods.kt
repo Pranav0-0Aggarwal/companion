@@ -102,14 +102,15 @@ class Foods(private val c: Context, private val repo: Repo) {
 
     private suspend fun save(w: Wen, src: String, note: String?, order: Long?, hits: List<Hit>): String {
         val id = if (order != null) order.also { repo.life.fillMeal(it, hits) } else repo.life.addMeal(w, src, note, hits)
-        val m = repo.life.eaten(w.day).firstOrNull { it.meal.id == id }
-        if (m != null) Health.meal(c, m.meal, m.items)
+        val row = repo.life.meal(id)
+        val day = row?.let { LocalDate.ofEpochDay(it.day) } ?: w.day
+        val slot = row?.slot ?: w.meal.label
+        repo.life.eaten(day).firstOrNull { it.meal.id == id }?.let { Health.meal(c, it.meal, it.items) }
         Nudges.schedule(c)
         val total = hits.sumOf { it.kcal }
-        val day = repo.life.kcalOn(w.day)
         val goal = target()
         val items = hits.joinToString(", ") { "${it.name} ${qty(it.qty)}${it.unit.takeIf { u -> u != "serving" }?.let { u -> " $u" }.orEmpty()} ${k(it.kcal)}${if (it.source.label == "estimate") " est" else ""}" }
-        return "Logged ${w.meal.label} on ${w.day}: $items. Meal ${k(total)} kcal. Day ${k(day)}${goal?.let { " of $it" }.orEmpty()} kcal."
+        return "Logged $slot on $day: $items. Meal ${k(total)} kcal. Day ${k(repo.life.kcalOn(day))}${goal?.let { " of $it" }.orEmpty()} kcal."
     }
 
     suspend fun day(day: LocalDate): String {

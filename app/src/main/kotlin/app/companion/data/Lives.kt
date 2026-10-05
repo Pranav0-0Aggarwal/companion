@@ -111,7 +111,7 @@ class Lives(private val db: Db) {
 
     suspend fun summary(t: TripRow) = run {
         val by = d.shares(t.id).associateBy { it.itemId }
-        val items = d.tripItems(t.id).filter { it.kind != "Credit" }.map { i ->
+        val items = d.tripItems(t.id).filter { it.kind != "Credit" && (it.currency == "INR" || by[it.id]?.inr != null) }.map { i ->
             val s = by[i.id]
             TItem(i.id, i.at, s?.inr ?: i.paise, i.category, i.merchant, s?.share ?: 1.0)
         }

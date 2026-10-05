@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import app.companion.core.Alerts
 import app.companion.core.Body
 import app.companion.core.Calibration
+import app.companion.core.CardFind
 import app.companion.core.Category
 import app.companion.core.Chan
 import app.companion.core.Cycles
@@ -11,8 +12,11 @@ import app.companion.core.Dup
 import app.companion.core.Event
 import app.companion.core.Filed
 import app.companion.core.Fingerprint
+import app.companion.core.Found
 import app.companion.core.Flows
 import app.companion.core.Labels
+import app.companion.core.Paid
+import app.companion.core.Phase
 import app.companion.core.Merchant
 import app.companion.core.Group
 import app.companion.core.Kind
@@ -21,6 +25,7 @@ import app.companion.core.Rules
 import app.companion.core.Progress
 import app.companion.core.Raw
 import app.companion.core.Refile
+import app.companion.core.Seen
 import app.companion.core.Senders
 import app.companion.core.Source
 import app.companion.core.Template
@@ -35,7 +40,10 @@ import app.companion.core.text
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -43,7 +51,7 @@ data class Added(val item: Item, val fresh: Boolean)
 
 data class Change(val moved: Boolean, val ask: Boolean)
 
-class Owed(val item: Item, val n: Int)
+class Owed(val item: Item, val n: Int, val old: Boolean = false)
 
 class Also(internal val prev: List<Pair<Long, Filed>>) {
     val n get() = prev.map { it.first }.distinct().size
@@ -62,8 +70,13 @@ class Repo(private val db: Db) {
     val profile: Flow<Profile> = d.profile().map { it ?: Profile() }
     val cards = d.cards()
     val money = d.money()
-    val owed = d.bills().map { l -> Cycles.of(l, Item::slip).map { Owed(it.first(), it.size) } }
-    val bills = owed.map { l -> l.map(Owed::item) }
+    val owed = d.bills().map { l -> Cycles.plan(l, Item::slip, now = System.currentTimeMillis()).filter { it.phase == Phase.Open || it.phase == Phase.Old }.map { Owed(it.head, it.items.size, it.phase == Phase.Old) } }
+    val bills = owed.map { l -> l.filter { !it.old }.map(Owed::item) }
+    val paid = d.paid().map { l -> Cycles.of(l, Item::slip).map { it.first() }.take(8) }
+    val found = combine(d.cardRows().map { l -> CardFind.of(l.map { Seen(it.kind, it.bank, it.last4, it.at, it.due, it.text) }) }.flowOn(Dispatchers.Default), d.cards(), d.dismissed()) { f, cards, gone ->
+        val have = cards.map { "${Cycles.issuer(it.bank)}:${it.last4}" }.toSet() + gone
+        f.filter { it.key !in have }
+    }
     val asks = d.asks()
     val tasks = d.tasks()
     val rules = d.ruleRows()
@@ -87,9 +100,15 @@ class Repo(private val db: Db) {
 
     suspend fun otpsNow(now: Long = System.currentTimeMillis()) = d.otpsNow(now)
 
-    suspend fun billsNow() = Cycles.of(d.billsNow(), Item::slip).map { it.first() }
+    suspend fun billsNow() = cycles().map { it.first() }
 
-    suspend fun cycles() = Cycles.of(d.billsNow(), Item::slip)
+    suspend fun cycles() = Cycles.plan(d.billsNow(), Item::slip, now = System.currentTimeMillis()).filter { it.phase == Phase.Open }.map { it.items }
+
+    suspend fun addFound(f: Found) = f.takeIf { it.ready }?.let { addCard(Card(bank = it.bank, nick = "", last4 = it.last4, stmtDay = it.stmtDay!!, dueDay = it.dueDay!!, limit = it.limit?.takeIf { l -> l > 0 })) }
+
+    suspend fun dismissFound(f: Found) = d.dismiss(Dismissed(f.key))
+
+    suspend fun restoreFound(f: Found) = d.restore(f.key)
 
     suspend fun unpinged(chan: Chan, since: Long) = d.unpinged(Kind.entries.filter { Alerts.chan(it) == chan }.map { it.name }, since, Alerts.bit(chan))
 
@@ -296,8 +315,18 @@ class Repo(private val db: Db) {
 
     suspend fun dismiss(id: Long) = d.setState(id, State.SETTLED)
 
+    private suspend fun cycleOf(id: Long) = Cycles.of(d.billsNow(), Item::slip).firstOrNull { g -> g.any { it.id == id } }?.map(Item::id) ?: listOf(id)
+
     suspend fun pay(id: Long) = db.withTransaction {
-        d.payAll(Cycles.of(d.billsNow(), Item::slip).firstOrNull { g -> g.any { it.id == id } }?.map(Item::id) ?: listOf(id))
+        d.close(cycleOf(id), Paid.note(Paid.ME, System.currentTimeMillis()))
+    }
+
+    suspend fun keep(id: Long) = db.withTransaction {
+        d.annotate(cycleOf(id), Paid.KEEP)
+    }
+
+    private suspend fun tidy(i: Item?) {
+        if (i != null && (i.bill || i.cardBill)) db.withTransaction { d.settle(System.currentTimeMillis()) }
     }
 
     fun dups(id: Long) = d.dups(id)
@@ -380,6 +409,7 @@ class Repo(private val db: Db) {
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         if (e is Event.Move || e is Event.Statement) item.last4?.let { l -> own = own?.plus(l) }
         fresh[id] = System.currentTimeMillis()
+        tidy(item)
         val kept = item.copy(id = id)
         return Added(if (learnName(kept, raw.sender)) d.item(id) ?: kept else kept, true)
     }
@@ -410,6 +440,7 @@ class Repo(private val db: Db) {
         val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         if (n == cur || Refile.lost(cur.filed(), n.filed())) return@withTransaction Change(false, false)
         d.update(n)
+        tidy(n)
         Change(true, Refile.asks(cur.filed(), n.filed()))
     }
 
@@ -461,6 +492,7 @@ class Repo(private val db: Db) {
         val f = if (go) new else old
         d.refile(id, f.kind, f.tags, f.category, f.state, n.conf, v.guess?.label, v.guess?.prob)
         d.setFlow(id, flowOf(e, raw))
+        if (go) tidy(d.item(id))
         return Change(go, Refile.asks(old, new))
     }
 

@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import app.companion.ai.Pending
 import app.companion.core.Calibration
+import app.companion.core.Category
 import app.companion.core.Fingerprint
 import app.companion.core.Flow
 import app.companion.core.Flows
@@ -17,6 +18,7 @@ import app.companion.core.Guard
 import app.companion.core.Merchant
 import app.companion.core.Refile
 import app.companion.core.Rules
+import app.companion.core.Senders
 import app.companion.core.Source
 import app.companion.core.Template
 import app.companion.core.text
@@ -30,7 +32,7 @@ import kotlinx.coroutines.withContext
 class Upgrade(private val c: Context, private val db: Db) {
     private val d = db.dao()
 
-    suspend fun run() = tpl() && names()
+    suspend fun run() = tpl() && names() && tidy()
 
     private suspend fun tpl(): Boolean {
         val m = d.mark(TPL)
@@ -113,6 +115,43 @@ class Upgrade(private val c: Context, private val db: Db) {
         return true
     }
 
+    private suspend fun tidy(): Boolean {
+        val m = d.mark(V8)
+        val cap = m?.cap ?: d.top()
+        var pos = m?.pos ?: 0L
+        if (m != null && pos >= cap) return true
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val rows = d.page(pos, cap, PAGE)
+            if (rows.isEmpty()) break
+            val titled = rows.filter { it.src == "Sms" && it.kind in headed }
+            val from = if (titled.isEmpty()) emptyMap() else d.senders(titled.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender }
+            val named = rows.filter { it.money && it.merchant != null && (it.category == Category.Transfer.label || it.category == Category.Other.label) }
+            val corrected = d.corrected(named.map { it.id }).toSet()
+            val taught = d.taught(named.mapNotNull { it.tpl }).toSet()
+            db.withTransaction {
+                titled.forEach { i ->
+                    val s = from[i.id]
+                    if (s != null && i.title == s) Senders.title(s).takeIf { it != s }?.let { d.setTitle(i.id, it) }
+                }
+                named.forEach { i ->
+                    val cat = Category.of(i.merchant, i.credit)
+                    val key = Fingerprint.norm(i.merchant)
+                    if (cat != Category.Other && cat.label != i.category && (i.credit || cat != Category.Income) && key != null && d.learned(key) == null && !Refile.locked(i.filed(), true, i.id in corrected, i.tpl in taught)) {
+                        d.recat(i.id, cat.label, if (i.state == State.CHECK) State.SETTLED else i.state)
+                    }
+                }
+                pos = rows.last().id
+                d.putMark(Mark(V8, pos, cap, 0, 0, 0, 0, 0, null, false, false))
+            }
+        }
+        db.withTransaction {
+            d.settle(System.currentTimeMillis())
+            d.putMark(Mark(V8, cap, cap, 0, 0, 0, 0, 0, null, false, false))
+        }
+        return true
+    }
+
     private suspend fun rekey(old: String, new: String, merchant: Boolean) {
         d.rulesFor(old).filter { !(merchant && it.task == Calibration.CATEGORY) }.forEach { r ->
             val cur = d.rule(new, r.task)
@@ -125,6 +164,7 @@ class Upgrade(private val c: Context, private val db: Db) {
     companion object {
         private const val TPL = "upgrade6"
         private const val JOB = "upgrade7"
+        private const val V8 = "upgrade8"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 

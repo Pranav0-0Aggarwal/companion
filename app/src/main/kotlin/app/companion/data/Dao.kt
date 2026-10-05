@@ -82,8 +82,35 @@ interface Dao {
     @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' AND dup IS NULL ORDER BY due IS NULL, due, at DESC")
     suspend fun billsNow(): List<Item>
 
-    @Query("UPDATE items SET state = 'paid' WHERE id IN (:ids) OR dup IN (:ids)")
-    suspend fun payAll(ids: List<Long>)
+    @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state = 'paid' AND dup IS NULL ORDER BY at DESC LIMIT 60")
+    fun paid(): Flow<List<Item>>
+
+    @Query("UPDATE items SET state = 'paid', note = :note WHERE id IN (:ids) OR dup IN (:ids)")
+    suspend fun close(ids: List<Long>, note: String)
+
+    @Query("UPDATE items SET note = :note WHERE id IN (:ids) OR dup IN (:ids)")
+    suspend fun annotate(ids: List<Long>, note: String)
+
+    @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit') AND dup IS NULL AND at >= :since AND (flow = 'CardBill' OR category = 'Bills') ORDER BY at")
+    suspend fun cardPays(since: Long): List<Item>
+
+    @Query("SELECT kind, bank, last4, at, due, COALESCE(body, '') AS text FROM items WHERE kind IN ('Statement', 'CardSpend') AND bank IS NOT NULL AND last4 IS NOT NULL AND dup IS NULL ORDER BY at DESC LIMIT 4000")
+    fun cardRows(): Flow<List<CardRow>>
+
+    @Query("SELECT key FROM dismissed")
+    fun dismissed(): Flow<List<String>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun dismiss(d: Dismissed)
+
+    @Query("DELETE FROM dismissed WHERE key = :key")
+    suspend fun restore(key: String)
+
+    @Query("UPDATE items SET title = :title WHERE id = :id")
+    suspend fun setTitle(id: Long, title: String)
+
+    @Query("UPDATE items SET category = :category, state = :state WHERE id = :id")
+    suspend fun recat(id: Long, category: String, state: String)
 
     @Query("UPDATE items SET dup = :keep WHERE id = :id")
     suspend fun setDup(id: Long, keep: Long?)

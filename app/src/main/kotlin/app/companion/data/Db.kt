@@ -6,8 +6,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Fold::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class, SenderRule::class, Moved::class, Alias::class],
-    version = 7,
+    entities = [Profile::class, Item::class, ItemFts::class, Link::class, Fold::class, Card::class, Tally::class, Learned::class, Task::class, Correction::class, TemplateRule::class, Mark::class, SenderRule::class, Moved::class, Alias::class, Dismissed::class],
+    version = 8,
     exportSchema = false,
 )
 abstract class Db : RoomDatabase() {
@@ -70,5 +70,11 @@ val Migrate5to6 = object : Migration(5, 6) {
 val Migrate6to7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `aliases` (`raw` TEXT NOT NULL, `name` TEXT NOT NULL, `auto` INTEGER NOT NULL, PRIMARY KEY(`raw`))")
+    }
+}
+
+val Migrate7to8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `dismissed` (`key` TEXT NOT NULL, PRIMARY KEY(`key`))")
     }
 }

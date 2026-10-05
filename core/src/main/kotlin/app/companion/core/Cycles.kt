@@ -75,7 +75,7 @@ object Cycles {
 
     private val noise = setOf("bank", "card", "cards", "credit", "ltd", "limited")
 
-    internal fun issuer(s: String?) = s?.let { BrandDb.words(it).filter { w -> w !in noise }.joinToString("") }?.takeIf { it.isNotEmpty() }
+    fun issuer(s: String?) = s?.let { BrandDb.words(it).filter { w -> w !in noise }.joinToString("") }?.takeIf { it.isNotEmpty() }
 
     private fun key(s: Slip) =
         s.last4?.takeIf { it.isNotBlank() }?.let { "#$it" } ?: s.name?.filterNot(Char::isWhitespace)?.lowercase()?.takeIf { it.isNotEmpty() }

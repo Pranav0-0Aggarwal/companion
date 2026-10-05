@@ -8,8 +8,12 @@ import app.companion.core.Filed
 import app.companion.core.Fingerprint
 import app.companion.core.Group
 import app.companion.core.Labels
+import app.companion.core.Merchant
 import app.companion.core.Mode
+import app.companion.core.Paid
 import app.companion.core.Raw
+import app.companion.core.Senders
+import app.companion.core.Source
 import app.companion.core.Slip
 import app.companion.core.Suggest
 import app.companion.core.Suggestion
@@ -18,12 +22,14 @@ import app.companion.core.Verdict
 import java.time.LocalDate
 import java.time.ZoneId
 
+internal val headed = setOf("Unknown", "Alert", "Spam", "Promo", "Personal")
+
 val Item.credit get() = kind == "Credit"
 val Item.money get() = kind == "Debit" || kind == "Credit" || kind == "CardSpend"
 val Item.bill get() = kind == "Bill" || kind == "Statement"
 val Item.dueDate: LocalDate? get() = due?.let(LocalDate::ofEpochDay)
 val Item.tagList get() = tags?.split(',')?.filter { it.isNotEmpty() }.orEmpty()
-fun Item.slip() = Slip(at, due, last4, merchant ?: bank)
+fun Item.slip() = Slip(at, due, last4, merchant ?: bank, note == Paid.KEEP)
 fun Item.filed() = Filed(kind, tags, category, state)
 
 fun Item.move(): Event.Move? {
@@ -37,7 +43,11 @@ fun Item.move(): Event.Move? {
 }
 
 val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)
-val Item.brand get() = if (money || bill || kind == "Delivery") merchant ?: bank else null
+val Item.brand get() = when {
+    money || bill || kind == "Delivery" -> merchant ?: bank
+    src == "Sms" && kind in headed && Merchant.brand(title) != null -> title
+    else -> null
+}
 val Item.moved get() = flow != null || cardPay
 
 fun Item.cal(): Suggestion.Cal? {
@@ -63,6 +73,8 @@ fun Fingerprint.kinds() = when (group) {
     Group.Due -> listOf("Bill", "Statement")
     Group.Code -> listOf("Otp")
 }
+
+private fun head(r: Raw) = if (r.source == Source.Sms) Senders.title(r.sender) else r.sender
 
 object Items {
     fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE): Item {
@@ -104,13 +116,13 @@ object Items {
             Event.Personal -> {
                 val c = Suggest.chat(r.sender, r.title + "\n" + r.body, r.at, ZoneId.systemDefault())
                 base.copy(
-                    title = r.sender,
+                    title = head(r),
                     note = (r.title.takeIf { it != r.sender && it.isNotBlank() }?.plus(": ") ?: "") + r.body.take(160),
                     state = State.CHECK, start = c?.start, end = c?.end,
                 )
             }
-            Event.Unknown, Event.Alert, Event.Spam -> base.copy(title = r.title.ifBlank { r.sender }, note = r.body.take(160))
-            Event.Promo -> base.copy(title = r.sender)
+            Event.Unknown, Event.Alert, Event.Spam -> base.copy(title = r.title.ifBlank { head(r) }, note = r.body.take(160))
+            Event.Promo -> base.copy(title = head(r))
         }
     }
 }

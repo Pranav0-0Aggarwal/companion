@@ -149,6 +149,11 @@ data class Alias(@PrimaryKey val raw: String, val name: String, val auto: Boolea
 @Entity(tableName = "moved")
 data class Moved(@PrimaryKey val key: String)
 
+@Entity(tableName = "dismissed")
+data class Dismissed(@PrimaryKey val key: String)
+
+data class CardRow(val kind: String, val bank: String?, val last4: String?, val at: Long, val due: Long?, val text: String)
+
 data class ExportRow(val sender: String?, val title: String, val note: String, val body: String?, val task: String, val model: String?, val prob: Float?, val chosen: String)
 
 @Entity(tableName = "tasks", indices = [Index("done"), Index("remindAt")])

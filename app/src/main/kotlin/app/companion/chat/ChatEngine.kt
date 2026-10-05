@@ -31,7 +31,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -83,7 +83,6 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
 
     @Volatile private var shown = false
 
-    @Volatile private var live: ChatClient? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var warming: Job? = null
     private var warmed = 0L
@@ -151,9 +150,9 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         warmed = SystemClock.elapsedRealtime()
         warming = scope.launch {
             try {
-                abortable {
+                abortable { hold ->
                     gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
-                        live = cl
+                        hold(cl)
                         cl.warm(b.tpl.head(system), pre(), Process.THREAD_PRIORITY_BACKGROUND)
                     }
                 }
@@ -190,19 +189,19 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         send(Out.Done)
     }
 
-    private suspend fun CoroutineScope.abortable(block: suspend () -> Boolean): Boolean {
-        val on = AtomicBoolean(true)
+    private suspend fun CoroutineScope.abortable(block: suspend ((ChatClient) -> Unit) -> Boolean): Boolean {
+        val held = AtomicReference<ChatClient?>()
         val watch = launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 awaitCancellation()
             } finally {
-                if (on.get()) live?.cancel()
+                held.get()?.cancel()
             }
         }
         try {
-            return block()
+            return block { held.set(it) }
         } finally {
-            on.set(false)
+            held.set(null)
             watch.cancel()
         }
     }
@@ -214,9 +213,9 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         val end = ObjEnd().also { it.feed(lead) }
         val prompt = b.tpl.render(system, turns, lead)
         val prio = if (bg) Process.THREAD_PRIORITY_BACKGROUND else Process.THREAD_PRIORITY_DEFAULT
-        val ok = abortable {
+        val ok = abortable { hold ->
             gov.run(b.spec, { ChatClient.open(c, Models.file(c, b.spec) ?: error("model"), threads()) }) { cl ->
-                live = cl
+                hold(cl)
                 cl.run(prompt, b.tpl.head(system), if (strict) grammar else "", if (strict) MAX_TOKENS else Decode.FREE, threads(), pre(), TEMP, prio) { piece ->
                     raw.append(piece)
                     say?.feed(piece)?.takeIf { it.isNotEmpty() }?.let { spoke.append(it); trySend(Out.Say(it)) }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,6 +27,7 @@ import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import app.companion.data.Profile
 import app.companion.ui.CompanionTheme
+import app.companion.ui.Pick
 import app.companion.ui.kit.FloatNav
 import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.Motion
@@ -64,12 +66,13 @@ import app.companion.ui.screens.TodayScreen
 class MainActivity : FragmentActivity() {
     private var unlocked by mutableStateOf(false)
     private var capture by mutableStateOf<String?>(null)
+    private var dest by mutableStateOf<Dest?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         take(intent)
-        setContent { CompanionTheme { Root(this, unlocked, capture, { capture = it }) { unlocked = true } } }
+        setContent { CompanionTheme { Root(this, unlocked, capture, { capture = it }, dest, { dest = null }) { unlocked = true } } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -83,6 +86,10 @@ class MainActivity : FragmentActivity() {
             NEW -> ""
             else -> capture
         }
+        if (i?.action == OPEN) {
+            val route = i.getStringExtra(ROUTE)?.takeIf { it in tabs }
+            if (route != null) dest = Dest(route, i.getLongExtra(ITEM, 0), System.nanoTime())
+        }
     }
 
     override fun onStop() {
@@ -92,18 +99,23 @@ class MainActivity : FragmentActivity() {
 
     companion object {
         const val NEW = "app.companion.NEW"
+        const val OPEN = "app.companion.OPEN"
+        const val ROUTE = "route"
+        const val ITEM = "item"
     }
 }
 
+private class Dest(val route: String, val item: Long, val n: Long)
+
 @Composable
-private fun Root(a: FragmentActivity, unlocked: Boolean, capture: String?, setCapture: (String?) -> Unit, onUnlock: () -> Unit) {
+private fun Root(a: FragmentActivity, unlocked: Boolean, capture: String?, setCapture: (String?) -> Unit, dest: Dest?, took: () -> Unit, onUnlock: () -> Unit) {
     val p by a.sl.repo.profile.collectAsStateWithLifecycle<Profile?>(null)
     val pr = p
     when {
         pr == null -> Box(Modifier.fillMaxSize().background(pal.bg))
         !pr.done -> OnboardingScreen()
         pr.lock && !unlocked -> LockScreen(a, onUnlock)
-        else -> Shell(a, capture, setCapture)
+        else -> Shell(a, capture, setCapture, dest, took)
     }
 }
 
@@ -116,7 +128,7 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.pop() =
     initialState.destination.route !in tabs && targetState.destination.route in tabs
 
 @Composable
-private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -> Unit) {
+private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -> Unit, dest: Dest?, took: () -> Unit) {
     val info by remember { WindowInfoTracker.getOrCreate(a).windowLayoutInfo(a) }.collectAsStateWithLifecycle(null)
     val fold = info?.displayFeatures?.filterIsInstance<FoldingFeature>()?.firstOrNull()
         ?.takeIf { it.state == FoldingFeature.State.HALF_OPENED && it.orientation == FoldingFeature.Orientation.HORIZONTAL }
@@ -133,6 +145,13 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                 restoreState = true
             }
             launchSingleTop = true
+        }
+    }
+    LaunchedEffect(dest?.n) {
+        dest?.let {
+            if (it.item > 0) Pick.item.value = it.item
+            go(it.route)
+            took()
         }
     }
     val enter = if (on) fadeIn(tween(210, 90)) + scaleIn(tween(210, 90), 0.97f) else fadeIn(tween(120))

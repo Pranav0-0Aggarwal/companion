@@ -1,8 +1,10 @@
 package app.companion.data
 
 import androidx.room.withTransaction
+import app.companion.core.Alerts
 import app.companion.core.Body
 import app.companion.core.Calibration
+import app.companion.core.Chan
 import app.companion.core.Cycles
 import app.companion.core.Dup
 import app.companion.core.Event
@@ -61,6 +63,19 @@ class Repo(private val db: Db) {
     suspend fun otpsNow(now: Long = System.currentTimeMillis()) = d.otpsNow(now)
 
     suspend fun billsNow() = Cycles.of(d.billsNow(), Item::slip).map { it.first() }
+
+    suspend fun cycles() = Cycles.of(d.billsNow(), Item::slip)
+
+    suspend fun unpinged(chan: Chan, since: Long) = d.unpinged(Kind.entries.filter { Alerts.chan(it) == chan }.map { it.name }, since, Alerts.bit(chan))
+
+    suspend fun addPing(id: Long, bit: Int) = d.addPing(id, bit)
+
+    suspend fun deliveriesSince(since: Long) = d.deliveriesSince(since)
+
+    suspend fun needs(since: Long) = d.needs(since)
+
+    suspend fun spentToday(now: Long = System.currentTimeMillis()): Pair<Long, Int> =
+        d.spentSince(Alerts.dayStart(now, ZoneId.systemDefault())).filter { !it.cardPay && it.currency == "INR" }.let { l -> l.sumOf { it.paise } to l.size }
 
     suspend fun item(id: Long) = d.item(id)
 
@@ -198,7 +213,7 @@ class Repo(private val db: Db) {
             return null
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, model = v.guess?.label, mprob = v.guess?.prob)
+        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, ping = if (live) 0 else Alerts.seen, model = v.guess?.label, mprob = v.guess?.prob)
         val fp = item.fp()
         val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
         if (twin != null) {

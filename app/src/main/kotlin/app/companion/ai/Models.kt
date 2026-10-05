@@ -1,72 +1,59 @@
 package app.companion.ai
 
 import android.content.Context
-import app.companion.core.Calibration
 import app.companion.core.Hash
-import app.companion.core.Json
 import java.io.File
 
-class Spec(val name: String, val file: String, val bytes: Long, val sha: String, val idleMs: Long = 0, val tag: String = "models-v1")
+class Spec(val name: String, val file: String, val bytes: Long, val sha: String, val tag: String, val idleMs: Long = 0)
 
 object Manifest {
     private const val HOST = "https://github.com/Pranav0-0Aggarwal/companion/releases/download/"
 
     fun url(s: Spec) = "$HOST${s.tag}/${s.file}"
 
-    val decide = Spec("Decide", "decide.tflite", 518772848, "9f7655625d6861ee22792fca56d9fa7291192ec5f893f6c169b8e7dd69ae2072", 30_000)
-    val tokenizer = Spec("Tokenizer", "tokenizer.dtk", 2354330, "746e5a467d4019afbbef1c945c8fbe4fb2b4a9da5401a3cb8526ab19cb57d0fa")
-    val schema = Spec("Schema", "schema_prefix.json", 3396, "58d7211b245e5a45260190b4edb5d29df62c0d7897e6d0359f8a8a566c4140d5")
-    val calibration = Spec("Calibration", "calibration.json", 938, "37e2bcaf993b8a44b0c87f6391ef1a45c9a4fff00991cb09ae4dd12380ca0ae1")
-    val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", 60_000, "models-v2")
-    val chat = Spec("Conversation (Qwen3.5-2B)", "qwen3.5-2b-q4_0.gguf", 1_236_740_608, "b58f077d816cc565b2d6ae55e2da5997b3837a1bd79ec70a014801c582fa627b", 60_000, "models-v3")
-    val all = listOf(tokenizer, schema, calibration, decide, nux, chat)
-    val every = all
+    val spec = Spec("ModernBERT spec", "model_spec.json", 7162, "38ed5c9d275d37b73d741f9b475410c1d5a1c316a15675fd9483ceddd24609ea", "models-v4")
+    val tokenizer = Spec("ModernBERT tokenizer", "tokenizer.json", 3583326, "fe530b837c912faf33acd6b1a15a46234259519acb967ead693c692cc2e93647", "models-v4")
+    val calibration = Spec("ModernBERT calibration", "calibration.json", 950, "e6f811eff7bcbdf010745ccc5266f225baeb79574bf866d4f62252a602b5f7b7", "models-v4")
+    val type = Spec("ModernBERT type", "type.tflite", 409130000, "df080d4697ed36a212095cf20b44c03c24ff937d6194eafe92ad9c8eac1ff821", "models-v4", 30_000)
+    val category = Spec("ModernBERT category", "category.tflite", 409131056, "7e07e3b0dbd426db0489d6a155ae5c73d22d00864feb4bfa39d70028117bf696", "models-v4", 30_000)
+    val nux = Spec("Smart extraction (NuExtract)", "nuextract-tiny-q4_0.gguf", 352_154_432, "cb10c8078f425cdba1040246712b47fd33af083d2db7af6ac63553677bf577e7", "models-v2", 60_000)
+    val chat = Spec("Conversation (Qwen3.5-2B)", "qwen3.5-2b-q4_0.gguf", 1_236_740_608, "b58f077d816cc565b2d6ae55e2da5997b3837a1bd79ec70a014801c582fa627b", "models-v3", 60_000)
+    val bert = listOf(spec, tokenizer, calibration, type, category)
+    val all = bert + listOf(nux, chat)
     val llama = setOf(nux, chat)
     val wanted get() = all.filter { it !in llama || Chip.nux }
 }
 
-enum class Have { No, Base, Custom }
-
 object Models {
     private val hex = Regex("[0-9a-f]{64}")
-    private const val PURGED = "needle_purged"
+    private val gliner = listOf("decide.tflite", "tokenizer.dtk", "schema_prefix.json", "calibration.json")
 
     fun pinned(s: Spec) = s.bytes > 0 && hex.matches(s.sha)
 
     fun dir(c: Context) = File(c.filesDir, "models").also { it.mkdirs() }
 
-    fun custom(c: Context) = File(dir(c), "custom")
+    private fun parts(c: Context) = File(c.noBackupFilesDir, "models")
+
+    private fun retire(c: Context, flag: String, names: List<String>, vararg more: File) {
+        val prefs = c.getSharedPreferences("models", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(flag, false)) return
+        val part = parts(c)
+        names.forEach { n -> listOf(File(dir(c), n), File(part, "$n.part"), File(part, "$n.part.ranges"), File(part, "$n.part.ranges.tmp")).forEach(File::delete) }
+        more.forEach(File::deleteRecursively)
+        prefs.edit().apply {
+            prefs.all.keys.filter { k -> names.any(k::endsWith) }.forEach(::remove)
+            putBoolean(flag, true)
+        }.apply()
+    }
 
     fun purge(c: Context) {
-        val prefs = c.getSharedPreferences("models", Context.MODE_PRIVATE)
-        if (prefs.getBoolean(PURGED, false)) return
-        val old = "needle3.cact"
-        val part = File(c.noBackupFilesDir, "models")
-        listOf(File(dir(c), old), File(custom(c), old), File(part, "$old.part"), File(part, "$old.part.ranges"), File(part, "$old.part.ranges.tmp")).forEach(File::delete)
-        prefs.edit().apply {
-            prefs.all.keys.filter { it.endsWith(old) }.forEach(::remove)
-            putBoolean(PURGED, true)
-        }.apply()
+        retire(c, "needle_purged", listOf("needle3.cact"))
+        retire(c, "gliner_purged", gliner, File(dir(c), "custom"), File(parts(c), "import"), File(parts(c), "previous"))
     }
 
     fun base(c: Context, s: Spec) = File(dir(c), s.file)
 
-    fun part(c: Context, s: Spec) = File(File(c.noBackupFilesDir, "models").also { it.mkdirs() }, "${s.file}.part")
-
-    private var listed: Pair<String, Map<String, String>>? = null
-
-    @Synchronized
-    private fun listing(c: Context): Map<String, String> {
-        val f = File(custom(c), "custom.json")
-        if (!f.isFile) return emptyMap()
-        val stamp = "${f.length()}:${f.lastModified()}"
-        listed?.takeIf { it.first == stamp }?.let { return it.second }
-        val m = runCatching {
-            Json.obj(f.readText()).mapNotNull { (k, v) -> (v as? String)?.lowercase()?.takeIf { hex.matches(it) && Manifest.every.any { s -> s.file == k } }?.let { k to it } }.toMap()
-        }.getOrDefault(emptyMap())
-        listed = stamp to m
-        return m
-    }
+    fun part(c: Context, s: Spec) = File(parts(c).also { it.mkdirs() }, "${s.file}.part")
 
     internal fun verified(c: Context, f: File, sha: String): Boolean {
         if (!f.isFile) return false
@@ -82,36 +69,11 @@ object Models {
         c.getSharedPreferences("models", Context.MODE_PRIVATE).edit().putString(f.path, "${f.length()}:${f.lastModified()}:$sha").apply()
     }
 
-    fun have(c: Context, s: Spec): Have {
-        listing(c)[s.file]?.let { sha -> if (verified(c, File(custom(c), s.file), sha)) return Have.Custom }
-        return if (pinned(s) && verified(c, base(c, s), s.sha)) Have.Base else Have.No
-    }
+    fun has(c: Context, s: Spec) = pinned(s) && verified(c, base(c, s), s.sha)
 
-    fun file(c: Context, s: Spec): File? = when (have(c, s)) {
-        Have.Custom -> File(custom(c), s.file)
-        Have.Base -> base(c, s)
-        Have.No -> null
-    }
+    fun file(c: Context, s: Spec): File? = base(c, s).takeIf { has(c, s) }
 
-    fun sha(c: Context, s: Spec): String? = when (have(c, s)) {
-        Have.Custom -> listing(c)[s.file]
-        Have.Base -> s.sha
-        Have.No -> null
-    }
+    fun sha(c: Context, s: Spec): String? = s.sha.takeIf { has(c, s) }
 
-    fun version(c: Context, s: Spec): String? = when (have(c, s)) {
-        Have.Custom -> "${listing(c)[s.file]?.take(8)} custom"
-        Have.Base -> s.sha.take(8)
-        Have.No -> null
-    }
-
-    private var cal: Pair<String, Calibration>? = null
-
-    @Synchronized
-    fun loadCalibration(c: Context): Calibration {
-        val f = file(c, Manifest.calibration) ?: return Calibration.DEFAULT
-        val stamp = "${f.path}:${f.length()}:${f.lastModified()}"
-        cal?.takeIf { it.first == stamp }?.let { return it.second }
-        return runCatching { Calibration.fromJson(f.readText()) }.getOrDefault(Calibration.DEFAULT).also { cal = stamp to it }
-    }
+    fun version(c: Context, s: Spec): String? = sha(c, s)?.take(8)
 }

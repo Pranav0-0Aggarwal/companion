@@ -28,7 +28,17 @@ class LowMemory : Exception()
 
 data class Live(val name: String, val accel: String, val mb: Long)
 
-class Governor(private val app: Application) {
+private fun roomy(app: Application): Boolean {
+    val i = ActivityManager.MemoryInfo()
+    app.getSystemService(ActivityManager::class.java).getMemoryInfo(i)
+    return !i.lowMemory && i.availMem >= 1_500L * 1024 * 1024
+}
+
+private fun pss() = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }.totalPss / 1024L
+
+class Governor(private val roomy: () -> Boolean, private val pss: () -> Long) {
+    constructor(app: Application) : this({ roomy(app) }, ::pss)
+
     private val lock = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var spec: Spec? = null
@@ -36,14 +46,6 @@ class Governor(private val app: Application) {
     private var idle: Job? = null
     private val holds = AtomicInteger()
     val live = MutableStateFlow<Live?>(null)
-
-    private fun pss() = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }.totalPss / 1024L
-
-    private fun roomy(): Boolean {
-        val i = ActivityManager.MemoryInfo()
-        app.getSystemService(ActivityManager::class.java).getMemoryInfo(i)
-        return !i.lowMemory && i.availMem >= 1_500L * 1024 * 1024
-    }
 
     private fun drop() {
         runner?.close()

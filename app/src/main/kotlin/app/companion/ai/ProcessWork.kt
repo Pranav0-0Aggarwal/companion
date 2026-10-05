@@ -104,7 +104,7 @@ private class Engine(private val c: Context, private val job: Job, private val t
     }
 
     private suspend fun halted(): Result {
-        val why = if (Active.bert(c) == null && Models.file(c, Manifest.decide) == null) "No model installed" else "Not enough free memory, try again"
+        val why = if (Active.bert(c) == null) "No model installed" else "Not enough free memory, try again"
         Processing.publish(null, token)
         Note.done(c, job, why)
         return Result.failure()

@@ -15,6 +15,7 @@ import app.companion.ai.Pending
 import app.companion.ai.Processing
 import app.companion.ai.Scorers
 import app.companion.ui.Proc
+import app.companion.core.Merchant
 import app.companion.core.NoExtractor
 import app.companion.core.Planner
 import app.companion.core.Refine
@@ -61,6 +62,7 @@ class CompanionApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Merchant.source { assets.open("brands.json").use { it.readBytes().decodeToString() } }
         if (Process.isIsolated()) return
         Live.boot(this)
         Processing.boot(this)

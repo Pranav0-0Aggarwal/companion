@@ -143,6 +143,9 @@ data class RuleRow(val hash: String, val task: String, val label: String, val co
 @Entity(tableName = "sender_rules")
 data class SenderRule(@PrimaryKey val sender: String, val label: String, val count: Int)
 
+@Entity(tableName = "aliases")
+data class Alias(@PrimaryKey val raw: String, val name: String, val auto: Boolean)
+
 @Entity(tableName = "moved")
 data class Moved(@PrimaryKey val key: String)
 

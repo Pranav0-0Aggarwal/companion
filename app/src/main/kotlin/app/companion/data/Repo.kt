@@ -11,6 +11,7 @@ import app.companion.core.Filed
 import app.companion.core.Fingerprint
 import app.companion.core.Flows
 import app.companion.core.Labels
+import app.companion.core.Merchant
 import app.companion.core.Group
 import app.companion.core.Kind
 import app.companion.core.Repeat
@@ -26,6 +27,8 @@ import app.companion.core.Types
 import app.companion.core.Verdict
 import app.companion.core.Flow as Route
 import app.companion.core.Worth
+import app.companion.core.named
+import app.companion.core.who
 import app.companion.core.text
 import java.time.Instant
 import java.time.ZoneId
@@ -46,6 +49,8 @@ class Also(internal val prev: List<Pair<Long, Filed>>) {
     operator fun plus(o: Also) = Also(prev + o.prev)
 }
 
+class Renamed(internal val items: List<Item>, internal val before: List<Alias>, internal val key: String, internal val learned: Boolean, internal val moved: Boolean, internal val from: String, internal val to: String)
+
 class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, val note: String? = null)
 
 class Repo(private val db: Db) {
@@ -63,6 +68,7 @@ class Repo(private val db: Db) {
     val senderRules = d.senderRules()
     val learned = d.learnedRows()
     val moved = d.movedKeys().map { it.toSet() }
+    val aliases = d.aliasRows()
     @Volatile private var own: Set<String>? = null
 
     suspend fun profileNow() = d.profileNow() ?: Profile()
@@ -114,6 +120,47 @@ class Repo(private val db: Db) {
     suspend fun deleteLearned(key: String) = d.deleteLearned(key)
 
     suspend fun deleteSender(key: String) = d.deleteSender(key)
+
+    suspend fun deleteAlias(raw: String) = d.deleteAlias(raw)
+
+    private suspend fun aliased(e: Event): Event = e.who()?.let { d.alias(Merchant.key(it)) }?.let { e.named(it) } ?: e
+
+    private suspend fun name(from: String, to: String, auto: Boolean): Renamed? = db.withTransaction {
+        val key = Merchant.key(from)
+        val rows = d.named().filter { Merchant.key(it.merchant.orEmpty()) == key }
+        val before = d.aliasesAround(key, from)
+        d.repoint(from, to)
+        d.putAliases(listOf(Alias(key, to, auto)))
+        rows.forEach { r -> d.setNamed(r.id, to, r.merchant?.takeIf { r.title.startsWith(it) }?.let { to + r.title.removePrefix(it) } ?: r.title) }
+        val (a, b) = Fingerprint.norm(from).orEmpty() to Fingerprint.norm(to).orEmpty()
+        val l = a != b && d.learned(a) != null && d.learned(b) == null
+        val m = a != b && d.isMoved(a) && !d.isMoved(b)
+        if (l) d.rekeyLearned(a, b)
+        if (m) d.rekeyMoved(a, b)
+        Renamed(rows, before, key, l, m, a, b)
+    }
+
+    suspend fun rename(id: Long, to: String): Renamed? {
+        val from = d.item(id)?.merchant ?: return null
+        val n = to.trim().replace(Regex("\\s+"), " ").take(40)
+        return if (n.isEmpty() || n == from) null else name(from, n, false)
+    }
+
+    suspend fun unname(r: Renamed) = db.withTransaction {
+        r.items.forEach { d.setNamed(it.id, it.merchant, it.title) }
+        d.dropAliases(r.before.map { it.raw } + r.key)
+        d.putAliases(r.before)
+        if (r.learned) d.rekeyLearned(r.to, r.from)
+        if (r.moved) d.rekeyMoved(r.to, r.from)
+    }
+
+    private suspend fun learnName(i: Item, sender: String): Boolean {
+        val m = i.merchant?.takeIf { i.money } ?: return false
+        val to = Merchant.guess(m, sender) ?: return false
+        if (d.alias(Merchant.key(m)) != null) return false
+        val seen = d.sendersOf(m).filter { Merchant.guess(m, it.sender) == to }.map { it.itemId }.distinct().size
+        return Merchant.due(seen) && name(m, to, true) != null
+    }
 
     suspend fun file(id: Long, category: String): Taught = db.withTransaction {
         val i = d.item(id) ?: return@withTransaction Taught()
@@ -291,7 +338,7 @@ class Repo(private val db: Db) {
     suspend fun add(raw: Raw, verdict: Verdict, p: Profile, live: Boolean = false): Added? {
         val tpl = Template.of(raw)
         val (v, learnedCat) = ruled(tpl, verdict, raw)
-        val e = v.event
+        val e = aliased(v.event)
         val folded = foldKey(e, raw, v, p)
         if (folded != null) {
             d.count(day(raw), folded)
@@ -318,7 +365,8 @@ class Repo(private val db: Db) {
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         if (e is Event.Move || e is Event.Statement) item.last4?.let { l -> own = own?.plus(l) }
         fresh[id] = System.currentTimeMillis()
-        return Added(item.copy(id = id), true)
+        val kept = item.copy(id = id)
+        return Added(if (learnName(kept, raw.sender)) d.item(id) ?: kept else kept, true)
     }
 
     private fun day(raw: Raw) = Instant.ofEpochMilli(raw.at).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
@@ -333,7 +381,7 @@ class Repo(private val db: Db) {
     suspend fun refine(id: Long, raw: Raw, verdict: Verdict, p: Profile, was: String?): Change = db.withTransaction {
         val cur = d.item(id)?.takeIf { (was == null || it.state == was) && frozen(listOf(it)).isEmpty() } ?: return@withTransaction Change(false, false)
         val (v, cat) = ruled(cur.tpl ?: Template.of(raw), verdict, raw)
-        val e = v.event
+        val e = aliased(v.event)
         val key = foldKey(e, raw, v, p)
         if (key != null) {
             d.drop(id)
@@ -389,7 +437,7 @@ class Repo(private val db: Db) {
 
     suspend fun refile(id: Long, raw: Raw, v: Verdict, p: Profile): Change {
         val cur = d.item(id)?.takeIf { frozen(listOf(it)).isEmpty() } ?: return Change(false, false)
-        val e = v.event
+        val e = aliased(v.event)
         val learned = (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
         val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()))
         val old = cur.filed()

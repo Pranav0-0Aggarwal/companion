@@ -14,6 +14,7 @@ import app.companion.core.Fingerprint
 import app.companion.core.Flow
 import app.companion.core.Flows
 import app.companion.core.Guard
+import app.companion.core.Merchant
 import app.companion.core.Refile
 import app.companion.core.Rules
 import app.companion.core.Source
@@ -29,8 +30,10 @@ import kotlinx.coroutines.withContext
 class Upgrade(private val c: Context, private val db: Db) {
     private val d = db.dao()
 
-    suspend fun run(): Boolean {
-        val m = d.mark(JOB)
+    suspend fun run() = tpl() && names()
+
+    private suspend fun tpl(): Boolean {
+        val m = d.mark(TPL)
         val cap = m?.cap ?: d.top()
         var pos = m?.pos ?: 0L
         if (m != null && pos >= cap) return true
@@ -57,6 +60,52 @@ class Upgrade(private val c: Context, private val db: Db) {
                 }
                 keys.forEach { (old, news) -> rekey(old, news.maxBy { it.value }.key, rows.any { it.tpl == old && it.merchant != null }) }
                 pos = rows.last().id
+                d.putMark(Mark(TPL, pos, cap, 0, 0, 0, 0, 0, null, false, false))
+            }
+        }
+        d.putMark(Mark(TPL, cap, cap, 0, 0, 0, 0, 0, null, false, false))
+        return true
+    }
+
+    private suspend fun names(): Boolean {
+        val m = d.mark(JOB)
+        val cap = m?.cap ?: d.top()
+        var pos = m?.pos ?: 0L
+        if (m != null && pos >= cap) return true
+        val taught = d.allRules().map { it.hash }.toSet()
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            if (Guard.hold(vitals(c)) != null) return false
+            val rows = d.page(pos, cap, PAGE)
+            if (rows.isEmpty()) break
+            val held = d.aliasNames().toSet()
+            val ruled = rows.filter { it.tpl in taught }
+            val from = if (ruled.isEmpty()) emptyMap() else d.senders(ruled.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender }
+            val raws = ruled.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source.name in Refile.SOURCES_SET } }
+            db.withTransaction {
+                val keys = HashMap<String, HashMap<String, Int>>()
+                rows.forEach { i ->
+                    val old = i.merchant
+                    if (old != null && i.kind in NAMED && old !in held) {
+                        val clean = Merchant.resolve(old)
+                        val to = clean?.let { n -> d.alias(Merchant.key(n)) ?: n }
+                        if (to != null && to != old) {
+                            d.setNamed(i.id, to, if (i.title.startsWith(old)) to + i.title.removePrefix(old) else i.title)
+                            val (a, b) = Fingerprint.norm(old).orEmpty() to Fingerprint.norm(to).orEmpty()
+                            if (a != b) {
+                                d.rekeyLearned(a, b)
+                                d.rekeyMoved(a, b)
+                            }
+                        }
+                    }
+                    val tpl = raws[i.id]?.let(Template::of)
+                    if (tpl != null && tpl != i.tpl) {
+                        d.retag(i.id, tpl, i.flow)
+                        i.tpl?.let { keys.getOrPut(it) { HashMap() }.merge(tpl, 1, Int::plus) }
+                    }
+                }
+                keys.forEach { (old, news) -> rekey(old, news.maxBy { it.value }.key, rows.any { it.tpl == old && it.merchant != null }) }
+                pos = rows.last().id
                 d.putMark(Mark(JOB, pos, cap, 0, 0, 0, 0, 0, null, false, false))
             }
         }
@@ -74,7 +123,9 @@ class Upgrade(private val c: Context, private val db: Db) {
     }
 
     companion object {
-        private const val JOB = "upgrade6"
+        private const val TPL = "upgrade6"
+        private const val JOB = "upgrade7"
+        private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 
         fun boot(c: Context) {

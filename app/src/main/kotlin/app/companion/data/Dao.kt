@@ -314,4 +314,46 @@ interface Dao {
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun purgeTask(id: Long)
+
+    @Query("SELECT name FROM aliases WHERE raw = :raw")
+    suspend fun alias(raw: String): String?
+
+    @Query("SELECT * FROM aliases ORDER BY auto, raw")
+    fun aliasRows(): Flow<List<Alias>>
+
+    @Query("SELECT name FROM aliases")
+    suspend fun aliasNames(): List<String>
+
+    @Query("SELECT * FROM aliases WHERE raw = :raw OR name = :name")
+    suspend fun aliasesAround(raw: String, name: String): List<Alias>
+
+    @Upsert
+    suspend fun putAliases(a: List<Alias>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addAlias(a: Alias): Long
+
+    @Query("UPDATE aliases SET name = :to, auto = 0 WHERE name = :from")
+    suspend fun repoint(from: String, to: String)
+
+    @Query("DELETE FROM aliases WHERE raw IN (:raws)")
+    suspend fun dropAliases(raws: List<String>)
+
+    @Query("DELETE FROM aliases WHERE raw = :raw")
+    suspend fun deleteAlias(raw: String)
+
+    @Query("SELECT * FROM items WHERE merchant IS NOT NULL AND kind IN ('Debit', 'Credit', 'CardSpend', 'Bill', 'Delivery')")
+    suspend fun named(): List<Item>
+
+    @Query("UPDATE items SET merchant = :merchant, title = :title WHERE id = :id")
+    suspend fun setNamed(id: Long, merchant: String?, title: String)
+
+    @Query("SELECT l.itemId AS itemId, l.sender AS sender FROM links l JOIN items i ON i.id = l.itemId WHERE i.merchant = :merchant")
+    suspend fun sendersOf(merchant: String): List<Sender>
+
+    @Query("UPDATE OR IGNORE learned SET key = :to WHERE key = :from")
+    suspend fun rekeyLearned(from: String, to: String)
+
+    @Query("UPDATE OR IGNORE moved SET key = :to WHERE key = :from")
+    suspend fun rekeyMoved(from: String, to: String)
 }

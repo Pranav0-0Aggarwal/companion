@@ -18,6 +18,7 @@ class Reminders(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     override suspend fun doWork(): Result {
         val c = applicationContext
         Meetings.sync(c)
+        Mirror.sync(c)
         if (!c.has(Manifest.permission.POST_NOTIFICATIONS)) return Result.success()
         val o = Prefs.get(c)
         if (!o.remind) return Result.success()

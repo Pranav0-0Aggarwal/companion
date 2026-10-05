@@ -24,7 +24,7 @@ data class CalChoice(val id: Long, val name: String, val account: String)
 
 object Cals {
     const val OWN = "Companion"
-    private val local = "${CalendarContract.Calendars.ACCOUNT_TYPE} = '${CalendarContract.ACCOUNT_TYPE_LOCAL}' AND ${CalendarContract.Calendars.ACCOUNT_NAME} = '$OWN'"
+    internal val local = "${CalendarContract.Calendars.ACCOUNT_TYPE} = '${CalendarContract.ACCOUNT_TYPE_LOCAL}' AND ${CalendarContract.Calendars.ACCOUNT_NAME} = '$OWN'"
 
     fun own(c: Context): Long? {
         if (!c.has(Manifest.permission.READ_CALENDAR)) return null

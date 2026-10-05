@@ -126,6 +126,8 @@ class Repo(private val db: Db) {
 
     fun suggested(now: Long = System.currentTimeMillis()) = d.suggested(now, now - 3 * 24 * 3600 * 1000L)
 
+    suspend fun mirrored(now: Long = System.currentTimeMillis()) = d.mirrored(now)
+
     fun inbox(since: Long) = d.inbox(since)
 
     fun links(ids: List<Long>) = d.links(ids)

@@ -75,6 +75,7 @@ object Live {
             work.enqueueUniqueWork(SWEEP, ExistingWorkPolicy.REPLACE, sweep)
         }
         widgets(c)
+        Mirror.queue(c)
         TileService.requestListeningState(c, ComponentName(c, OtpTile::class.java))
         try {
             Ping.sync(c, again)

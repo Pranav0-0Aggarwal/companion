@@ -30,6 +30,7 @@ import app.companion.system.Export
 import app.companion.system.GTasks
 import app.companion.system.Live
 import app.companion.system.Meetings
+import app.companion.system.Mirror
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -51,6 +52,7 @@ class Services(val app: Application) {
         runBlocking(Dispatchers.IO) {
             repo.allTasks().forEach { Alarms.cancel(app, it.id) }
             Meetings.stop(app)
+            Mirror.drop(app)
         }
         WorkManager.getInstance(app).cancelAllWork()
         ModelJobs.kill(app)

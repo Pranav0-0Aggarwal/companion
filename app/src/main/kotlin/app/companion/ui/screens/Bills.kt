@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.data.Item
+import app.companion.data.Owed
 import app.companion.data.Profile
 import app.companion.data.dueDate
 import app.companion.sl
@@ -52,7 +53,7 @@ import kotlinx.coroutines.launch
 
 private val titles = listOf("Overdue", "This week", "Later", "No date")
 
-private fun bucket(b: Item, day: LocalDate) = when (b.dueDate?.let { daysTo(it, day) }) {
+private fun bucket(b: Owed, day: LocalDate) = when (b.item.dueDate?.let { daysTo(it, day) }) {
     null -> 3
     in Int.MIN_VALUE..-1 -> 0
     in 0..7 -> 1
@@ -64,12 +65,12 @@ fun BillsScreen(go: (String) -> Unit) {
     val c = LocalContext.current
     val repo = c.sl.repo
     val scope = rememberCoroutineScope()
-    val bills by repo.bills.collectAsStateWithLifecycle(emptyList<Item>())
+    val bills by repo.owed.collectAsStateWithLifecycle(emptyList<Owed>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
     val cred = remember { c.packageManager.getLaunchIntentForPackage(CRED) }
     val day = remember { today() }
-    val soon = bills.filter { b -> b.dueDate?.let { daysTo(it, day) <= 30 } == true }
-    val sub = if (bills.isEmpty()) "Nothing due" else "${soon.size} due · ${inr(soon.sumOf { it.paise })} in the next 30 days"
+    val soon = bills.filter { b -> b.item.dueDate?.let { daysTo(it, day) <= 30 } == true }
+    val sub = if (bills.isEmpty()) "Nothing due" else "${soon.size} due · ${inr(soon.sumOf { it.item.paise })} in the next 30 days"
     val groups = remember(bills, day) { bills.groupBy { bucket(it, day) } }
     Screen("Bills", sub, tools = { ToolButton(Ic.Plan, "Plan and reminders") { go("plan") } }) {
         if (bills.isEmpty()) {
@@ -82,31 +83,38 @@ fun BillsScreen(go: (String) -> Unit) {
     }
 }
 
-private fun LazyListScope.section(title: String, list: List<Item>, day: LocalDate, cred: Intent?, onPay: (Long) -> Unit, onCred: (Intent) -> Unit) {
+private fun LazyListScope.section(title: String, list: List<Owed>, day: LocalDate, cred: Intent?, onPay: (Long) -> Unit, onCred: (Intent) -> Unit) {
     item(key = "h$title") { Section(title) }
-    itemsIndexed(list, key = { _, b -> "b${b.id}" }) { k, b ->
+    itemsIndexed(list, key = { _, b -> "b${b.item.id}" }) { k, b ->
         Box(Modifier.animateItem().part(pal, k == 0, k == list.lastIndex)) {
-            BillLine(b, day, cred, { onPay(b.id) }, onCred)
+            BillLine(b, day, cred, { onPay(b.item.id) }, onCred)
         }
     }
 }
 
 @Composable
-private fun BillLine(b: Item, day: LocalDate, cred: Intent?, onPay: () -> Unit, onCred: (Intent) -> Unit) {
+private fun BillLine(o: Owed, day: LocalDate, cred: Intent?, onPay: () -> Unit, onCred: (Intent) -> Unit) {
+    val b = o.item
     val p = pal
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptic()
     val on = motion()
     var paid by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf(false) }
     val due = b.dueDate
     val days = due?.let { daysTo(it, day) }
     val card = listOfNotNull(b.bank, b.last4?.let { "··$it" }).joinToString(" ").ifEmpty { null }
-    val sub = listOfNotNull(days?.let { inDays(it).replaceFirstChar(Char::uppercase) }, card, b.minPaise?.let { "min ${money(it, b.currency)}" }).joinToString(" · ")
+    val sub = listOfNotNull(days?.let { inDays(it).replaceFirstChar(Char::uppercase) }, card, b.minPaise?.let { "min ${money(it, b.currency)}" }, o.n.takeIf { it > 1 }?.let { "$it messages" }).joinToString(" · ")
     PassLine(
         b.title,
         sub,
         lead = Ic.Bolt,
         tone = if ((days ?: 1) < 0) Tone.Red else Tone.Accent,
+        onLong = {
+            haptic(HapticFeedbackType.LongPress)
+            sheet = true
+        },
+        longLabel = "Mark as duplicate",
         trailing = {
             Column(horizontalAlignment = Alignment.End) {
                 Text(money(b.paise, b.currency), style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink))
@@ -134,4 +142,5 @@ private fun BillLine(b: Item, day: LocalDate, cred: Intent?, onPay: () -> Unit, 
             }
         },
     )
+    if (sheet) DupSheet(b) { sheet = false }
 }

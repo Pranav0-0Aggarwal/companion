@@ -9,6 +9,7 @@ import app.companion.core.Fingerprint
 import app.companion.core.Group
 import app.companion.core.Labels
 import app.companion.core.Raw
+import app.companion.core.Slip
 import app.companion.core.Stage
 import app.companion.core.Suggest
 import app.companion.core.Suggestion
@@ -21,6 +22,7 @@ val Item.money get() = kind == "Debit" || kind == "Credit" || kind == "CardSpend
 val Item.bill get() = kind == "Bill" || kind == "Statement"
 val Item.dueDate: LocalDate? get() = due?.let(LocalDate::ofEpochDay)
 val Item.tagList get() = tags?.split(',')?.filter { it.isNotEmpty() }.orEmpty()
+fun Item.slip() = Slip(at, due, last4, merchant ?: bank)
 fun Item.filed() = Filed(kind, tags, category, state)
 
 val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)

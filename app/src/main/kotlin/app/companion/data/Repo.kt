@@ -3,6 +3,8 @@ package app.companion.data
 import androidx.room.withTransaction
 import app.companion.core.Body
 import app.companion.core.Calibration
+import app.companion.core.Cycles
+import app.companion.core.Dup
 import app.companion.core.Event
 import app.companion.core.Fingerprint
 import app.companion.core.Group
@@ -29,6 +31,8 @@ data class Added(val item: Item, val fresh: Boolean)
 
 data class Change(val moved: Boolean, val ask: Boolean)
 
+class Owed(val item: Item, val n: Int)
+
 class Repo(private val db: Db) {
     private val d = db.dao()
     val fresh = ConcurrentHashMap<Long, Long>()
@@ -36,7 +40,8 @@ class Repo(private val db: Db) {
     val profile: Flow<Profile> = d.profile().map { it ?: Profile() }
     val cards = d.cards()
     val money = d.money()
-    val bills = d.bills()
+    val owed = d.bills().map { l -> Cycles.of(l, Item::slip).map { Owed(it.first(), it.size) } }
+    val bills = owed.map { l -> l.map(Owed::item) }
     val asks = d.asks()
     val tasks = d.tasks()
     val rules = d.ruleRows()
@@ -55,7 +60,7 @@ class Repo(private val db: Db) {
 
     suspend fun otpsNow(now: Long = System.currentTimeMillis()) = d.otpsNow(now)
 
-    suspend fun billsNow() = d.billsNow()
+    suspend fun billsNow() = Cycles.of(d.billsNow(), Item::slip).map { it.first() }
 
     suspend fun item(id: Long) = d.item(id)
 
@@ -128,7 +133,28 @@ class Repo(private val db: Db) {
 
     suspend fun dismiss(id: Long) = d.setState(id, State.SETTLED)
 
-    suspend fun pay(id: Long) = d.setState(id, State.PAID)
+    suspend fun pay(id: Long) = db.withTransaction {
+        d.payAll(Cycles.of(d.billsNow(), Item::slip).firstOrNull { g -> g.any { it.id == id } }?.map(Item::id) ?: listOf(id))
+    }
+
+    fun dups(id: Long) = d.dups(id)
+
+    suspend fun dupCandidates(id: Long): List<Item> {
+        val i = d.item(id) ?: return emptyList()
+        return d.dupCandidates(Dup.kinds(i.kind), id, i.at, i.at - Dup.WINDOW, i.at + Dup.WINDOW, i.paise, Dup.LIMIT)
+    }
+
+    suspend fun markDup(id: Long, keep: Long): Boolean = db.withTransaction {
+        val a = d.item(id) ?: return@withTransaction false
+        val b = d.item(keep) ?: return@withTransaction false
+        val to = b.dup ?: keep
+        if (id == keep || to == id || !Dup.compatible(a.kind, b.kind)) return@withTransaction false
+        d.moveDups(id, to)
+        d.setDup(id, to)
+        true
+    }
+
+    suspend fun unDup(id: Long) = d.setDup(id, null)
 
     suspend fun ping(id: Long, bits: Int) = d.setPing(id, bits)
 
@@ -209,13 +235,14 @@ class Repo(private val db: Db) {
         val key = foldKey(e, raw, v, p)
         if (key != null) {
             d.drop(id)
+            d.moveDups(id, null)
             d.count(day(raw), key)
             if (!p.imported && raw.source == Source.Sms) d.fold(Fold(raw.sender, raw.at))
             fresh.remove(id)
             return@withTransaction Change(true, false)
         }
         val learned = cat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, model = v.guess?.label, mprob = v.guess?.prob)
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob)
         if (n == cur || Refile.lost(cur.filed(), n.filed())) return@withTransaction Change(false, false)
         d.update(n)
         Change(true, Refile.asks(cur.filed(), n.filed()))

@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
@@ -25,7 +27,10 @@ import androidx.window.layout.WindowInfoTracker
 import app.companion.data.Profile
 import app.companion.ui.CompanionTheme
 import app.companion.ui.kit.FloatNav
+import app.companion.ui.kit.LocalSnack
 import app.companion.ui.kit.Motion
+import app.companion.ui.kit.Snack
+import app.companion.ui.kit.SnackLane
 import app.companion.ui.kit.Tab
 import app.companion.ui.kit.motion
 import app.companion.ui.pal
@@ -120,6 +125,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
     val top = route == null || route in tabs
     var ask by remember { mutableStateOf<AskReq?>(null) }
     val on = motion()
+    val snack = remember { SnackbarHostState() }.let { h -> Snack(h, rememberCoroutineScope()) }
     val go: (String) -> Unit = { r ->
         nav.navigate(r) {
             if (r in tabs) {
@@ -133,7 +139,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
     val exit = fadeOut(tween(90))
     val slideIn = if (on) slideInHorizontally(Motion.soft()) { it / 6 } + fadeIn(tween(200)) else fadeIn(tween(120))
     val slideOut = if (on) slideOutHorizontally(Motion.soft()) { it / 6 } + fadeOut(tween(150)) else fadeOut(tween(90))
-    CompositionLocalProvider(LocalCapture provides { setCapture(it) }, LocalAsk provides { ask = it }) {
+    CompositionLocalProvider(LocalCapture provides { setCapture(it) }, LocalAsk provides { ask = it }, LocalSnack provides snack) {
         Box(Modifier.fillMaxSize().background(pal.bg)) {
             AnimatedContent(
                 fold?.takeIf { top },
@@ -165,6 +171,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                     }
                 }
             }
+            SnackLane(snack, Modifier.align(Alignment.BottomCenter), top && fold == null)
             AskHost(ask, { ask = null }, go)
             capture?.let { CaptureSheet(it) { setCapture(null) } }
         }

@@ -72,31 +72,49 @@ interface Dao {
     @Query("UPDATE items SET body = NULL WHERE body IS NOT NULL AND at < :before")
     suspend fun blank(before: Long): Int
 
-    @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit', 'CardSpend') ORDER BY at DESC LIMIT 3000")
+    @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit', 'CardSpend') AND dup IS NULL ORDER BY at DESC LIMIT 3000")
     fun money(): Flow<List<Item>>
 
-    @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' ORDER BY due IS NULL, due, at DESC")
+    @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' AND dup IS NULL ORDER BY due IS NULL, due, at DESC")
     fun bills(): Flow<List<Item>>
 
-    @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' ORDER BY due IS NULL, due, at DESC")
+    @Query("SELECT * FROM items WHERE kind IN ('Bill', 'Statement') AND state != 'paid' AND dup IS NULL ORDER BY due IS NULL, due, at DESC")
     suspend fun billsNow(): List<Item>
 
-    @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' ORDER BY at DESC")
+    @Query("UPDATE items SET state = 'paid' WHERE id IN (:ids) OR dup IN (:ids)")
+    suspend fun payAll(ids: List<Long>)
+
+    @Query("UPDATE items SET dup = :keep WHERE id = :id")
+    suspend fun setDup(id: Long, keep: Long?)
+
+    @Query("UPDATE items SET dup = :keep WHERE dup = :id")
+    suspend fun moveDups(id: Long, keep: Long?)
+
+    @Query("SELECT * FROM items WHERE dup = :id ORDER BY at DESC")
+    fun dups(id: Long): Flow<List<Item>>
+
+    @Query(
+        "SELECT * FROM items WHERE kind IN (:kinds) AND dup IS NULL AND id != :id AND at BETWEEN :lo AND :hi " +
+            "ORDER BY ABS(at - :at), ABS(paise - :paise) LIMIT :n",
+    )
+    suspend fun dupCandidates(kinds: List<String>, id: Long, at: Long, lo: Long, hi: Long, paise: Long, n: Int): List<Item>
+
+    @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL ORDER BY at DESC")
     fun asks(): Flow<List<Item>>
 
     @Query(
-        "SELECT * FROM items WHERE kind != 'Otp' AND (state IN ('ask', 'check') OR at > :since) " +
+        "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND (state IN ('ask', 'check') OR at > :since) " +
             "ORDER BY CASE state WHEN 'ask' THEN 0 WHEN 'check' THEN 1 ELSE 2 END, at DESC LIMIT 200",
     )
     fun inbox(since: Long): Flow<List<Item>>
 
     @Query(
         "SELECT items.* FROM items JOIN items_fts ON items.id = items_fts.rowid " +
-            "WHERE items_fts MATCH :q AND items.kind != 'Otp' ORDER BY items.at DESC LIMIT 100",
+            "WHERE items_fts MATCH :q AND items.kind != 'Otp' AND items.dup IS NULL ORDER BY items.at DESC LIMIT 100",
     )
     fun search(q: String): Flow<List<Item>>
 
-    @Query("SELECT * FROM items WHERE start IS NOT NULL AND start > :now AND at > :since AND (ping & 8) = 0 ORDER BY start LIMIT 5")
+    @Query("SELECT * FROM items WHERE start IS NOT NULL AND start > :now AND at > :since AND (ping & 8) = 0 AND dup IS NULL ORDER BY start LIMIT 5")
     fun suggested(now: Long, since: Long): Flow<List<Item>>
 
     @Query("UPDATE items SET state = :state WHERE id = :id")

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -195,11 +196,13 @@ fun PassLine(
     lines: Int = 2,
     fill: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onLong: (() -> Unit)? = null,
+    longLabel: String? = null,
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val p = pal
-    Column(modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
+    Column(modifier.fillMaxWidth().let { if (onClick != null || onLong != null) it.combinedClickable(onLongClickLabel = longLabel, onLongClick = onLong, onClick = onClick ?: {}) else it }) {
         Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (lead != null) {
                 Lead(lead, tone)

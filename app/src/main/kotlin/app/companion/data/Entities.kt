@@ -75,6 +75,7 @@ data class Item(
     val mprob: Float? = null,
     val body: String? = null,
     val tags: String? = null,
+    val dup: Long? = null,
 )
 
 @Fts4(contentEntity = Item::class)

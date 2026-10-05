@@ -255,5 +255,6 @@ private fun Detail(i: Item, card: Card?, links: Links, onFile: (String) -> Unit)
                 Chip(c.label.cap(), i.category == c.label, icon = Ic.of(c.label)) { if (i.category != c.label) onFile(c.label) }
             }
         }
+        DupPanel(i, Modifier.padding(top = 12.dp))
     }
 }

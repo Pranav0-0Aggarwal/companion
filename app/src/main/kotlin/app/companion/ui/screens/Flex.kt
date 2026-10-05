@@ -66,7 +66,6 @@ import app.companion.ui.rememberNow
 import app.companion.core.Timeline
 import app.companion.ui.clock
 import kotlinx.coroutines.launch
-import app.companion.ui.money as amt
 
 @Composable
 private fun Modifier.slide(from: Float): Modifier {
@@ -117,10 +116,10 @@ private fun Glance(d: Day, tl: Tl, goal: Int?, modifier: Modifier) {
         Text(d.hello, Modifier.padding(start = 8.dp), style = Ty.ui(15, FontWeight.Medium).copy(color = p.ink2))
         if (o != null) CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, big = true)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val safe = tl.safe
-            Tile(if (safe != null) "Safe to spend" else "Spent today", Modifier.weight(1f)) {
-                Amount(amt(safe ?: tl.spent, "INR"), Ty.mono(size, FontWeight.Bold).copy(color = p.ink))
-                Text(if (safe != null) "a day" else "${tl.n} payments", style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
+            val f = tl.fig(true)
+            Tile(f.label, Modifier.weight(1f)) {
+                Amount(f.figure, Ty.mono(size, FontWeight.Bold).copy(color = if (f.over) p.red else p.ink))
+                Text(f.sub, style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))
             }
             if (goal != null) {
                 Tile("Calories", Modifier.weight(1f)) {

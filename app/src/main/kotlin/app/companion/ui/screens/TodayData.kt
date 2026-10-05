@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Cycle
+import app.companion.core.Margin
 import app.companion.core.Meeting
 import app.companion.core.Meets
 import app.companion.core.Safe
@@ -29,6 +30,8 @@ import app.companion.system.Prefs
 import app.companion.ui.dateOf
 import app.companion.ui.daysTo
 import app.companion.ui.has
+import app.companion.ui.inDays
+import app.companion.ui.inr
 import app.companion.ui.zone
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +47,19 @@ sealed class Ev(val key: String, val at: Long?, val rank: Int = 0) {
     class Review(val n: Int) : Ev("review", null, -1)
 }
 
-class Tl(val items: List<Ev>, val soon: List<Ev>, val spent: Long, val n: Int, val kcal: Int, val safe: Long?, val payIn: Int?)
+class Fig(val label: String, val figure: String, val sub: String, val over: Boolean)
+
+fun Tl.fig(live: Boolean): Fig {
+    val m = safe
+    val pay = payIn?.let { " · payday ${inDays(it)}" }.orEmpty()
+    return when (m) {
+        is Margin.Over -> Fig("Over budget", "${inr(m.by)} over", "${inr(month)} spent of ${inr(budget)} budget$pay", true)
+        is Margin.Safe -> Fig("Safe to spend", inr(m.perDay), "a day$pay", false)
+        null -> Fig(if (live) "Spent today" else "Spent", inr(spent), "$n ${if (n == 1) "payment" else "payments"}", false)
+    }
+}
+
+class Tl(val items: List<Ev>, val soon: List<Ev>, val spent: Long, val n: Int, val kcal: Int, val safe: Margin?, val payIn: Int?, val month: Long, val budget: Long)
 
 private class Ext(val meets: List<Meeting> = emptyList(), val orders: List<Ping.Order> = emptyList(), val asked: Boolean = false)
 
@@ -121,6 +136,6 @@ private fun build(day: LocalDate, today: LocalDate, prof: Profile, money: List<I
     val n = here.count { !it.credit && !it.moved }
     val pd = prof.payDay?.let { Cycle.payday(it, day) }
     val month = money.filter { dateOf(it.at).let { d -> d.year == day.year && d.month == day.month } }.spends().sumOf { it.paise }
-    val safe = if (live && pd != null) Safe.perDay(prof.budget, month, Safe.owed(bills.map { it.dueDate to it.paise }, pd), Safe.days(day, pd)) else null
-    return Tl(Timeline.order(evs, { it.at }, { it.rank }), soon, spent, n, meals.sumOf { it.kcal }.toInt(), safe, pd?.let { daysTo(it, day) })
+    val safe = if (live && pd != null) Safe.room(prof.budget, month, Safe.owed(bills.map { it.dueDate to it.paise }, pd), Safe.days(day, pd)) else null
+    return Tl(Timeline.order(evs, { it.at }, { it.rank }), soon, spent, n, meals.sumOf { it.kcal }.toInt(), safe, pd?.let { daysTo(it, day) }, month, prof.budget ?: 0)
 }

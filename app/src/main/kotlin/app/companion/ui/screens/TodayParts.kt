@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.Cycle
+import app.companion.core.Needs
 import app.companion.data.Item
 import app.companion.data.brand
 import app.companion.data.Link
@@ -132,7 +133,8 @@ fun rememberDay(): Day {
     val printed = remember(money, day) { money.filter { dateOf(it.at) == day }.reversed() }
     val links = rememberLinks(need.take(5) + printed)
     val payday = prof.payDay?.let { "payday ${inDays(daysTo(Cycle.payday(it, day), day))}" }
-    val sub = listOfNotNull(dayLabel(day), Voice.need(need.size).cap(), payday).joinToString(" · ")
+    val due = bills.count { b -> b.dueDate?.let { daysTo(it, day) <= 7 } == true && asks.none { it.id == b.id } }
+    val sub = listOfNotNull(dayLabel(day), Needs.line(asks.size, due).cap(), payday).joinToString(" · ")
     val hour = LocalTime.now(app.companion.ui.zone()).hour
     return Day(prof.name, Voice.hello(prof.name, hour), sub, day, otps, asks, need, bills, printed, links)
 }

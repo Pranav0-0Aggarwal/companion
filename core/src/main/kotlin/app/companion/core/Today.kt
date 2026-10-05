@@ -8,10 +8,23 @@ object Safe {
 
     fun days(today: LocalDate, payday: LocalDate) = ChronoUnit.DAYS.between(today, payday).toInt().coerceAtLeast(1)
 
-    fun perDay(budget: Long?, spent: Long, owed: Long, days: Int?): Long? {
+    fun room(budget: Long?, spent: Long, owed: Long, days: Int?): Margin? {
         if (budget == null || budget <= 0 || days == null) return null
-        return ((budget - spent - owed) / days.coerceAtLeast(1) / 100 * 100).coerceAtLeast(0)
+        val left = budget - spent - owed
+        return if (left <= 0) Margin.Over(-left) else Margin.Safe(left / days.coerceAtLeast(1) / 100 * 100)
     }
+}
+
+sealed interface Margin {
+    data class Safe(val perDay: Long) : Margin
+    data class Over(val by: Long) : Margin
+}
+
+object Needs {
+    fun line(asks: Int, bills: Int): String = listOfNotNull(
+        asks.takeIf { it > 0 }?.let { "$it ${if (it == 1) "needs" else "need"} you" },
+        bills.takeIf { it > 0 }?.let { "$it bill${if (it == 1) "" else "s"} due" },
+    ).joinToString(" · ").ifEmpty { "nothing needs you" }
 }
 
 object Strip {

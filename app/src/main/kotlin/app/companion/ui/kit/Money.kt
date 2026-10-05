@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,35 +54,38 @@ fun MoneyRow(
     onClick: (() -> Unit)? = null,
 ) {
     val p = pal
-    Row(
-        modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (brand != null) {
-            BrandMark(brand)
-            Box(Modifier.size(14.dp))
-        } else if (lead != null) {
-            Lead(lead, if (moved) Tone.Plain else if (credit) Tone.Green else Tone.Accent)
-            Box(Modifier.size(14.dp))
-        } else if (time != null) {
-            Text(time, Modifier.width(52.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2))
+    BoxWithConstraints(modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
+        val tight = maxWidth < Tight
+        val shown = if (credit && !moved) "+$amount" else amount
+        val figure: @Composable (Modifier) -> Unit = {
+            Text(shown, it, style = Ty.mono(16, FontWeight.SemiBold).copy(color = if (moved) p.ink2 else if (credit) p.green else p.ink), maxLines = 1, softWrap = false)
         }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (stamp != null || tags.isNotEmpty()) {
-                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    stamp?.let { Stamp(it, ink = Ink.Quiet) }
-                    Tags(tags)
+        Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (brand != null) {
+                BrandMark(brand)
+                Box(Modifier.size(14.dp))
+            } else if (lead != null) {
+                Lead(lead, if (moved) Tone.Plain else if (credit) Tone.Green else Tone.Accent)
+                Box(Modifier.size(14.dp))
+            } else if (time != null) {
+                Text(time, Modifier.width(52.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (stamp != null || tags.isNotEmpty() || tight) {
+                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        stamp?.let { Stamp(it, ink = Ink.Quiet) }
+                        Tags(tags)
+                        if (tight) {
+                            Spacer(Modifier.weight(1f))
+                            figure(Modifier)
+                        }
+                    }
                 }
             }
+            if (!tight) figure(Modifier.padding(start = 12.dp))
         }
-        Text(
-            if (credit && !moved) "+$amount" else amount,
-            Modifier.padding(start = 12.dp),
-            style = Ty.mono(16, FontWeight.SemiBold).copy(color = if (moved) p.ink2 else if (credit) p.green else p.ink),
-            maxLines = 1,
-        )
     }
 }
 

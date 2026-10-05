@@ -124,7 +124,7 @@ fun TodayScreen(go: (String) -> Unit) {
                 itemsIndexed(tl.soon, key = { _, e -> "c${e.key}" }) { k, e ->
                     val b = e.beat()
                     Box(Modifier.animateItem().part(p, k == 0, k == tl.soon.lastIndex)) {
-                        PassLine(b.title, b.sub, lead = if (e is Ev.Bill) Ic.Bolt else if (e is Ev.Meet) Ic.Calendar else Ic.Bell, tone = Tone.Plain, lines = 1, onClick = { go(if (e is Ev.Bill) "bills" else "plan") },
+                        PassLine(b.title, b.sub, lead = if (e is Ev.Bill) Ic.Bolt else if (e is Ev.Meet) Ic.Calendar else Ic.Bell, tone = Tone.Plain, onClick = { go(if (e is Ev.Bill) "bills" else "plan") },
                             trailing = b.amount?.let { a -> { Text(a, style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink)) } })
                     }
                 }
@@ -160,13 +160,10 @@ internal fun GlanceTile(label: String, modifier: Modifier, onClick: () -> Unit, 
 private fun Glance(t: Tl, day: LocalDate, live: Boolean, goal: Int?, go: (String) -> Unit) {
     val p = pal
     Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        val safe = t.safe
-        GlanceTile(if (safe != null) "Safe to spend" else if (live) "Spent today" else "Spent", Modifier.weight(1f), { go("ledger") }) {
-            Amount(inr(safe ?: t.spent), Ty.mono(28, FontWeight.Bold).copy(color = p.ink))
-            Text(
-                if (safe != null) "a day${t.payIn?.let { " · payday in $it" }.orEmpty()}" else "${t.n} ${if (t.n == 1) "payment" else "payments"}",
-                style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1,
-            )
+        val f = t.fig(live)
+        GlanceTile(f.label, Modifier.weight(1f), { go("ledger") }) {
+            Amount(f.figure, Ty.mono(28, FontWeight.Bold).copy(color = if (f.over) p.red else p.ink))
+            Text(f.sub, style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 3)
         }
         if (goal != null) {
             val left = goal - t.kcal

@@ -10,24 +10,39 @@ class TodayTest {
 
     @Test
     fun `safe to spend divides what is left by the days to payday`() {
-        assertEquals(1_000L, Safe.perDay(100_000, 30_000, 10_000, 60))
-        assertEquals(600L, Safe.perDay(100_000, 30_000, 10_000, 100))
-        assertEquals(500L, Safe.perDay(100_000, 30_000, 10_000, 120))
+        assertEquals(Margin.Safe(1_000L), Safe.room(100_000, 30_000, 10_000, 60))
+        assertEquals(Margin.Safe(600L), Safe.room(100_000, 30_000, 10_000, 100))
+        assertEquals(Margin.Safe(500L), Safe.room(100_000, 30_000, 10_000, 120))
     }
 
     @Test
-    fun `safe to spend floors at zero and is hidden without a budget or payday`() {
-        assertEquals(0L, Safe.perDay(10_000, 20_000, 0, 5))
-        assertNull(Safe.perDay(null, 0, 0, 5))
-        assertNull(Safe.perDay(0, 0, 0, 5))
-        assertNull(Safe.perDay(10_000, 0, 0, null))
+    fun `over budget reports the shortfall including bills before payday`() {
+        assertEquals(Margin.Over(10_000L), Safe.room(10_000, 20_000, 0, 5))
+        assertEquals(Margin.Over(5_000L), Safe.room(100_000, 90_000, 15_000, 5))
+        assertEquals(Margin.Over(0L), Safe.room(10_000, 10_000, 0, 5))
+        assertEquals(Margin.Safe(100L), Safe.room(10_000, 9_500, 0, 5))
+    }
+
+    @Test
+    fun `no margin without a budget or payday`() {
+        assertNull(Safe.room(null, 0, 0, 5))
+        assertNull(Safe.room(0, 0, 0, 5))
+        assertNull(Safe.room(10_000, 0, 0, null))
     }
 
     @Test
     fun `payday today still counts one day`() {
         assertEquals(1, Safe.days(d, d))
         assertEquals(5, Safe.days(d, d.plusDays(5)))
-        assertEquals(500L, Safe.perDay(500, 0, 0, Safe.days(d, d)))
+        assertEquals(Margin.Safe(500L), Safe.room(500, 0, 0, Safe.days(d, d)))
+    }
+
+    @Test
+    fun `the needs line counts asks and bills separately`() {
+        assertEquals("nothing needs you", Needs.line(0, 0))
+        assertEquals("1 needs you", Needs.line(1, 0))
+        assertEquals("142 need you · 1 bill due", Needs.line(142, 1))
+        assertEquals("2 bills due", Needs.line(0, 2))
     }
 
     @Test

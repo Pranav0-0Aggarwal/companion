@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -206,36 +207,42 @@ fun PassLine(
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val p = pal
-    Column(modifier.fillMaxWidth().let { if (onClick != null || onLong != null) it.combinedClickable(onLongClickLabel = longLabel, onLongClick = onLong, onClick = onClick ?: {}) else it }) {
-        Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (brand != null) {
-                BrandMark(brand)
-                Box(Modifier.size(14.dp))
-            } else if (lead != null) {
-                Lead(lead, tone)
-                Box(Modifier.size(14.dp))
+    BoxWithConstraints(modifier.fillMaxWidth().let { if (onClick != null || onLong != null) it.combinedClickable(onLongClickLabel = longLabel, onLongClick = onLong, onClick = onClick ?: {}) else it }) {
+        val tight = trailing != null && maxWidth < Tight
+        Column {
+            Row(Modifier.heightIn(min = 64.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = if (tight) Alignment.Top else Alignment.CenterVertically) {
+                if (brand != null) {
+                    BrandMark(brand)
+                    Box(Modifier.size(14.dp))
+                } else if (lead != null) {
+                    Lead(lead, tone)
+                    Box(Modifier.size(14.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = lines, overflow = TextOverflow.Ellipsis)
+                    if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2), maxLines = lines, overflow = TextOverflow.Ellipsis)
+                    Tags(tags, Modifier.padding(top = 6.dp))
+                    if (tight) Box(Modifier.padding(top = 8.dp)) { trailing?.invoke() }
+                }
+                if (trailing != null && !tight) {
+                    Box(Modifier.padding(start = 12.dp)) { trailing() }
+                }
             }
-            Column(Modifier.weight(1f)) {
-                Text(title, style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = lines, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 2.dp), style = Ty.mono(13, FontWeight.Normal).copy(color = p.ink2), maxLines = lines, overflow = TextOverflow.Ellipsis)
-                Tags(tags, Modifier.padding(top = 6.dp))
-            }
-            if (trailing != null) {
-                Box(Modifier.padding(start = 12.dp)) { trailing() }
-            }
-        }
-        if (actions != null) {
-            if (fill) {
-                Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
-            } else {
-                androidx.compose.foundation.layout.FlowRow(
-                    Modifier.padding(start = if (lead != null || brand != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) { actions() }
+            if (actions != null) {
+                if (fill) {
+                    Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
+                } else {
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier.padding(start = if (lead != null || brand != null) 72.dp else 18.dp, end = 12.dp, bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) { actions() }
+                }
             }
         }
     }
 }
+
+internal val Tight = 300.dp
 
 @Composable
 fun Rule(start: Dp = 18.dp) {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -51,6 +52,7 @@ import app.companion.chat.Msg
 import app.companion.core.Card
 import app.companion.core.Cover
 import app.companion.core.Focus
+import app.companion.core.Margin
 import app.companion.core.Meets
 import app.companion.core.Now
 import app.companion.core.Query
@@ -225,7 +227,11 @@ private fun NowPage(v: Cov) {
             Head("Spent today")
             Big(v.show(inr(v.tl.spent)))
             Quiet("${v.tl.n} ${if (v.tl.n == 1) "payment" else "payments"}", Modifier.padding(top = 4.dp))
-            v.tl.safe?.let { Quiet("Safe to spend ${v.show(inr(it))} a day", Modifier.padding(top = 12.dp)) }
+            when (val m = v.tl.safe) {
+                is Margin.Safe -> Quiet("Safe to spend ${v.show(inr(m.perDay))} a day", Modifier.padding(top = 12.dp))
+                is Margin.Over -> Quiet("Over budget by ${v.show(inr(m.by))}", Modifier.padding(top = 12.dp))
+                null -> {}
+            }
         }
     }
 }
@@ -238,25 +244,35 @@ private fun TodayPage(v: Cov) {
     val rows = Timeline.around(v.tl.items.filter { it !is Ev.Review }, { it.at }, v.now, 4)
     if (rows.isEmpty()) return Quiet("Nothing planned today.")
     var shown = false
-    rows.forEach { e ->
-        if (!shown && (e.at ?: 0L) > v.now) {
-            shown = true
-            Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("NOW", Modifier.width(52.dp), style = Ty.ui(11, FontWeight.ExtraBold).copy(color = p.red, letterSpacing = 1.2.sp))
-                Box(Modifier.weight(1f).height(2.dp).background(p.red, RoundedCornerShape(1.dp)))
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val tight = maxWidth - RAIL < 300.dp
+        Column {
+            rows.forEach { e ->
+                if (!shown && (e.at ?: 0L) > v.now) {
+                    shown = true
+                    Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("NOW", Modifier.width(RAIL), style = Ty.ui(11, FontWeight.ExtraBold).copy(color = p.red, letterSpacing = 1.2.sp))
+                        Box(Modifier.weight(1f).height(2.dp).background(p.red, RoundedCornerShape(1.dp)))
+                    }
+                }
+                val b = e.beat()
+                val amount = b.amount?.let { v.show(it) }
+                val figure: (@Composable () -> Unit)? = amount?.let { a -> { Text(a, style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink), maxLines = 1, softWrap = false) } }
+                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                    Text(e.at?.let(::clock) ?: "Due", Modifier.width(RAIL).padding(top = 2.dp), style = Ty.mono(14, FontWeight.Normal).copy(color = p.ink2), maxLines = 1, softWrap = false)
+                    Column(Modifier.weight(1f)) {
+                        Text(b.title, style = Ty.ui(17, FontWeight.Medium).copy(color = p.ink), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        if (b.sub.isNotEmpty()) Text(b.sub, style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        if (tight && figure != null) Box(Modifier.padding(top = 4.dp)) { figure() }
+                    }
+                    if (!tight && figure != null) Box(Modifier.padding(start = 8.dp)) { figure() }
+                }
             }
-        }
-        val b = e.beat()
-        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(e.at?.let(::clock) ?: "Due", Modifier.width(52.dp), style = Ty.mono(14, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
-            Column(Modifier.weight(1f)) {
-                Text(b.title, style = Ty.ui(17, FontWeight.Medium).copy(color = p.ink), maxLines = 1)
-                if (b.sub.isNotEmpty()) Text(b.sub, style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
-            }
-            b.amount?.let { Text(v.show(it), Modifier.padding(start = 8.dp), style = Ty.mono(16, FontWeight.SemiBold).copy(color = p.ink), maxLines = 1) }
         }
     }
 }
+
+private val RAIL = 44.dp
 
 @Composable
 private fun ChipBtn(text: String, onClick: () -> Unit) {

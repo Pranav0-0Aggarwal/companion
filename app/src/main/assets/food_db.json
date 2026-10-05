@@ -38,5 +38,9 @@
 {"id":"maggi","name":"Maggi noodles","aliases":["maggi","maggie","instant noodles","noodles","masala maggi"],"per100":{"kcal":112,"protein":2.5,"carbs":16,"fat":4.5},"serve":{"serving":280,"bowl":250,"plate":280},"unit":"serving","source":"seed-estimate"},
 {"id":"pizza","name":"Pizza slice","aliases":["pizza","pizza slice","cheese pizza","veg pizza"],"per100":{"kcal":266,"protein":11,"carbs":33,"fat":10},"serve":{"slice":100,"piece":100},"unit":"slice","source":"seed-estimate"},
 {"id":"burger","name":"Burger","aliases":["burger","veg burger","chicken burger","cheese burger"],"per100":{"kcal":240,"protein":11,"carbs":28,"fat":9},"serve":{"piece":150},"unit":"piece","source":"seed-estimate"},
-{"id":"ghee","name":"Ghee","aliases":["ghee","desi ghee","clarified butter"],"per100":{"kcal":900,"protein":0,"carbs":0,"fat":100},"serve":{"tbsp":15,"tsp":5},"unit":"tsp","source":"seed-estimate"}
+{"id":"ghee","name":"Ghee","aliases":["ghee","desi ghee","clarified butter"],"per100":{"kcal":900,"protein":0,"carbs":0,"fat":100},"serve":{"tbsp":15,"tsp":5},"unit":"tsp","source":"seed-estimate"},
+{"id":"paneer_bhurji","name":"Paneer bhurji","aliases":["paneer bhurji","paneer bhurjee","scrambled paneer"],"per100":{"kcal":250,"protein":14,"carbs":6,"fat":19},"serve":{"bowl":150},"unit":"bowl","source":"seed-estimate"},
+{"id":"soya_curry","name":"Soya chunks curry","aliases":["soya chunks","soya curry","soya chunk curry","nutrela","meal maker"],"per100":{"kcal":140,"protein":12,"carbs":10,"fat":6},"serve":{"bowl":150},"unit":"bowl","source":"seed-estimate"},
+{"id":"moong_chilla","name":"Moong dal chilla","aliases":["moong chilla","moong dal chilla","chilla","cheela","moong cheela"],"per100":{"kcal":190,"protein":10,"carbs":25,"fat":6},"serve":{"piece":80},"unit":"piece","source":"seed-estimate"},
+{"id":"sprouts","name":"Sprouts chaat","aliases":["sprouts","sprouts salad","moong sprouts","sprouts chaat"],"per100":{"kcal":100,"protein":7,"carbs":15,"fat":1},"serve":{"bowl":150},"unit":"bowl","source":"seed-estimate"}
 ]}

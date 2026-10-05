@@ -178,12 +178,11 @@ interface Dao {
     @Query("SELECT * FROM items WHERE kind = 'Delivery' AND dup IS NULL AND state != 'ask' AND at >= :since ORDER BY at")
     suspend fun deliveriesSince(since: Long): List<Item>
 
-    @Query("SELECT COUNT(*) FROM items WHERE state IN ('ask', 'check') AND kind NOT IN ('Otp', 'Spam') AND dup IS NULL AND at >= :since")
+    @Query("SELECT COUNT(*) FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL AND at >= :since")
     suspend fun needs(since: Long): Int
 
     @Query(
-        "SELECT * FROM items WHERE state IN ('ask', 'check') AND kind NOT IN ('Otp', 'Spam') AND dup IS NULL " +
-            "ORDER BY CASE state WHEN 'ask' THEN 0 ELSE 1 END, at DESC LIMIT :n",
+        "SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL ORDER BY at DESC LIMIT :n",
     )
     suspend fun needing(n: Int): List<Item>
 

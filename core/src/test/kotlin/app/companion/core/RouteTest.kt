@@ -70,4 +70,22 @@ class RouteTest {
         assertTrue(Route.asks("should I have paneer?"))
         assertFalse(Route.asks("had paneer for dinner"))
     }
+
+    @Test
+    fun plainMealStatementsBecomeItems() {
+        val a = Route.meal("had 2 idli and chai for breakfast")!!
+        assertEquals(listOf("idli" to 2.0, "chai" to 1.0), a.map { it.name to it.qty })
+        assertNull(a[0].unit)
+        val b = Route.meal("lunch was 2 rotis, dal and a bowl of curd")!!
+        assertEquals(listOf("rotis", "dal", "curd"), b.map { it.name })
+        assertEquals("bowl", b[2].unit)
+        val c = Route.meal("kal raat 2 plate momos aur ek roll khaya")!!
+        assertEquals(listOf("momos" to 2.0, "roll" to 1.0), c.map { it.name to it.qty })
+        assertEquals("plate", c[0].unit)
+        assertEquals(listOf("rotis", "paneer"), Route.meal("I had 3 rotis with paneer")!!.map { it.name })
+        assertNull(Route.meal("suggest a dinner"))
+        assertNull(Route.meal("had dinner?"))
+        assertNull(Route.meal("how much did I spend on lunch"))
+        assertNull(Route.meal("paid 300 for lunch"))
+    }
 }

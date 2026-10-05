@@ -31,6 +31,17 @@ object Route {
         }
     }
 
+    private val ate = Regex("^(?:i |maine )?(?:just )?(?:had|ate|have had|have eaten|eaten|finished)\\b|\\b(?:breakfast|lunch|dinner|snacks?|brunch|nashta) (?:was|were|is)\\b|\\bfor (?:breakfast|lunch|dinner|snacks?|brunch)$|\\b(?:khaya|khayi|khaye|khaaya|piya|piyi|pi li|kha liya|kha li|kha liye)$")
+    private val money = Regex("\\b(spend|spent|paid|pay|rs|inr|bill|order|ordered|kharcha|cost)\\b")
+    private val drop = Regex("\\b(?:i|maine|just|had|ate|have|eaten|finished|for|in|at|was|were|is|my|some|today|tonight|yesterday|this morning|this evening|last night|kal|aaj|raat|subah|shaam|dopahar|ko|mein|me|breakfast|lunch|dinner|snacks?|brunch|nashta|khaya|khayi|khaye|khaaya|piya|piyi|pi li|kha liya|kha li|kha liye|li|liya)\\b")
+
+    fun meal(text: String): List<Req>? {
+        val t = text.lowercase().replace('’', '\'').replace(Regex("[^a-z0-9,+&/'\\s]"), " ").replace(Regex("\\s+"), " ").trim()
+        if (text.trim().endsWith("?") || ask.containsMatchIn(t) || money.containsMatchIn(t) || !ate.containsMatchIn(t)) return null
+        val items = t.replace(Regex("\\s+with\\s+"), " and ").replace(drop, " ").replace(Regex("\\s+"), " ").trim()
+        return Clarify.spoken(items).filter { r -> r.name.any(Char::isLetter) }.takeIf { it.isNotEmpty() }
+    }
+
     private fun compare(t: String): String? {
         val (a, b) = t.split(Regex("\\s(?:vs|versus|compared (?:to|with))\\s"), limit = 2).map { it.trim() }
         val pb = period.find(b)?.value ?: return null

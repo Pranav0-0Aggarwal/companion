@@ -144,7 +144,10 @@ class BillCycle(private val repo: Repo, private val show: (Card) -> Unit) : Base
 class BestCard(private val repo: Repo, private val show: (Card) -> Unit) : Base(ToolSpecs.bestCard) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
         val cards = repo.cards.first().map { Plastic((listOf(it.bank.removeSuffix(" Bank"), it.nick).filter(String::isNotBlank) + "··${it.last4}").joinToString(" "), it.stmtDay, it.dueDay) }
-        if (cards.isEmpty()) return ToolOut.Ok("No cards added yet.")
+        if (cards.isEmpty()) {
+            val n = repo.found.first().size
+            return ToolOut.Ok(if (n > 0) "No cards added yet. I found $n in your messages: add them in Money, Cards and I can pick the best one each day." else "No cards added yet. Add one in Money, Cards.")
+        }
         val w = Best.rank(cards, LocalDate.now(zone))
         show(Card.Facts("Best card today", w.first().name, w.take(8).map { Fact(it.name, "pay by ${shortDay(it.due)}", "${it.days} days") }, open = "cards"))
         return ToolOut.Ok(Shape.best(w))

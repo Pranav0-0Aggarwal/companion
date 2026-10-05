@@ -131,6 +131,7 @@ class GuardTest {
         assertEquals(4, Guard.prefill(v(charging = true, thermal = 3)))
         assertEquals(4, Guard.prefill(v(charging = false, thermal = Guard.LIGHT)))
         assertEquals(2, Guard.prefill(v(charging = false, thermal = Guard.MODERATE)))
+        assertEquals(6, Guard.prefill(v(charging = true, thermal = Guard.LIGHT)))
         assertEquals(listOf(4, 2), listOf(v(charging = true), v(charging = false)).map(Guard::threads))
     }
 }

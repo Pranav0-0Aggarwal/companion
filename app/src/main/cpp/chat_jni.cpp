@@ -180,7 +180,8 @@ bool gen(C *h, const std::string &prompt, const std::string &pin, const std::str
         }
         llama_sampler_chain_add(s, gr);
     }
-    llama_sampler_chain_add(s, llama_sampler_init_penalties(llama_vocab_n_tokens(v), 64, 1.1f, 0.0f, 0.0f));
+    static const char *breaks[] = {"\n", ":", "\"", ",", "{", "}"};
+    llama_sampler_chain_add(s, llama_sampler_init_dry(v, 0.8f, 1.75f, 2, 256, breaks, 6));
     if (temp > 0.0f) {
         llama_sampler_chain_add(s, llama_sampler_init_top_k(40));
         llama_sampler_chain_add(s, llama_sampler_init_temp(temp));
@@ -302,7 +303,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_run(JNIEnv *
     try {
         const std::string p = utf8(e, prompt);
         if (p.empty()) return JNI_FALSE;
-        llama_set_n_threads(h->c, std::max(1, std::min((int)threads, 4)), std::max(1, std::min((int)pre, 4)));
+        llama_set_n_threads(h->c, std::max(1, std::min((int)threads, 4)), std::max(1, std::min((int)pre, 6)));
         const Put put = [&](const std::string &s) {
             jstring j = jstr(e, s);
             if (!j) return false;
@@ -326,7 +327,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_app_companion_ai_ChatJni_warm(JNIEnv 
     if (!h || !pin) return JNI_FALSE;
     h->stop.store(false);
     try {
-        llama_set_n_threads(h->c, 1, std::max(1, std::min((int)pre, 4)));
+        llama_set_n_threads(h->c, 1, std::max(1, std::min((int)pre, 6)));
         return warm(h, utf8(e, pin)) ? JNI_TRUE : JNI_FALSE;
     } catch (...) {
         clear(h);

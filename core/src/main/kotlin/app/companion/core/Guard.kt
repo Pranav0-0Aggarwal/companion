@@ -38,7 +38,11 @@ object Guard {
 
     fun threads(v: Vitals) = if (v.charging) 4 else 2
 
-    fun prefill(v: Vitals) = if (v.charging || v.thermal < MODERATE) 4 else 2
+    fun prefill(v: Vitals) = when {
+        v.charging && v.thermal < MODERATE -> 6
+        v.charging || v.thermal < MODERATE -> 4
+        else -> 2
+    }
 
     fun take(v: Vitals, n: Int, charge: Boolean) = if (!charge || hold(v, true) == null) n else n.coerceAtMost(LIVE)
 

@@ -235,6 +235,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     private suspend fun ProducerScope<Out>.run(text: String, bg: Boolean) {
         foods.answer(text)?.let { return settle(text, it) }
         Route.of(text)?.let { registry.parse(it) as? Step.Call }?.let { return act(text, it, Json.write(mapOf("tool" to it.tool.name, "args" to it.args))) }
+        Route.meal(text)?.let { return settle(text, foods.log(it, foods.wen(text), if (foods.order != null) "order" else "chat", null, foods.order)) }
         val b = brain() ?: return fail("model")
         val first = Turn(Role.User, Prompt.user(text, stamp.format(ZonedDateTime.now(zone))))
         val turns = hist.fit(listOf(first)) { b.tpl.render(system, it).length <= MAX_PROMPT }

@@ -173,6 +173,8 @@ dependencies {
     implementation(libs.coroutines)
     implementation(libs.play.auth)
     implementation(libs.litert)
+    implementation(libs.health)
+    implementation(libs.mlkit.text)
     testImplementation(libs.kotlin.test)
 }
 

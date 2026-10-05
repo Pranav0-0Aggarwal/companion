@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
 
     <queries>
         <package android:name="com.dreamplug.androidapp" />
@@ -51,7 +55,27 @@
             </intent-filter>
         </activity>
 
-<receiver
+        <activity-alias
+            android:name=".HealthRationale"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".HealthUsage"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <receiver
             android:name=".ingest.SmsReceiver"
             android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
@@ -121,6 +145,11 @@
         </service>
 
         <service
+            android:name=".ai.ChatService"
+            android:exported="false"
+            android:isolatedProcess="true" />
+
+        <service
             android:name=".ai.NuxService"
             android:exported="false"
             android:isolatedProcess="true" />
@@ -173,6 +202,14 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            tools:node="merge">
+            <meta-data
+                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+                tools:node="remove" />
+        </service>
 
         <service
             android:name="com.google.android.play.core.assetpacks.AssetPackExtractionService"

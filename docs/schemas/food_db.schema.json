@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://companion.local/schemas/food_db.schema.json",
+  "title": "Companion food database",
+  "type": "object",
+  "required": ["version", "source", "foods"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "foods": { "type": "array", "items": { "$ref": "#/$defs/food" } }
+  },
+  "$defs": {
+    "grams": { "type": "number", "exclusiveMinimum": 0 },
+    "food": {
+      "type": "object",
+      "required": ["id", "name", "per100", "serve", "unit", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "per100": {
+          "type": "object",
+          "required": ["kcal", "protein", "carbs", "fat"],
+          "additionalProperties": false,
+          "properties": {
+            "kcal": { "type": "number", "minimum": 0, "maximum": 900 },
+            "protein": { "type": "number", "minimum": 0, "maximum": 100 },
+            "carbs": { "type": "number", "minimum": 0, "maximum": 100 },
+            "fat": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "serve": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "enum": ["piece", "bowl", "plate", "cup", "glass", "tbsp", "tsp", "slice", "serving"] },
+          "additionalProperties": { "$ref": "#/$defs/grams" }
+        },
+        "unit": { "enum": ["piece", "bowl", "plate", "cup", "glass", "tbsp", "tsp", "slice", "serving"] },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

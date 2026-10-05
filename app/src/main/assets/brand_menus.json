@@ -1,0 +1,14 @@
+{"version":1,"chains":[
+{"name":"California Burrito","aliases":["cali burrito","california burrito"],"source":"","as_of":"","items":[]},
+{"name":"McDonald's","aliases":["mcdonalds","mc donalds","mcd","macdonalds"],"source":"","as_of":"","items":[]},
+{"name":"Domino's","aliases":["dominos","domino","dominoes"],"source":"","as_of":"","items":[]},
+{"name":"KFC","aliases":["kentucky fried chicken"],"source":"","as_of":"","items":[]},
+{"name":"Subway","aliases":[],"source":"","as_of":"","items":[]},
+{"name":"Burger King","aliases":["bk"],"source":"","as_of":"","items":[]},
+{"name":"Starbucks","aliases":["sbux"],"source":"","as_of":"","items":[]},
+{"name":"Taco Bell","aliases":[],"source":"","as_of":"","items":[]},
+{"name":"Chaayos","aliases":["chayos"],"source":"","as_of":"","items":[]},
+{"name":"Third Wave","aliases":["third wave coffee","twc"],"source":"","as_of":"","items":[]},
+{"name":"Box8","aliases":["box 8","box eight"],"source":"","as_of":"","items":[]},
+{"name":"Faasos","aliases":["fasoos","faasos wraps"],"source":"","as_of":"","items":[]}
+]}

@@ -71,6 +71,13 @@ class Lives(private val db: Db) {
         d.addMealItems(rows.map { it.copy(id = 0, qty = it.qty * f, kcal = it.kcal * f, protein = it.protein?.times(f), carbs = it.carbs?.times(f), fat = it.fat?.times(f)) })
     }
 
+    suspend fun editItem(i: MealItemRow) = d.updateItem(i)
+
+    suspend fun dropItem(i: MealItemRow) = db.withTransaction {
+        d.dropItem(i.id)
+        if (d.itemCount(i.mealId) == 0 && d.meal(i.mealId)?.src != "order") d.dropMeal(i.mealId)
+    }
+
     suspend fun kcalOn(day: LocalDate) = eaten(day).sumOf { it.kcal }
 
     suspend fun foodPaid(lo: Long, hi: Long) = d.foodPaid(lo, hi)

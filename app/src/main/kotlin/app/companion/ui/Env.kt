@@ -75,9 +75,9 @@ fun animationsOn(): Boolean {
     return remember { Settings.Global.getFloat(c.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f }
 }
 
-fun copy(c: Context, text: String) {
+fun copy(c: Context, text: String, label: String = "code") {
     val cm = c.getSystemService(ClipboardManager::class.java)
-    val clip = ClipData.newPlainText("code", text)
+    val clip = ClipData.newPlainText(label, text)
     clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
     cm.setPrimaryClip(clip)
 }

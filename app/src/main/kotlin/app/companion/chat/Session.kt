@@ -1,0 +1,166 @@
+package app.companion.chat
+
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import app.companion.Services
+import app.companion.ai.Answer
+import app.companion.ai.Answers
+import app.companion.core.Card
+import app.companion.core.ChatOpts
+import app.companion.core.Opt
+import app.companion.data.Item
+import java.time.LocalDate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class LogReq(val day: LocalDate, val slot: String? = null, val order: Long? = null)
+
+sealed class Msg(val id: Long) {
+    class User(id: Long, val text: String) : Msg(id)
+
+    class Bot(id: Long) : Msg(id) {
+        var text by mutableStateOf("")
+    }
+
+    class Rule(id: Long, val answer: Answer) : Msg(id)
+
+    class Res(id: Long, val card: Card) : Msg(id)
+
+    class Pick(id: Long, val question: String, val opts: List<Opt>) : Msg(id) {
+        var done by mutableStateOf(false)
+    }
+
+    class Hits(id: Long, val items: List<Item>) : Msg(id)
+
+    class Need(id: Long) : Msg(id)
+
+    class Note(id: Long, val text: String) : Msg(id)
+}
+
+@Stable
+class ChatSession(private val sl: Services) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var job: Job? = null
+    private var n = 0L
+
+    val msgs = mutableStateListOf<Msg>()
+    var busy by mutableStateOf(false)
+        private set
+    var typing by mutableStateOf(false)
+        private set
+    var ctx by mutableStateOf<LogReq?>(null)
+
+    val pending get() = (msgs.lastOrNull() as? Msg.Pick)?.takeIf { !it.done }
+
+    private fun id() = ++n
+
+    fun send(raw: String, go: (String) -> Unit = {}) {
+        val text = raw.trim()
+        if (text.isEmpty() || busy) return
+        (msgs.lastOrNull() as? Msg.Pick)?.done = true
+        msgs += Msg.User(id(), text)
+        run(go) { turn(text, go) }
+    }
+
+    fun today(day: LocalDate = LocalDate.now()) {
+        if (busy) return
+        (msgs.lastOrNull() as? Msg.Pick)?.done = true
+        msgs += Msg.User(id(), "What did I eat today?")
+        run({}) { collect(sl.chat.dayCard(day), {}) }
+    }
+
+    fun stop() {
+        job?.cancel()
+        busy = false
+        typing = false
+    }
+
+    fun reset() {
+        stop()
+        msgs.clear()
+        ctx = null
+        sl.chat.reset()
+    }
+
+    private fun run(go: (String) -> Unit, block: suspend () -> Unit) {
+        busy = true
+        typing = true
+        job = scope.launch {
+            try {
+                block()
+            } finally {
+                busy = false
+                typing = false
+            }
+        }
+    }
+
+    private suspend fun turn(text: String, go: (String) -> Unit) {
+        val c = ctx
+        val chat = sl.chat
+        val held = chat.foods.pending
+        if (c == null && !held) {
+            val answers = withContext(Dispatchers.Default) {
+                sl.planner.plan(text, System.currentTimeMillis()).takeIf { it.explicit }?.queries.orEmpty().map { Answers.run(it, sl.repo) }
+            }
+            if (answers.isNotEmpty()) {
+                answers.forEach { msgs += Msg.Rule(id(), it) }
+                return
+            }
+            if (!chat.ready()) {
+                val hits = withContext(Dispatchers.Default) { sl.repo.search(text).first() }
+                if (hits.isNotEmpty()) msgs += Msg.Hits(id(), hits) else msgs += Msg.Note(id(), "I can answer questions about your spending, bills and plans. Try \"spent this week\" or \"bills due this week\".")
+                msgs += Msg.Need(id())
+                return
+            }
+        }
+        if (c != null && !held && !chat.ready()) return collect(chat.log(text, c.day, c.slot, c.order), go)
+        val ask = if (c != null && !held) "I had this${c.slot?.let { " for $it" }.orEmpty()}: $text" else text
+        collect(chat.ask(ask, c?.order, at = c?.takeIf { !held }?.let { it.day to it.slot }), go)
+    }
+
+    private suspend fun collect(flow: Flow<Out>, go: (String) -> Unit) {
+        var bot: Msg.Bot? = null
+        flow.collect { o ->
+            when (o) {
+                is Out.Say -> {
+                    typing = false
+                    val b = bot ?: Msg.Bot(id()).also { msgs += it; bot = it }
+                    b.text += o.delta
+                }
+                is Out.Used -> {
+                    typing = true
+                    bot = null
+                }
+                is Out.Show -> {
+                    typing = false
+                    msgs += Msg.Res(id(), o.card)
+                    if (o.card is Card.Meal) ctx = null
+                }
+                is Out.Ask -> {
+                    typing = false
+                    msgs += Msg.Pick(id(), o.question, ChatOpts.of(o.question))
+                }
+                is Out.Open -> go(o.route)
+                is Out.Fail -> {
+                    typing = false
+                    when (o.why) {
+                        "model" -> msgs += Msg.Need(id())
+                        "memory" -> msgs += Msg.Note(id(), "Not enough free memory for the chat model right now. Try again in a moment.")
+                        else -> msgs += Msg.Note(id(), "I couldn't work that out. Try saying it another way.")
+                    }
+                }
+                Out.Done -> typing = false
+            }
+        }
+    }
+}

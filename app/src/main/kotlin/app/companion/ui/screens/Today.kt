@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.chat.LogReq
 import app.companion.core.Timeline
 import app.companion.data.Profile
 import app.companion.system.FoodPrefs
@@ -79,7 +80,6 @@ fun TodayScreen(go: (String) -> Unit) {
     val goal = rememberGoal()
     val c = LocalContext.current
     var sure by remember { mutableStateOf(FoodPrefs.sure(c)) }
-    var logging by remember { mutableStateOf<LogReq?>(null) }
     val nowAt = if (live) Timeline.nowAt(tl.items, { it.at }, now) else if (day < d.today) tl.items.size else 0
     val rel = app.companion.ui.daysTo(day, d.today)
     val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -108,14 +108,14 @@ fun TodayScreen(go: (String) -> Unit) {
             if (tl.items.isEmpty()) {
                 item(key = "clear") {
                     if (live) PassLine("All clear", "Nothing needs you right now", Modifier.padding(top = 16.dp).part(p, true, true), lead = Ic.Check, tone = Tone.Green)
-                    else Empty(Ic.Today, "Nothing on ${dayLabel(day)}", "Meals, payments and plans for this day show here.", action = { Btn("Log a meal", icon = Ic.Add) { logging = LogReq(day) } })
+                    else Empty(Ic.Today, "Nothing on ${dayLabel(day)}", "Meals, payments and plans for this day show here.", action = { Btn("Log a meal", icon = Ic.Add) { ask(AskReq(null, "I had ", log = LogReq(day))) } })
                 }
             }
             item(key = "gap") { Box(Modifier.padding(top = 8.dp)) }
             tl.items.forEachIndexed { k, e ->
                 if (live && k == nowAt) item(key = "now") { NowLine() }
                 item(key = e.key, contentType = e::class.simpleName) {
-                    Box(Modifier.animateItem()) { TlRow(e, k < nowAt, now, d.today, go, { logging = it }, sure) { sure = sure + it } }
+                    Box(Modifier.animateItem()) { TlRow(e, k < nowAt, now, d.today, go, { ask(AskReq(null, "I had ", log = it)) }, sure) { sure = sure + it } }
                 }
             }
             if (live && tl.items.isNotEmpty() && nowAt == tl.items.size) item(key = "now") { NowLine() }
@@ -134,7 +134,6 @@ fun TodayScreen(go: (String) -> Unit) {
         }
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(p.bg).padding(top = 8.dp, bottom = nav + 86.dp)) { AskPill(hint = "Ask or log anything") }
     }
-    logging?.let { LogSheet(it) { logging = null } }
 }
 
 @Composable

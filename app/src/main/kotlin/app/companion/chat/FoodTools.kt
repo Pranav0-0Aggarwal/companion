@@ -1,6 +1,7 @@
 package app.companion.chat
 
 import android.content.Context
+import app.companion.core.Card
 import app.companion.core.Req
 import app.companion.core.Sku
 import app.companion.core.ToolSpecs
@@ -41,7 +42,7 @@ class SetKcal(private val repo: Repo) : Base(ToolSpecs.setKcal) {
     }
 }
 
-class LogWeight(private val c: Context, private val repo: Repo) : Base(ToolSpecs.logWeight) {
+class LogWeight(private val c: Context, private val repo: Repo, private val show: (Card) -> Unit = {}) : Base(ToolSpecs.logWeight) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
         val kg = a.d("kg")?.takeIf { it in 25.0..300.0 } ?: return ToolOut.Fail("kg")
         val now = System.currentTimeMillis()
@@ -49,6 +50,7 @@ class LogWeight(private val c: Context, private val repo: Repo) : Base(ToolSpecs
         repo.life.weigh(day, kg, now)
         Health.weight(c, kg, now)
         val t = WeightNudge.trend(repo.life.weights(60).map { LocalDate.ofEpochDay(it.day) to it.kg })
+        show(Card.Weight(kg, day.toEpochDay(), t?.slopePerWeek, t?.avg7))
         val tail = t?.let { String.format(Locale.US, " Trend %+.1f kg a week, 7 day average %.1f.", it.slopePerWeek, it.avg7) }.orEmpty()
         return ToolOut.Ok("Saved ${kg} kg for $day.$tail")
     }

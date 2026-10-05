@@ -138,35 +138,6 @@ fun YouScreen(go: (String) -> Unit) {
     if (weigh) WeightSheet { weigh = false }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun WeightSheet(onClose: () -> Unit) {
-    val p = pal
-    val c = LocalContext.current
-    val snack = LocalSnack.current
-    var text by remember { mutableStateOf("") }
-    val kg = text.replace(',', '.').toDoubleOrNull()
-    val ok = kg != null && kg in 25.0..300.0
-    val go = {
-        val v = kg ?: 0.0
-        onClose()
-        snack.go {
-            when (val r = LogWeight(c, c.sl.repo).run(mapOf("kg" to v))) {
-                is ToolOut.Ok -> snack.say(r.text)
-                is ToolOut.Fail -> snack.say("Couldn't save that weight")
-                else -> Unit
-            }
-        }
-    }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.navigationBarsPadding().imePadding().padding(horizontal = 24.dp).padding(bottom = 20.dp)) {
-            Text("Log your weight", style = Ty.ui(22, FontWeight.Bold).copy(color = p.ink))
-            Field("Weight in kg", text, { text = it.take(6) }, Modifier.padding(top = 16.dp), keyboard = KeyboardType.Decimal, mono = true, ime = ImeAction.Done) { if (ok) go() }
-            Btn("Save", Modifier.padding(top = 20.dp), go = true, enabled = ok) { go() }
-        }
-    }
-}
-
 @Composable
 fun VaultScreen(back: () -> Unit) {
     val p = pal

@@ -7,6 +7,7 @@ import android.os.Process
 import androidx.work.WorkManager
 import app.companion.ai.BertScorer
 import app.companion.chat.ChatEngine
+import app.companion.chat.ChatSession
 import app.companion.ai.DecideScorer
 import app.companion.ai.DocIngest
 import app.companion.ai.Governor
@@ -49,6 +50,7 @@ class Services(val app: Application) {
     val pending by lazy { Pending(app, repo, refine, gov, scorer, nux) }
     val planner: Planner by lazy { RulePlanner() }
     val chat by lazy { ChatEngine(app, repo, gov) }
+    val session by lazy { ChatSession(this) }
     val docs by lazy { DocIngest(repo, nux) }
     val hooks by lazy { Hooks(app, repo, { chat.foods }, docs) }
     val ingest by lazy { Ingest(app, repo, rules, pending, hooks) }

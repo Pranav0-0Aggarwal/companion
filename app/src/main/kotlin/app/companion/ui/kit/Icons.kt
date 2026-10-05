@@ -72,6 +72,9 @@ object Ic {
     val Money = icon("money", "M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11", "M16 13.5h.01")
     val Trip = icon("trip", "M21 3L3 11l7 3 3 7z", "M10 14l11-11")
     val Vault = icon("vault", "M9 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M12 11h9M18 11v3")
+    val Stop = icon("stop", "M7 7h10v10H7z")
+    val Image = icon("image", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z", "M4 16l5-5 4 4 3-3 4 4", "M9 8h.01")
+    val Eye = icon("eye", "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")
     val Scale = icon("scale", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z", "M8 10a4 4 0 0 1 8 0M12 10l2-2")
 
     fun of(category: String?) = when (category) {

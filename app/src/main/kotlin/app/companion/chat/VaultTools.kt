@@ -1,6 +1,8 @@
 package app.companion.chat
 
+import app.companion.core.Card
 import app.companion.core.DocKind
+import app.companion.core.DocLine
 import app.companion.core.Mask
 import app.companion.core.Phrase
 import app.companion.core.ToolSpecs
@@ -10,14 +12,17 @@ import app.companion.data.Repo
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 private val zone get() = ZoneId.systemDefault()
 
 internal fun masked(r: DocRow) = "${r.kind} ${r.title}${r.mask?.let { " $it" }.orEmpty()}${r.expires?.let { " expires ${Instant.ofEpochMilli(it).atZone(zone).toLocalDate()}" }.orEmpty()}"
 
-class VaultFind(private val repo: Repo) : Base(ToolSpecs.vaultFind) {
+class VaultFind(private val repo: Repo, private val show: (Card) -> Unit) : Base(ToolSpecs.vaultFind) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
         val r = repo.docs.find(a.s("query") ?: return ToolOut.Fail("query")).take(8)
+        val today = LocalDate.now(zone)
+        if (r.isNotEmpty()) show(Card.Docs(r.map { DocLine(it.id, it.kind, it.title, it.mask, it.expires?.let { e -> ChronoUnit.DAYS.between(today, Instant.ofEpochMilli(e).atZone(zone).toLocalDate()).toInt() }) }))
         return ToolOut.Ok(if (r.isEmpty()) "No matching documents." else r.joinToString("; ") { masked(it) })
     }
 }

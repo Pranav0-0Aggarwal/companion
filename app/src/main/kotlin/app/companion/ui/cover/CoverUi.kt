@@ -45,10 +45,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.chat.LogReq
+import app.companion.chat.ChatSession
+import app.companion.chat.Msg
+import app.companion.core.Card
 import app.companion.core.Cover
 import app.companion.core.Focus
 import app.companion.core.Meets
 import app.companion.core.Now
+import app.companion.core.Query
 import app.companion.core.Stage
 import app.companion.core.Timeline
 import app.companion.data.Item
@@ -75,6 +80,7 @@ import app.companion.ui.rememberVoice
 import app.companion.ui.screens.CRED
 import app.companion.ui.screens.Ev
 import app.companion.ui.screens.Input
+import app.companion.ui.screens.cap
 import app.companion.ui.screens.Tl
 import app.companion.ui.screens.beat
 import app.companion.ui.screens.rememberGoal
@@ -270,41 +276,76 @@ private fun Mic(modifier: Modifier = Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Said(say: Say) {
+private fun LastAnswer(s: ChatSession, v: Cov) {
     val p = pal
-    val s = say.said
-    if (say.busy) Quiet("Working it out on this phone", Modifier.padding(top = 16.dp))
-    if (s != null) {
-        Text(s.head, Modifier.padding(top = 16.dp), style = Ty.ui(20, FontWeight.Bold).copy(color = p.ink, lineHeight = 26.sp))
-        s.lines.forEach { Quiet(it, Modifier.padding(top = 4.dp)) }
+    val m = s.msgs.lastOrNull { it !is Msg.User }
+    if (s.busy && s.typing) Quiet("Working it out on this phone", Modifier.padding(top = 16.dp))
+    if (m == null || s.typing) return
+    Column(Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp)) {
+        when (m) {
+            is Msg.Rule -> {
+                val a = m.answer
+                Text(a.total?.takeIf { a.query !is Query.CreateReminder }?.let { v.show(inr(it)) } ?: a.says, style = Ty.mono(32, FontWeight.Bold).copy(color = p.ink), maxLines = 2)
+                if (a.total != null) Quiet(a.says, Modifier.padding(top = 4.dp))
+                a.lines.take(3).forEach { Quiet("${it.title} ${v.show(inr(it.paise))}", Modifier.padding(top = 4.dp)) }
+            }
+            is Msg.Bot -> Text(m.text, style = Ty.ui(20, FontWeight.Bold).copy(color = p.ink, lineHeight = 26.sp))
+            is Msg.Res -> Brief(m.card, v)
+            is Msg.Pick -> {
+                Text(m.question, style = Ty.ui(18, FontWeight.Medium).copy(color = p.ink, lineHeight = 24.sp))
+                m.opts.filter { it.send != null }.forEach { o -> BigBtn(o.label, Modifier.padding(top = 10.dp), go = false) { s.send(o.send!!) } }
+            }
+            is Msg.Hits -> Text("${m.items.size} matching ${if (m.items.size == 1) "message" else "messages"}", style = Ty.ui(20, FontWeight.Bold).copy(color = p.ink))
+            is Msg.Need -> Quiet("Download the chat model in Settings on the main screen to log meals and ask in plain words.")
+            is Msg.Note -> Quiet(m.text)
+            is Msg.User -> Unit
+        }
     }
 }
 
 @Composable
+private fun Brief(c: Card, v: Cov) {
+    val p = pal
+    val (big, line) = when (c) {
+        is Card.Spend -> v.show(inr(c.total)) to c.label
+        is Card.Bills -> v.show(inr(c.total)) to c.label
+        is Card.Meal -> "${num(c.kcal)} kcal" to "${c.slot.cap()} logged"
+        is Card.Day -> "${num(c.kcal)} kcal" to (c.goal?.let { "of ${num(it)} today" } ?: "eaten today")
+        is Card.Weight -> String.format(java.util.Locale.US, "%.1f kg", c.kg) to "Weight logged"
+        is Card.Trip -> v.show(inr(c.total)) to c.name
+        is Card.Docs -> "${c.rows.size} saved" to "Open the vault on the main screen to reveal"
+    }
+    Text(big, style = Ty.mono(32, FontWeight.Bold).copy(color = p.ink), maxLines = 1)
+    Quiet(line, Modifier.padding(top = 4.dp))
+}
+
+@Composable
 private fun AskPage(v: Cov) {
-    val say = rememberSay()
-    val voice = rememberVoice { t -> t?.let(say::run) }
-    val meal = rememberVoice { t -> t?.let { say.run("I had $it for lunch") } }
+    val s = LocalContext.current.sl.session
+    val voice = rememberVoice { t -> t?.let { s.send(it) } }
     var q by remember { mutableStateOf("") }
     Head("Ask")
     if (!v.reveal) return Hidden(v)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (voice != null) Mic(Modifier.padding(vertical = 8.dp)) { voice() }
-        else Input(q, { q = it }, { say.run(q.trim()) }, null, false, Modifier)
     }
-    FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ChipBtn("Log lunch") { if (meal != null) meal() else say.run("Log lunch") }
-        ChipBtn("Spent today?") { say.run("Spent today") }
-        ChipBtn("Next bill") { say.run("Bills due this week") }
+    LastAnswer(s, v)
+    FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ChipBtn("Log lunch") {
+            s.ctx = LogReq(dateOf(System.currentTimeMillis()), "lunch")
+            if (voice != null) voice() else q = "I had "
+        }
+        ChipBtn("Spent today?") { s.send("Spent today") }
+        ChipBtn("Next bill") { s.send("Bills due this week") }
     }
-    Said(say)
+    Input(q, { q = it }, { s.send(q); q = "" }, null, false, Modifier)
 }
 
 @Composable
 private fun FoodPage(v: Cov) {
     val p = pal
-    val say = rememberSay()
-    val voice = rememberVoice { t -> t?.let { say.run("I had $it") } }
+    val s = LocalContext.current.sl.session
+    val voice = rememberVoice { t -> t?.let { s.send(it) } }
     Head("Food")
     if (!v.reveal) return Hidden(v)
     val goal = v.goal
@@ -316,8 +357,11 @@ private fun FoodPage(v: Cov) {
             if (goal != null) Quiet("of ${num(goal)}")
         }
     }
-    BigBtn("Log a meal", Modifier.padding(top = 16.dp), Ic.Mic) { if (voice != null) voice() }
-    Said(say)
+    BigBtn("Log a meal", Modifier.padding(top = 16.dp), Ic.Mic) {
+        s.ctx = LogReq(dateOf(System.currentTimeMillis()))
+        if (voice != null) voice()
+    }
+    LastAnswer(s, v)
 }
 
 @Composable

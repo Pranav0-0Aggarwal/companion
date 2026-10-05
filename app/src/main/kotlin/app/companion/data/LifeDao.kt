@@ -21,6 +21,15 @@ interface LifeDao {
     @Insert
     suspend fun addMealItems(i: List<MealItemRow>)
 
+    @Update
+    suspend fun updateItem(i: MealItemRow)
+
+    @Query("DELETE FROM meal_items WHERE id = :id")
+    suspend fun dropItem(id: Long)
+
+    @Query("SELECT COUNT(*) FROM meal_items WHERE meal_id = :id")
+    suspend fun itemCount(id: Long): Int
+
     @Query("DELETE FROM meal_items WHERE meal_id = :id")
     suspend fun clearMeal(id: Long)
 

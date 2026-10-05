@@ -50,13 +50,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import app.companion.chat.LogReq
 import app.companion.ui.Ty
 import app.companion.ui.kit.Ic
 import app.companion.ui.kit.lift
 import app.companion.ui.pal
 import kotlinx.coroutines.launch
 
-class AskReq(val origin: Rect?, val text: String = "", val voice: Boolean = false)
+class AskReq(val origin: Rect?, val text: String = "", val voice: Boolean = false, val log: LogReq? = null)
 
 val LocalAsk = staticCompositionLocalOf<(AskReq) -> Unit> { {} }
 
@@ -135,7 +136,7 @@ fun AskHost(req: AskReq?, onClose: () -> Unit, go: (String) -> Unit) {
             }.drawBehind { drawRect(lerp(p.card, p.bg, k.value.coerceIn(0f, 1f))) },
         ) {
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = ((k.value - 0.3f) / 0.7f).coerceIn(0f, 1f) }) {
-                AskSheet(r, req != null, onClose, { go(it) }, drag)
+                ChatSheet(r, req != null, onClose, { go(it) }, drag)
             }
         }
     }

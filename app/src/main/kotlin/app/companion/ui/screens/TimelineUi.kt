@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.companion.chat.LogReq
 import app.companion.core.Meets
 import app.companion.core.Stage
 import app.companion.core.Track

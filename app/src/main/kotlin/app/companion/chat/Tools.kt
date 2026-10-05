@@ -1,6 +1,7 @@
 package app.companion.chat
 
 import android.content.Context
+import app.companion.core.Card
 import app.companion.core.Tool
 import app.companion.core.ToolSpec
 import app.companion.data.Repo
@@ -24,11 +25,11 @@ abstract class Base(private val s: ToolSpec) : Tool {
 }
 
 object ChatTools {
-    fun of(c: Context, repo: Repo, foods: Foods, go: (String) -> Unit): List<Tool> = listOf(
-        Spend(repo), Bills(repo), Cards(repo), Balance(),
-        LogMeal(foods), FoodToday(foods), SetKcal(repo), LogWeight(c, repo),
-        StartTrip(repo), EndTrip(repo), TripSummaryTool(repo),
-        VaultFind(repo), VaultAdd(repo),
+    fun of(c: Context, repo: Repo, foods: Foods, go: (String) -> Unit, show: (Card) -> Unit): List<Tool> = listOf(
+        Spend(repo, show), Bills(repo, show), Cards(repo), Balance(),
+        LogMeal(foods), FoodToday(foods), SetKcal(repo), LogWeight(c, repo, show),
+        StartTrip(repo, show), EndTrip(repo, show), TripSummaryTool(repo, show),
+        VaultFind(repo, show), VaultAdd(repo),
         Remind(c), CalendarAdd(c, repo), Open(go),
     )
 }

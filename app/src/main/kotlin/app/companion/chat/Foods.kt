@@ -3,10 +3,13 @@ package app.companion.chat
 import android.content.Context
 import app.companion.core.Answer
 import app.companion.core.Ask
+import app.companion.core.Bar
+import app.companion.core.Card
 import app.companion.core.BrandMenus
 import app.companion.core.Clarify
 import app.companion.core.FoodDb
 import app.companion.core.Hit
+import app.companion.core.MealLine
 import app.companion.core.Meal
 import app.companion.core.MealTimes
 import app.companion.core.Req
@@ -35,6 +38,10 @@ class Foods(private val c: Context, private val repo: Repo) {
 
     @Volatile var order: Long? = null
 
+    @Volatile var emit: ((Card) -> Unit)? = null
+
+    @Volatile var pin: Pair<LocalDate, String?>? = null
+
     val pending get() = hold != null
 
     private fun asset(n: String) = c.assets.open(n).use { it.readBytes().decodeToString() }
@@ -49,6 +56,12 @@ class Foods(private val c: Context, private val repo: Repo) {
     suspend fun wen(text: String, now: Long = System.currentTimeMillis()): Wen =
         When.resolve(text, now, zone, times(now)) ?: When.resolve("", now, zone, times(now))!!
 
+    suspend fun wenFor(day: LocalDate, slot: String?): Wen {
+        if (day == LocalDate.now(zone)) return wen(slot.orEmpty())
+        val m = Meal.entries.firstOrNull { it.label == slot } ?: Meal.of(LocalTime.now(zone))
+        return Wen(day, m, day.atTime(times()[m] ?: LocalTime.NOON).atZone(zone).toInstant().toEpochMilli())
+    }
+
     suspend fun target(): Int? {
         val p = repo.profileNow()
         p.kcalGoal?.let { return it }
@@ -56,7 +69,8 @@ class Foods(private val c: Context, private val repo: Repo) {
         return Targets.kcal(kg, p.heightCm ?: return null, p.age ?: return null, p.sex, p.activity)
     }
 
-    suspend fun log(reqs: List<Req>, w: Wen, src: String, note: String?, order: Long?): ToolOut = go(resolver(), w, src, note, order, emptyList(), reqs)
+    suspend fun log(reqs: List<Req>, w: Wen, src: String, note: String?, order: Long?): ToolOut =
+        go(resolver(), pin?.let { wenFor(it.first, it.second) } ?: w, src, note, order, emptyList(), reqs)
 
     private suspend fun go(r: Resolver, w: Wen, src: String, note: String?, order: Long?, done: List<Hit>, todo: List<Req>): ToolOut {
         val got = done.toMutableList()
@@ -109,14 +123,17 @@ class Foods(private val c: Context, private val repo: Repo) {
         Nudges.schedule(c)
         val total = hits.sumOf { it.kcal }
         val goal = target()
+        val dayKcal = repo.life.kcalOn(day)
+        emit?.invoke(Card.Meal(id, day.toEpochDay(), slot, Math.round(total).toInt(), hits.map { MealLine(it.name, "${qty(it.qty)}${it.unit.takeIf { u -> u != "serving" }?.let { u -> " $u" }.orEmpty()}", Math.round(it.kcal).toInt(), it.source.label == "estimate") }, Math.round(dayKcal).toInt(), goal))
         val items = hits.joinToString(", ") { "${it.name} ${qty(it.qty)}${it.unit.takeIf { u -> u != "serving" }?.let { u -> " $u" }.orEmpty()} ${k(it.kcal)}${if (it.source.label == "estimate") " est" else ""}" }
-        return "Logged $slot on $day: $items. Meal ${k(total)} kcal. Day ${k(repo.life.kcalOn(day))}${goal?.let { " of $it" }.orEmpty()} kcal."
+        return "Logged $slot on $day: $items. Meal ${k(total)} kcal. Day ${k(dayKcal)}${goal?.let { " of $it" }.orEmpty()} kcal."
     }
 
     suspend fun day(day: LocalDate): String {
         val ms = repo.life.eaten(day)
         if (ms.isEmpty()) return "Nothing logged for $day."
         val goal = target()
+        emit?.invoke(Card.Day(day.toEpochDay(), Math.round(ms.sumOf(Eaten::kcal)).toInt(), goal, ms.filter { it.items.isNotEmpty() }.map { Bar(it.meal.slot, Math.round(it.kcal)) }))
         val lines = ms.joinToString("; ") { e -> "${e.meal.slot} ${if (e.items.isEmpty()) "pending order" else "${k(e.kcal)} kcal (${e.items.joinToString(", ") { it.name }})"}" }
         val burn = Health.burn(c, day)?.let { " Steps ${it.steps}, active ${k(it.kcal)} kcal." }.orEmpty()
         return "$day: $lines. Total ${k(ms.sumOf(Eaten::kcal))}${goal?.let { " of $it" }.orEmpty()} kcal.$burn"

@@ -10,7 +10,9 @@ import app.companion.ai.Manifest
 import app.companion.ai.Models
 import app.companion.ai.Spec
 import app.companion.ai.vitals
+import app.companion.core.Card
 import app.companion.core.ChatTemplate
+import app.companion.core.Clarify
 import app.companion.core.Convo
 import app.companion.core.Guard
 import app.companion.core.Json
@@ -22,6 +24,7 @@ import app.companion.core.Step
 import app.companion.core.ToolOut
 import app.companion.core.Turn
 import app.companion.data.Repo
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -41,6 +44,7 @@ sealed interface Out {
     data class Used(val tool: String) : Out
     data class Ask(val question: String) : Out
     data class Open(val route: String) : Out
+    data class Show(val card: Card) : Out
     data class Fail(val why: String) : Out
     data object Done : Out
 }
@@ -54,7 +58,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
     val foods = Foods(c, repo)
 
     @Volatile private var sink: SendChannel<Out>? = null
-    private val registry by lazy { Registry(ChatTools.of(c, repo, foods) { sink?.trySend(Out.Open(it)) }) }
+    private val registry by lazy { Registry(ChatTools.of(c, repo, foods, { sink?.trySend(Out.Open(it)) }, ::show)) }
     private val system by lazy { Prompt.system(registry.listing()) }
     private val grammar by lazy { registry.grammar() }
     private val hist = Convo()
@@ -66,15 +70,39 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
 
     fun ready() = brain() != null
 
-    fun ask(text: String, order: Long? = null, bg: Boolean = false): Flow<Out> = channelFlow {
+    @Volatile private var shown = false
+
+    private fun show(c: Card) {
+        shown = true
+        sink?.trySend(Out.Show(c))
+    }
+
+    fun ask(text: String, order: Long? = null, bg: Boolean = false, at: Pair<LocalDate, String?>? = null): Flow<Out> = direct(order, at) { run(text.take(MAX_TEXT), bg) }
+
+    fun log(text: String, day: LocalDate, slot: String?, order: Long?): Flow<Out> = direct(order, day to slot) {
+        foods.quiet(Clarify.spoken(text), foods.wenFor(day, slot), "chat", null, order)
+        send(Out.Done)
+    }
+
+    fun dayCard(day: LocalDate): Flow<Out> = direct(null, null) {
+        foods.day(day)
+        send(Out.Done)
+    }
+
+    private fun direct(order: Long?, at: Pair<LocalDate, String?>?, block: suspend ProducerScope<Out>.() -> Unit): Flow<Out> = channelFlow {
         turn.withLock {
             sink = channel
+            shown = false
             foods.order = order
+            foods.pin = at
+            foods.emit = ::show
             try {
-                run(text.take(MAX_TEXT), bg)
+                block()
             } finally {
                 sink = null
                 foods.order = null
+                foods.pin = null
+                foods.emit = null
             }
         }
     }.flowOn(Dispatchers.IO)
@@ -110,7 +138,7 @@ class ChatEngine(private val c: Context, private val repo: Repo, private val gov
         when (out) {
             is ToolOut.Ok -> {
                 hist.add(Role.Assistant, said(out.text))
-                send(Out.Say(out.text))
+                if (!shown) send(Out.Say(out.text))
             }
             is ToolOut.Ask -> {
                 hist.add(Role.Assistant, said(out.question))

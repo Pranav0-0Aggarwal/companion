@@ -60,4 +60,105 @@ class CyclesTest {
         val c = slip(115, last4 = "1111")
         assertEquals(listOf(a, b), groups(a, b, c).map { it.first() })
     }
+
+    private val now = 400 * day
+
+    private fun plan(pays: List<Pay> = emptyList(), vararg s: Slip) = Cycles.plan(s.toList(), { it }, pays, now)
+
+    private fun phases(pays: List<Pay> = emptyList(), vararg s: Slip) = plan(pays, *s).map { it.phase }
+
+    @Test
+    fun `an older cycle of the same account is closed by the newest one`() {
+        val old = slip(300, due = 310)
+        val new = slip(350, due = 380)
+        val c = plan(emptyList(), new, old)
+        assertEquals(listOf(Phase.Open, Phase.Closed), c.map { it.phase })
+        assertEquals(Paid.NEWER, Paid.read(c[1].note)?.by)
+        assertEquals(350 * day, Paid.read(c[1].note)?.at)
+    }
+
+    @Test
+    fun `only the newest of three cycles stays open and other accounts are untouched`() {
+        val a = slip(300, due = 310)
+        val b = slip(330, due = 340)
+        val c = slip(360, due = 390)
+        val other = slip(365, due = 375, last4 = "9999")
+        assertEquals(listOf(Phase.Closed, Phase.Closed, Phase.Open, Phase.Open), phases(emptyList(), a, b, c, other))
+    }
+
+    @Test
+    fun `cycles with no account are never closed by another`() {
+        assertEquals(listOf(Phase.Open, Phase.Open), phases(emptyList(), slip(380, due = 390, last4 = null), slip(381, due = 391, last4 = null)))
+    }
+
+    @Test
+    fun `a later payment with the same last4 pays the cycle and notes who and when`() {
+        val c = plan(listOf(Pay(112 * day + 5, "1234", "HDFC Bank")), slip(100, due = 120))
+        assertEquals(Phase.Paid, c.single().phase)
+        val n = Paid.read(c.single().note)
+        assertEquals(Paid.PAY, n?.by)
+        assertEquals("HDFC Bank", n?.name)
+        assertEquals(112 * day + 5, n?.at)
+    }
+
+    @Test
+    fun `a different last4 does not pay even if the bank matches`() {
+        assertEquals(listOf(Phase.Old), phases(listOf(Pay(112 * day, "5678", "HDFC Bank")), slip(100, due = 120, name = "HDFC Bank")))
+    }
+
+    @Test
+    fun `without a last4 the issuer pays`() {
+        val s = slip(100, due = 120, last4 = null, name = "SBI Card")
+        assertEquals(listOf(Phase.Paid), phases(listOf(Pay(110 * day, null, "SBI")), s))
+        assertEquals(listOf(Phase.Paid), phases(listOf(Pay(110 * day, "1234", "SBI Card")), slip(100, due = 120, last4 = null, name = "SBI Card")))
+        assertEquals(listOf(Phase.Old), phases(listOf(Pay(110 * day, null, "ICICI Bank")), s))
+        assertEquals(listOf(Phase.Old), phases(listOf(Pay(110 * day, null, null)), s))
+    }
+
+    @Test
+    fun `a payment before the newest message of the cycle does not pay it`() {
+        val c = Cycles.plan(listOf(slip(100, due = 120), slip(115, due = 121)), { it }, listOf(Pay(110 * day, "1234", null)), now)
+        assertEquals(Phase.Old, c.single().phase)
+        assertEquals(Phase.Paid, Cycles.plan(listOf(slip(100, due = 120)), { it }, listOf(Pay(110 * day, "1234", null)), now).single().phase)
+    }
+
+    @Test
+    fun `a payment pays only the cycle before it`() {
+        val a = slip(300, due = 310)
+        val b = slip(330, due = 380)
+        val c = plan(listOf(Pay(320 * day, "1234", null)), b, a)
+        assertEquals(listOf(Phase.Open, Phase.Paid), c.map { it.phase })
+    }
+
+    @Test
+    fun `the earliest matching payment is the one noted`() {
+        val c = plan(listOf(Pay(130 * day, "1234", "Axis"), Pay(120 * day, "1234", "HDFC")), slip(100, due = 125))
+        assertEquals("HDFC", Paid.read(c.single().note)?.name)
+    }
+
+    @Test
+    fun `due more than 45 days ago is old and 45 is still overdue`() {
+        assertEquals(listOf(Phase.Open), phases(emptyList(), slip(350, due = 355)))
+        assertEquals(listOf(Phase.Open), phases(emptyList(), slip(300, due = now / day - 45)))
+        assertEquals(listOf(Phase.Old), phases(emptyList(), slip(300, due = now / day - 46)))
+    }
+
+    @Test
+    fun `without a due date the newest message must be over 60 days old`() {
+        assertEquals(listOf(Phase.Open), phases(emptyList(), slip(340)))
+        assertEquals(listOf(Phase.Old), phases(emptyList(), slip(339)))
+    }
+
+    @Test
+    fun `a bill marked still due is never old`() {
+        assertEquals(listOf(Phase.Open), phases(emptyList(), Slip(100 * day, 110, "1234", null, kept = true)))
+    }
+
+    @Test
+    fun `closed notes round trip`() {
+        assertEquals(Paid.ME, Paid.read(Paid.note(Paid.ME, 5))?.by)
+        assertEquals("A B", Paid.read(Paid.note(Paid.PAY, 7, "A|B"))?.name)
+        assertEquals(null, Paid.read(""))
+        assertEquals(null, Paid.read(Paid.KEEP))
+    }
 }

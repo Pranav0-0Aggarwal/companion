@@ -55,8 +55,8 @@ class ChatsTest {
         assertTrue(d is Event.Delivery && d.merchant == "Swiggy" && d.stage == Stage.Out, "$d")
         val o = rules.classify(routed("HDFC Bank", "482913 is your OTP for login. Do not share it.")).event
         assertTrue(o is Event.Otp && o.code == "482913", "$o")
-        val m = rules.classify(routed("HDFC Bank", "Rs 1,250.00 debited from a/c XX4021 on 03-10-25 to VPA swiggy@icici. Ref 123456789012")).event
-        assertTrue(m is Event.Debit && m.paise == 125_000L && m.last4 == "4021", "$m")
+        val m = rules.classify(routed("HDFC Bank", "Rs 1,250.00 debited from a/c XX5821 on 03-10-25 to VPA swiggy@icici. Ref 123456789012")).event
+        assertTrue(m is Event.Debit && m.paise == 125_000L && m.last4 == "5821", "$m")
         val b = rules.classify(routed("Shipway", "Your parcel has been shipped, AWB 998877. Track your shipment.")).event
         assertTrue(b is Event.Delivery, "$b")
     }

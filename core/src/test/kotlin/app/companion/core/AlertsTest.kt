@@ -52,7 +52,7 @@ class AlertsTest {
 
     @Test
     fun `the lock screen shows the redacted face unless details are on`() {
-        val full = Alerts.spend("₹261", "Swiggy", "food", "HDFC", "4021", false)
+        val full = Alerts.spend("₹261", "Swiggy", "food", "HDFC", "5821", false)
         assertEquals(Hidden.spend, Alerts.shown(Opts(), full, Hidden.spend))
         assertEquals(full, Alerts.shown(Opts(lock = true), full, Hidden.spend))
         listOf(Hidden.spend, Hidden.bill, Hidden.due, Hidden.order, Hidden.daily).forEach { f ->
@@ -62,9 +62,9 @@ class AlertsTest {
 
     @Test
     fun `a spend reads amount then merchant over category and card`() {
-        val f = Alerts.spend("₹261", "Swiggy", "food", "HDFC", "4021", false)
+        val f = Alerts.spend("₹261", "Swiggy", "food", "HDFC", "5821", false)
         assertEquals("₹261 · Swiggy", f.title)
-        assertEquals("Food · HDFC ··4021", f.text)
+        assertEquals("Food · HDFC ··5821", f.text)
         assertEquals("+₹5,000 · Acme", Alerts.spend("₹5,000", "Acme", null, null, null, true).title)
         assertNull(Alerts.spend("₹5", "Acme", null, null, null, false).text)
         assertEquals("Today · ₹1,240 across 4", Alerts.total("₹1,240", 4).title)

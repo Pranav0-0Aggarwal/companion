@@ -17,14 +17,23 @@ import app.companion.ui.inr
 
 class Daily(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
     override suspend fun doWork(): Result {
+        try {
+            post()
+        } finally {
+            Live.digest(applicationContext)
+        }
+        return Result.success()
+    }
+
+    private suspend fun post() {
         val c = applicationContext
         val o = Prefs.get(c)
-        if (!o.digest || !c.has(Manifest.permission.POST_NOTIFICATIONS)) return Result.success()
+        if (!o.digest || !c.has(Manifest.permission.POST_NOTIFICATIONS)) return
         val repo = c.sl.repo
         val now = System.currentTimeMillis()
         val days = repo.billsNow().mapNotNull { b -> b.dueDate?.let { daysTo(it) } }
         val (total, n) = repo.spentToday(now)
-        val text = Digest.text(repo.needs(now - 3 * 86_400_000L), days.count { it == 0 }, days.count { it == 1 }, if (n > 0) inr(total) else null) ?: return Result.success()
+        val text = Digest.text(repo.needs(now - 3 * 86_400_000L), days.count { it == 0 }, days.count { it == 1 }, if (n > 0) inr(total) else null) ?: return
         val note = Ping.base(c, Ping.DIGEST, Face("Today", text), Hidden.daily, o)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setCategory(Notification.CATEGORY_STATUS)
@@ -33,6 +42,5 @@ class Daily(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
             .build()
         c.getSystemService(NotificationManager::class.java).notify(Ping.DIGEST, 0, note)
         Live.widgets(c)
-        return Result.success()
     }
 }

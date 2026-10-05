@@ -39,13 +39,17 @@ object Live {
         val daily = PeriodicWorkRequestBuilder<Reminders>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("reminders", ExistingPeriodicWorkPolicy.KEEP, daily)
         Prefs.since(app)
-        val digest = PeriodicWorkRequestBuilder<Daily>(1, TimeUnit.DAYS)
+        digest(app)
+        val retain = PeriodicWorkRequestBuilder<Sweep>(1, TimeUnit.DAYS).build()
+        WorkManager.getInstance(app).enqueueUniquePeriodicWork("retain", ExistingPeriodicWorkPolicy.KEEP, retain)
+    }
+
+    fun digest(c: Context) {
+        val req = OneTimeWorkRequestBuilder<Daily>()
             .setInitialDelay(Alerts.untilDigest(System.currentTimeMillis(), ZoneId.systemDefault()), TimeUnit.MILLISECONDS)
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .build()
-        WorkManager.getInstance(app).enqueueUniquePeriodicWork("digest", ExistingPeriodicWorkPolicy.KEEP, digest)
-        val retain = PeriodicWorkRequestBuilder<Sweep>(1, TimeUnit.DAYS).build()
-        WorkManager.getInstance(app).enqueueUniquePeriodicWork("retain", ExistingPeriodicWorkPolicy.KEEP, retain)
+        WorkManager.getInstance(c).enqueueUniqueWork("digest", ExistingWorkPolicy.REPLACE, req)
     }
 
     suspend fun widgets(c: Context) {

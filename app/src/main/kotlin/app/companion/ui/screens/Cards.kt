@@ -122,7 +122,7 @@ fun CardsScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
     var setup by remember { mutableStateOf<Found?>(null) }
     var deleting by remember { mutableStateOf<Card?>(null) }
     val sub = if (cards.isEmpty()) found.size.takeIf { it > 0 }?.let { "Found $it in your messages" } ?: "No cards yet" else "${inr(cycles.sumOf { it.spent })} this cycle · ${cards.size} card${if (cards.size == 1) "" else "s"}"
-    Screen("Money", sub, lead = lead, tools = { ToolButton(Ic.Add, "Add a card") { adding = true } }) {
+    Screen("Money", sub, lead = lead, tall = false, tools = { ToolButton(Ic.Add, "Add a card") { adding = true } }) {
         val sel = cycles.getOrNull(pager.currentPage)
         val suggest = {
             suggestions(

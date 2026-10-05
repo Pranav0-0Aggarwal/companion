@@ -12,6 +12,7 @@ class TodayTest {
     fun `safe to spend divides what is left by the days to payday`() {
         assertEquals(1_000L, Safe.perDay(100_000, 30_000, 10_000, 60))
         assertEquals(600L, Safe.perDay(100_000, 30_000, 10_000, 100))
+        assertEquals(500L, Safe.perDay(100_000, 30_000, 10_000, 120))
     }
 
     @Test

@@ -167,6 +167,7 @@ fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
         "Money",
         "${shortDay(span.from)} to ${shortDay(span.to)} · ${inr(spent)} ${if (parked) "moved" else "spent"}",
         lead = lead,
+        tall = false,
         tools = { ToolButton(Ic.Search, "Search or ask") { ask(AskReq(null)) } },
     ) {
         item(key = "ask") { AskPill(hint = "Ask about your spending") }

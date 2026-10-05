@@ -126,7 +126,7 @@ fun YouScreen(go: (String) -> Unit) {
         }
         item(key = "privacy") {
             Box(Modifier.padding(top = 16.dp).part(p, true, true)) {
-                PassLine(Privacy.line(read), "Everything is worked out on this phone", lead = Ic.Shield, tone = Tone.Green)
+                PassLine("Privacy", Privacy.line(read), lead = Ic.Shield, tone = Tone.Green)
             }
         }
         item(key = "settings") {

@@ -79,7 +79,7 @@ fun TripsScreen(lead: @Composable () -> Unit) {
     var seed by remember { mutableStateOf<Pick?>(null) }
     val total = sums.values.sumOf { it.total }
     Screen(
-        "Money", if (trips.isEmpty()) "No trips yet" else "${trips.size} ${if (trips.size == 1) "trip" else "trips"} · ${inr(total)}", lead = lead,
+        "Money", if (trips.isEmpty()) "No trips yet" else "${trips.size} ${if (trips.size == 1) "trip" else "trips"} · ${inr(total)}", lead = lead, tall = false,
         tools = { ToolButton(Ic.Add, "Start a trip") { seed = null; sheet = true } },
     ) {
         if (trips.isEmpty()) {

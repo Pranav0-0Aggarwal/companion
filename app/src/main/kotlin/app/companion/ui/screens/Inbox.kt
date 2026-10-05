@@ -130,7 +130,7 @@ fun InboxScreen(go: (String) -> Unit) {
             { i -> snack.teach(repo) { repo.notSpam(i.id) } },
         )
     }
-    Screen("Inbox", sub) {
+    Screen("Inbox", sub, tall = false) {
         item(key = "seg") {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InboxSeg.entries.forEach { s -> Chip(s.label, seg == s) { seg = s } }

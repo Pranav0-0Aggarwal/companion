@@ -132,7 +132,7 @@ fun TodayScreen(go: (String) -> Unit) {
             if (live) item(key = "cal") { CalAsk() }
             if (live) item(key = "sugg") { Suggested() }
         }
-        AskPill(Modifier.align(Alignment.BottomCenter).padding(bottom = nav + 86.dp), "Ask or log anything")
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(p.bg).padding(top = 8.dp, bottom = nav + 86.dp)) { AskPill(hint = "Ask or log anything") }
     }
     logging?.let { LogSheet(it) { logging = null } }
 }

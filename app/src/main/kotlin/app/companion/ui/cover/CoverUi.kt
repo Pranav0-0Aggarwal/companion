@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -111,7 +112,8 @@ fun CoverPager(reveal: Boolean, unlock: (() -> Unit)?, page: Int = 0) {
         Modifier.fillMaxSize().background(p.bg).windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout)).padding(horizontal = 8.dp),
     ) {
         HorizontalPager(st, Modifier.weight(1f), pageSpacing = 8.dp) { i ->
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 8.dp)) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+              Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight).padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = if (i == 0) Arrangement.Center else Arrangement.Top) {
                 when (i) {
                     0 -> NowPage(v)
                     1 -> TodayPage(v)
@@ -119,6 +121,7 @@ fun CoverPager(reveal: Boolean, unlock: (() -> Unit)?, page: Int = 0) {
                     3 -> FoodPage(v)
                     else -> BillsPage(v)
                 }
+              }
             }
         }
         PageDots(st)
@@ -339,7 +342,7 @@ private fun BillsPage(v: Cov) {
                 Modifier.padding(start = 8.dp).heightIn(min = 56.dp).clip(RoundedCornerShape(50)).background(p.accentBox)
                     .clickable(role = Role.Button) { if (cred != null) c.startActivity(cred) else scope.launch { repo.pay(b.id) } }.padding(horizontal = 20.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (cred != null) "Pay" else "Paid", style = Ty.ui(16).copy(color = p.onAccentBox), maxLines = 1) }
+            ) { Text(if (cred != null) "Pay" else "Mark paid", style = Ty.ui(16).copy(color = p.onAccentBox), maxLines = 1) }
         }
     }
 }

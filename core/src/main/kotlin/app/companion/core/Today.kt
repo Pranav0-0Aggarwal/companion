@@ -10,7 +10,7 @@ object Safe {
 
     fun perDay(budget: Long?, spent: Long, owed: Long, days: Int?): Long? {
         if (budget == null || budget <= 0 || days == null) return null
-        return ((budget - spent - owed) / days.coerceAtLeast(1)).coerceAtLeast(0)
+        return ((budget - spent - owed) / days.coerceAtLeast(1) / 100 * 100).coerceAtLeast(0)
     }
 }
 

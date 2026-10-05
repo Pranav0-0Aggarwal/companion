@@ -204,6 +204,10 @@
         </receiver>
 
         <service
+            android:name="androidx.health.platform.client.impl.sdkservice.HealthDataSdkService"
+            tools:node="remove" />
+
+        <service
             android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
             tools:node="merge">
             <meta-data

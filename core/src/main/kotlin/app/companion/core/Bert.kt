@@ -38,6 +38,8 @@ class BertSpec(
         const val TEMPLATE = "{sender}: {text}"
         const val CAL = "calibration.json"
 
+        private fun plain(raw: String) = raw.isNotEmpty() && raw.length <= 128 && ".." !in raw && raw.none { it == '/' || it == '\\' || it < ' ' }
+
         private fun name(v: Any?, key: String? = null): String? =
             (if (key != null && v is Map<*, *>) v[key] else v) as? String
 
@@ -81,7 +83,7 @@ class BertSpec(
                 inputs = (m["inputs"] as? List<*>)?.map { it as String } ?: listOf("input_ids", "attention_mask"),
                 tasks = tasks,
             )
-            require((spec.files + spec.calibration).all { PrivateFiles.plain(it) != null })
+            require((spec.files + spec.calibration).all { plain(it) })
             return spec
         }
     }

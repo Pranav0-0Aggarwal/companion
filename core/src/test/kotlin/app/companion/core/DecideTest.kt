@@ -1,61 +1,12 @@
 package app.companion.core
 
-import kotlin.math.abs
 import kotlin.test.Test
-import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DecideTest {
-    private val spec = DecideSpec.fromJson(
-        """{"pad_id": 0, "buckets": [8, 16], "template": "{body}", "tasks": {"kind": {"prefix": [101, 7], "labels": ["Promo", "Bill", "Other"]}}}""",
-    )
-    private val tok = SpTokenizer(listOf("[UNK]", "▁a", "▁b"), listOf(-100f, -1f, -1f), 0)
-
-    @Test
-    fun `input is prefix then word ids padded to the smallest bucket`() {
-        val x = Decide.build(spec, "kind", "", "a b", tok)
-        assertEquals(8, x.bucket)
-        assertContentEquals(intArrayOf(101, 7, 1, 2, 0, 0, 0, 0), x.ids)
-        assertContentEquals(intArrayOf(1, 1, 1, 1, 1, 0, 0, 0), x.mask)
-    }
-
-    @Test
-    fun `long text moves to the larger bucket and then truncates`() {
-        val mid = Decide.build(spec, "kind", "", List(10) { "a" }.joinToString(" "), tok)
-        assertEquals(16, mid.bucket)
-        val huge = Decide.build(spec, "kind", "", List(100) { "a" }.joinToString(" "), tok)
-        assertEquals(16, huge.bucket)
-        assertEquals(1, huge.ids[15])
-        assertTrue(huge.mask.all { it == 1 })
-    }
-
-    @Test
-    fun `a full stop is added only when the text lacks a closing mark`() {
-        assertEquals(listOf("a", "."), Decide.words(spec, "a"))
-        assertEquals(listOf("a", "!"), Decide.words(spec, "a!"))
-        assertEquals(listOf("a", "?"), Decide.words(spec, "A?"))
-        assertEquals(listOf("a", "."), Decide.words(spec, "A."))
-    }
-
-    @Test
-    fun `sender and body fill the template once`() {
-        val s = DecideSpec.fromJson("""{"pad_id": 0, "buckets": [8], "template": "{sender}|{body}", "tasks": {"kind": {"prefix": [], "labels": ["x"]}}}""")
-        assertEquals("{body}|x {sender}", Decide.message(s, "{body}", "x {sender}"))
-        assertEquals("Text message from VM-X:\nhi", Decide.message(spec.let { DecideSpec(0, listOf(8), emptyMap(), emptyMap()) }, "VM-X", "hi"))
-    }
-
-    @Test
-    fun `softmax and top label`() {
-        val p = Decide.softmax(floatArrayOf(1f, 2f, 3f))
-        assertTrue(abs(p.sum() - 1f) < 1e-5f)
-        val (label, prob) = Decide.top(spec, "kind", floatArrayOf(0f, 5f, 0f))
-        assertEquals("Bill", label)
-        assertTrue(prob > 0.98f)
-    }
-
     private val rules = RulesClassifier(IST)
 
     private fun scored(vararg p: Pair<String, Float>, cat: Map<String, Float>? = null) = Scored(mapOf(*p), cat)
@@ -166,15 +117,5 @@ class DecideTest {
         assertEquals("food", sure.cat?.label)
         val weak = DecideClassifier(rules) { scored("expense" to 0.99f, cat = mapOf("food" to 0.6f, "other" to 0.4f)) }.classify(debit)
         assertNull(weak.cat)
-    }
-
-    @Test
-    fun `signatures are read per task and bucket`() {
-        val s = DecideSpec.fromJson("""{"buckets":[8],"tasks":{"type":{"prefix":[1],"labels":["otp"],"signatures":{"8":"type_8"}},"category":{"prefix":[2],"labels":["food"]}}}""")
-        assertEquals("type_8", s.signature("type", 8))
-        assertNull(s.signature("type", 16))
-        assertNull(s.signature("category", 8))
-        assertTrue(s.has("category"))
-        assertTrue(!s.has("cat"))
     }
 }

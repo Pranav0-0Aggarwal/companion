@@ -218,6 +218,18 @@ class BertTest {
     }
 
     @Test
+    fun `the published models-v4 spec runs the type model only`() {
+        val json = res("model_spec_v4.json")
+        val s = BertSpec.fromJson(json)
+        assertTrue(s.has(Calibration.TYPE))
+        assertFalse(s.has(Calibration.CATEGORY))
+        assertEquals(listOf(64, 96, 128), s.buckets)
+        val four = mapOf("tokenizer.json" to "a", "type.tflite" to "b", "calibration.json" to "c")
+        val p = assertNotNull(BertPlan.of(json, four) { _, _ -> true })
+        assertEquals(setOf("tokenizer.json", "type.tflite"), p.shas.keys)
+    }
+
+    @Test
     fun `plan is absent for a missing wrong or broken spec`() {
         assertNull(BertPlan.of(null, listed) { _, _ -> true })
         assertNull(BertPlan.of(specJson(arch = "gliner"), listed) { _, _ -> true })

@@ -11,7 +11,7 @@ object Manifest {
 
     fun url(s: Spec) = "$HOST${s.tag}/${s.file}"
 
-    val spec = Spec("ModernBERT spec", "model_spec.json", 7162, "38ed5c9d275d37b73d741f9b475410c1d5a1c316a15675fd9483ceddd24609ea", "models-v4")
+    val spec = Spec("ModernBERT spec", "model_spec.json", 5308, "d039ad2aa473b75044c22aec395be10615e6cf1334ba5beb500649b0e61fb873", "models-v4")
     val tokenizer = Spec("ModernBERT tokenizer", "tokenizer.json", 3583326, "fe530b837c912faf33acd6b1a15a46234259519acb967ead693c692cc2e93647", "models-v4")
     val calibration = Spec("ModernBERT calibration", "calibration.json", 950, "e6f811eff7bcbdf010745ccc5266f225baeb79574bf866d4f62252a602b5f7b7", "models-v4")
     val type = Spec("ModernBERT type", "type.tflite", 409130000, "df080d4697ed36a212095cf20b44c03c24ff937d6194eafe92ad9c8eac1ff821", "models-v4", 30_000)

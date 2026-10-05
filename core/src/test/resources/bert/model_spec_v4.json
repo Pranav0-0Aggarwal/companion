@@ -1,0 +1,184 @@
+{
+ "arch": "modernbert-classifier",
+ "version": 1,
+ "template": "{sender}: {text}",
+ "max_len": 128,
+ "buckets": [
+  64,
+  96,
+  128
+ ],
+ "pad_id": 50283,
+ "cls_id": 50281,
+ "sep_id": 50282,
+ "truncation": "right",
+ "tasks": {
+  "type": {
+   "file": "type.tflite",
+   "labels": [
+    "otp",
+    "expense",
+    "income",
+    "bill",
+    "delivery",
+    "alert",
+    "personal",
+    "promo",
+    "spam"
+   ],
+   "signatures": {
+    "s64": {
+     "bucket": 64,
+     "inputs": {
+      "input_ids": [
+       1,
+       64
+      ],
+      "attention_mask": [
+       1,
+       64
+      ]
+     },
+     "dtype": "int32",
+     "output": "logits",
+     "output_shape": [
+      1,
+      9
+     ],
+     "output_dtype": "float32"
+    },
+    "s96": {
+     "bucket": 96,
+     "inputs": {
+      "input_ids": [
+       1,
+       96
+      ],
+      "attention_mask": [
+       1,
+       96
+      ]
+     },
+     "dtype": "int32",
+     "output": "logits",
+     "output_shape": [
+      1,
+      9
+     ],
+     "output_dtype": "float32"
+    },
+    "s128": {
+     "bucket": 128,
+     "inputs": {
+      "input_ids": [
+       1,
+       128
+      ],
+      "attention_mask": [
+       1,
+       128
+      ]
+     },
+     "dtype": "int32",
+     "output": "logits",
+     "output_shape": [
+      1,
+      9
+     ],
+     "output_dtype": "float32"
+    }
+   }
+  }
+ },
+ "calibration": "calibration.json",
+ "sha256": {
+  "type.tflite": "df080d4697ed36a212095cf20b44c03c24ff937d6194eafe92ad9c8eac1ff821",
+  "tokenizer.json": "fe530b837c912faf33acd6b1a15a46234259519acb967ead693c692cc2e93647",
+  "tokenizer.mbpe": "0798983aa58af26560f61199d11cc2da58e78c92d7478052f74da1c0618896fd",
+  "TOKENIZER.md": "1d64a56e3c9b4ec28dc7d27e2d913de6d50188606131014e44fa4b92d8250452",
+  "calibration.json": "e6f811eff7bcbdf010745ccc5266f225baeb79574bf866d4f62252a602b5f7b7"
+ },
+ "model": "modernbert-large-sms-v1",
+ "base": "answerdotai/ModernBERT-large",
+ "output": "raw logits, no softmax in graph; probs = softmax(logits / temperature) from calibration.json",
+ "inputs_note": "only input_ids and attention_mask; no position_ids, token_type_ids or sliding-window mask inputs (RoPE and the local/global attention masks are built inside the graph)",
+ "tokenizer": {
+  "json": "tokenizer.json",
+  "compact": "tokenizer.mbpe",
+  "doc": "TOKENIZER.md",
+  "vectors": "tokenizer_vectors.json",
+  "unk_id": 50280,
+  "mask_id": 50284,
+  "normalizer": "NFC",
+  "pre_tokenizer": "ByteLevel(add_prefix_space=false, use_regex=true)",
+  "post": "[CLS] A [SEP]",
+  "padding": "right with pad_id; attention_mask 1 for real tokens, 0 for pad",
+  "content_max": 126,
+  "raw_text": "feed raw SMS text (no OTP or number masking), same as training"
+ },
+ "bucket_rule": "S = smallest bucket >= len(ids) after truncation to 128; run signature f's{S}'",
+ "quantization": {
+  "type": {
+   "variant": "rotdyn",
+   "weights": "int8 per-channel (embedding int8 per-row)",
+   "activations": "float32, dynamically quantised to int8 per FC by XNNPACK",
+   "prep": "exact offline randomized-Hadamard rotation of the residual stream (LayerNorm folded into projection + RMS) and per-head V/O rotation; fp32 graph equals HF within 1e-4"
+  }
+ },
+ "expected": {
+  "type": {
+   "val_n": 240,
+   "acc_pytorch": 0.9666666666666667,
+   "acc_int8": 0.9708333333333333,
+   "agree_val": 0.9958333333333333,
+   "agree_all_1598": 0.9987484355444305,
+   "maxdiff_val": 0.4122
+  },
+  "calibration": {
+   "type": {
+    "T": 0.6371,
+    "coverage": 0.95,
+    "auto_precision": 0.9912
+   }
+  },
+  "mac_m4max_xnnpack_4t_ms": {
+   "type": {
+    "ms_mean": 32.3,
+    "ms_64": 26.7,
+    "ms_96": 36.6,
+    "ms_128": 45.1
+   }
+  },
+  "mac_peak_rss_mb": {
+   "type": {
+    "no_weight_cache": 1505,
+    "warm_weight_cache": 504
+   }
+  },
+  "tokenizer_parity_mismatches": 0
+ },
+ "runtime": {
+  "api": "LiteRT CompiledModel",
+  "accelerator": "CPU (XNNPACK); optional NPU via LiteRT Samsung Exynos AI LiteCore where it compiles the graph, otherwise CPU",
+  "kernels": "XNNPACK qd8-qc8w GEMM (Arm i8mm/dotprod on Cortex-X925/A725)",
+  "xnnpack_weight_cache": "required: set CpuOptions.xnnpack_weight_cache_path to a per-model file in noBackupFilesDir (e.g. type.xnn); first load packs (~350 MB file), later loads mmap it (RSS ~0.4 GB instead of ~1.4 GB); delete the cache file when the model sha256 changes",
+  "threads": "2-4, background priority (THREAD_PRIORITY_BACKGROUND); never more than the big+mid cores",
+  "residency": "load on demand, unload after idle; single model (type); category is rules-first then ASK",
+  "guards": "heavy batch work only while charging and thermal status < MODERATE (PowerManager.getCurrentThermalStatus); back off on THROTTLING; single-message inference allowed on battery",
+  "batching": "batch=1 fixed shapes; pick bucket per message"
+ },
+ "provenance": {
+  "litert-torch": "0.9.4",
+  "ai-edge-litert": "2.2.0",
+  "ai-edge-quantizer": "0.9.0",
+  "torch": "2.12.0",
+  "transformers": "4.57.6",
+  "tokenizers": "0.22.2"
+ },
+ "privacy": {
+  "pii_residual_in_training_text": 0,
+  "canary_real_vs_random": "no significant difference (p>=0.06)",
+  "membership_inference_auc_type": 0.634,
+  "note": "trained on the owner's anonymised SMS (all identifiers replaced with same-shape random surrogates) plus public datasets; no identifier is recoverable; weak membership signal on anonymised rows"
+ }
+}

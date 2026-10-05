@@ -131,10 +131,19 @@ interface Dao {
     fun asks(): Flow<List<Item>>
 
     @Query(
-        "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND (state IN ('ask', 'check') OR at > :since) " +
+        "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND state != 'low' AND (state IN ('ask', 'check') OR at > :since) " +
             "ORDER BY CASE state WHEN 'ask' THEN 0 WHEN 'check' THEN 1 ELSE 2 END, at DESC LIMIT 200",
     )
     fun inbox(since: Long): Flow<List<Item>>
+
+    @Query("SELECT * FROM items WHERE state = 'low' AND dup IS NULL AND at >= :since ORDER BY at DESC LIMIT 500")
+    fun chats(since: Long): Flow<List<Item>>
+
+    @Query("UPDATE items SET state = 'check' WHERE state = 'low' AND title = :title COLLATE NOCASE")
+    suspend fun promote(title: String)
+
+    @Query("DELETE FROM items WHERE state = 'low' AND at < :before")
+    suspend fun purgeChats(before: Long): Int
 
     @Query(
         "SELECT items.* FROM items JOIN items_fts ON items.id = items_fts.rowid " +

@@ -45,7 +45,7 @@ fun Item.move(): Event.Move? {
 val Item.cardPay get() = CardPay.of(kind, category, merchant ?: title)
 val Item.brand get() = when {
     money || bill || kind == "Delivery" -> merchant ?: bank
-    src == "Sms" && kind in headed && Merchant.brand(title) != null -> title
+    (src == "Sms" || (src == "Wa" || src == "Ig") && kind != "Personal") && kind in headed && Merchant.brand(title) != null -> title
     else -> null
 }
 val Item.moved get() = flow != null || cardPay
@@ -77,7 +77,7 @@ fun Fingerprint.kinds() = when (group) {
 private fun head(r: Raw) = if (r.source == Source.Sms) Senders.title(r.sender) else r.sender
 
 object Items {
-    fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE): Item {
+    fun of(e: Event, r: Raw, v: Verdict, learned: String?, since: Long = Long.MIN_VALUE, quiet: Boolean = false): Item {
         val unsure = v is Verdict.Unsure
         val base = Item(
             kind = e.kind.name, at = r.at, src = r.source.name, title = "", state = if (unsure) State.ASK else State.SETTLED, conf = v.confidence,
@@ -113,7 +113,7 @@ object Items {
                 val c = Suggest.travel(e, r.title + "\n" + r.body, r.at, ZoneId.systemDefault())
                 base.copy(title = "${e.what} booking", due = e.date?.toEpochDay(), note = c?.note.orEmpty(), start = c?.start, end = c?.end)
             }
-            Event.Personal -> {
+            Event.Personal -> if (quiet) base.copy(title = head(r), state = State.LOW) else {
                 val c = Suggest.chat(r.sender, r.title + "\n" + r.body, r.at, ZoneId.systemDefault())
                 base.copy(
                     title = head(r),

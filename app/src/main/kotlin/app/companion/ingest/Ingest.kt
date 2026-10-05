@@ -2,10 +2,12 @@ package app.companion.ingest
 
 import android.content.Context
 import app.companion.ai.Pending
+import app.companion.core.Chats
 import app.companion.core.Classifier
 import app.companion.core.Gaps
 import app.companion.core.Raw
 import app.companion.data.Repo
+import app.companion.data.State
 import app.companion.system.Live
 
 class Ingest(private val app: Context, private val repo: Repo, private val rules: Classifier, private val pending: Pending) {
@@ -19,10 +21,12 @@ class Ingest(private val app: Context, private val repo: Repo, private val rules
         if (key != null && !first(key)) return
         val p = repo.profileNow()
         if (!p.on(raw.source)) return
-        val v = rules.classify(raw)
-        val added = repo.add(raw, v, p, true) ?: return
+        val r = Chats.route(raw, p.vips)
+        val v = rules.classify(r)
+        val added = repo.add(r, v, p, true) ?: return
+        if (added.item.state == State.LOW) return
         if (refresh && (added.fresh || added.item.kind == "Otp")) Live.refresh(app)
-        if (added.fresh && Gaps.needs(raw, v)) pending.submit(added.item.id, raw, added.item.state)
+        if (added.fresh && Gaps.needs(r, v)) pending.submit(added.item.id, r, added.item.state)
     }
 
     private companion object {

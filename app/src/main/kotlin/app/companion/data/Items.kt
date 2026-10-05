@@ -3,6 +3,7 @@ package app.companion.data
 import app.companion.core.Body
 import app.companion.core.CardPay
 import app.companion.core.Category
+import app.companion.core.Spent
 import app.companion.core.Event
 import app.companion.core.Filed
 import app.companion.core.Fingerprint
@@ -51,6 +52,7 @@ val Item.brand get() = when {
     (src == "Sms" || (src == "Wa" || src == "Ig") && kind != "Personal") && kind in headed && Merchant.brand(title) != null -> title
     else -> null
 }
+fun Item.spent() = Spent(kind, category, merchant, title, last4, at, flow)
 val Item.moved get() = flow != null || cardPay
 
 fun Item.cal(): Suggestion.Cal? {

@@ -298,7 +298,7 @@ internal fun NeedCard() {
             Column(Modifier.padding(start = 14.dp)) {
                 Text("Chat model not installed", style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink))
                 Text(
-                    if (busy) (if (s.mode == Mode.Waiting) "Waiting for Wi-Fi" else "Downloading ${Show.pct(s.ready + s.pos, Pins.chat.bytes)}%") else String.format(Locale.US, "%.1f GB, downloads on Wi-Fi only", Pins.chat.bytes / 1e9),
+                    if (busy) (if (s.mode == Mode.Waiting) "Waiting for Wi-Fi" else if (s.cur == Pins.chat.file) "Downloading ${Show.pct(s.pos, Pins.chat.bytes)}%" else "Downloading models ${Show.pct(s.ready + s.pos, Dl.total)}%") else String.format(Locale.US, "%.1f GB, downloads on Wi-Fi only", Pins.chat.bytes / 1e9),
                     style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2),
                 )
             }

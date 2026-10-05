@@ -1,15 +1,17 @@
 package app.companion.ai
 
 import app.companion.core.Query
+import app.companion.core.Spends
 import app.companion.data.Item
 import app.companion.data.Repo
-import app.companion.data.moved
+import app.companion.data.spent
 import app.companion.data.dueDate
 import app.companion.ui.clock
 import app.companion.ui.dateOf
 import app.companion.ui.dayLabel
 import app.companion.ui.shortDay
 import app.companion.ui.span
+import app.companion.ui.zone
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -33,8 +35,6 @@ object DrillBox {
 }
 
 object Answers {
-    private fun spend(i: Item) = (i.kind == "Debit" || i.kind == "CardSpend") && !i.moved
-
     private fun line(i: Item) = Line(
         i.title,
         listOfNotNull(i.category, i.bank?.removeSuffix(" Bank"), i.last4?.let { "··$it" }).joinToString(" · "),
@@ -55,13 +55,7 @@ object Answers {
     }
 
     private suspend fun rows(repo: Repo, category: String?, merchant: String?, last4: String?, a: LocalDate, b: LocalDate) =
-        repo.money.first().filter {
-            val d = dateOf(it.at)
-            spend(it) && !d.isBefore(a) && !d.isAfter(b) &&
-                (category == null || it.category == category) &&
-                (merchant == null || it.merchant.orEmpty().contains(merchant, true) || it.title.contains(merchant, true)) &&
-                (last4 == null || it.last4 == last4)
-        }
+        repo.money.first().filter { Spends.match(it.spent(), category, merchant, last4, a, b, zone()) }
 
     suspend fun run(q: Query, repo: Repo): Answer = when (q) {
         is Query.SumSpend -> rows(repo, q.category, q.merchant, q.last4, q.start, q.end).let { r ->

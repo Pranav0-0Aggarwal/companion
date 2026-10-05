@@ -32,7 +32,7 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
     private val stop = (
         "how much did i spend spent on in at the my total kitna kitne kharcha kharch kiya kiye ka ki ke pe par mein me for of " +
             "and to a an is are was what show list dikhao dikha batao bata give me all mera meri hai ho tha thi top biggest most sabse zyada " +
-            "transactions transaction txns payments history card ending xx last past this week month year today yesterday kal aaj din days hafte " +
+            "transactions transaction txns payments history card ending xx last past this week month year today yesterday kal aaj din days hua hue hui hafte " +
             "hafta mahine mahina pichle pichhle pichla previous current iss saal remind reminder add calendar event during"
         ).split(' ').toSet()
 
@@ -42,7 +42,9 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
         write(text, t, now)?.let { return it }
         val words = t.split(' ').filter { it.isNotEmpty() }
         val has = { re: String -> Regex(re).containsMatchIn(t) }
-        val spendWord = has("\\b(spend|spent|kharcha|kharch|total|how much|kitna|kitne|paid|expense|expenses)\\b")
+        val money = has("\\b(spend|spent|spending|kharcha|kharch|total|how much|kitna|kitne|paid|expense|expenses|owe|owed|card|bill|bills|due|rs|inr)\\b") || '₹' in text
+        val meal = has("\\b(had|ate|eaten|eat|khaya|khayi|khaye|piya|piyi|li|breakfast|lunch|dinner|brunch|snack|snacks|nashta|subah|raat)\\b") && !money
+        if (meal) return Plan(emptyList(), false)
         if (has("\\bbills?\\b") && has("\\b(due|pending|upcoming|unpaid|baaki|payable|overdue)\\b")) {
             val (a, b) = billRange(t, today)
             return Plan(listOf(Query.ListBills(a, b, true)), true)
@@ -60,6 +62,7 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
         }
         val category = cat?.label ?: if (sameCat) shared[0].label else null
         val (start, end) = range.first to range.second
+        val known = cat != null || found.isNotEmpty() || last4 != null || merchant != null
         val q: Query = when {
             has("\\b(top|biggest|most|sabse|zyada)\\b") && has("\\b(merchant|merchants|shops|kahan|where|spend|spends|kharcha)\\b") ->
                 Query.TopMerchants(start, end, Regex("\\btop (\\d{1,2})\\b").find(t)?.groupValues?.get(1)?.toInt()?.coerceIn(1, 10) ?: 5)
@@ -67,8 +70,11 @@ class RulePlanner(private val zone: ZoneId = ZoneId.of("Asia/Kolkata")) : Planne
                 Query.ListTxns(category, merchant, last4, start, end, Regex("\\b(?:last|top) (\\d{1,2}) (?:transactions|txns|payments)\\b").find(t)?.groupValues?.get(1)?.toInt()?.coerceIn(1, 50) ?: 10)
             else -> Query.SumSpend(category, merchant, last4, start, end)
         }
-        return Plan(listOf(q), spendWord || range.third || cat != null || found.isNotEmpty() || q !is Query.SumSpend)
+        val clear = q is Query.TopMerchants || merchant == null || found.isNotEmpty() || sameCat || resolves(merchant)
+        return Plan(listOf(q), clear && (money || found.isNotEmpty() || known && range.third) || q is Query.TopMerchants)
     }
+
+    private fun resolves(m: String) = Merchant.brand(m) != null || Category.of(m) != Category.Other
 
     private fun leftover(words: List<String>): String? {
         val rest = words.filter { it !in stop && it !in cats && !it.all(Char::isDigit) && it.length >= 3 && !isMonth(it) }

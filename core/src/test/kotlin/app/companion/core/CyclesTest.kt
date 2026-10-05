@@ -161,4 +161,20 @@ class CyclesTest {
         assertEquals(null, Paid.read(""))
         assertEquals(null, Paid.read(Paid.KEEP))
     }
+
+    @Test
+    fun `a card payment credit carries the card and the bank`() {
+        val e = Event.Credit(500000, "INR", "1234", "HDFC Bank", null, Mode.Card)
+        assertEquals(Pay(7, "1234", "HDFC Bank"), Pays.of(e, "", 7))
+    }
+
+    @Test
+    fun `a debit towards a card carries the card digits it names or the issuer it pays`() {
+        val a = Event.Debit(500000, "INR", "9999", "ICICI Bank", null, Mode.Netbanking)
+        assertEquals(Pay(7, "1234", null), Pays.of(a, "Rs 5000 debited from a/c XX9999 towards card ending 1234", 7))
+        val b = Event.Debit(500000, "INR", "9999", "ICICI Bank", "HDFC Bank Card", Mode.Upi)
+        assertEquals(Pay(7, null, "HDFC Bank"), Pays.of(b, "Rs 5000 paid via UPI", 7))
+        val c = Event.Debit(500000, "INR", "9999", "ICICI Bank", "CRED", Mode.Upi)
+        assertEquals(Pay(7, null, null), Pays.of(c, "Rs 5000 paid", 7))
+    }
 }

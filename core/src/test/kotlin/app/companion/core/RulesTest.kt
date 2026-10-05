@@ -148,19 +148,35 @@ class RulesTest {
     }
 
     @Test
-    fun `a bill rule turns a debit into a bill and a notice stays put`() {
-        val v = typed(Verdict.Sure(debit, 1f), "bill")
-        assertIs<Event.Bill>(v.event)
+    fun `a bill rule never turns a payment into a bill and a notice stays put`() {
+        val m = Verdict.Sure(debit, 1f)
+        assertSame(m, typed(m, "bill"))
         assertSame(unknown, typed(unknown, "bill"))
+        listOf(
+            debit,
+            Event.Credit(100, "INR", null, null, null, Mode.Other),
+            Event.CardSpend(100, "INR", "1234", null, "ACME"),
+        ).forEach { e -> listOf("bill", "income", "expense").forEach { assertEquals(e, typed(Verdict.Sure(e, 1f), it, raw).event) } }
     }
 
     @Test
-    fun `expense and income rules flip money only`() {
-        assertIs<Event.Credit>(typed(Verdict.Sure(debit, 1f), "income").event)
-        val credit = Event.Credit(100, "INR", null, null, null, Mode.Other)
-        assertIs<Event.Debit>(typed(Verdict.Sure(credit, 1f), "expense").event)
+    fun `expense and income rules only confirm money and never flip it`() {
+        val m = Verdict.Unsure(debit, 0.4f)
+        val v = typed(m, "expense")
+        assertIs<Verdict.Sure>(v)
+        assertEquals(debit, v.event)
+        assertSame(m, typed(m, "income"))
+        val credit = Verdict.Sure(Event.Credit(100, "INR", null, null, null, Mode.Other), 1f)
+        assertSame(credit, typed(credit, "expense"))
         assertSame(unknown, typed(unknown, "expense"))
         assertSame(unknown, typed(unknown, "income"))
+    }
+
+    @Test
+    fun `a delivery rule still files an alert as a delivery`() {
+        val v = typed(Verdict.Sure(Event.Alert, 1f), "delivery", raw)
+        assertIs<Verdict.Sure>(v)
+        assertIs<Event.Delivery>(v.event)
     }
 
     @Test

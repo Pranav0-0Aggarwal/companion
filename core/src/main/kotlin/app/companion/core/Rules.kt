@@ -17,7 +17,7 @@ object Rules {
         "alert" -> Event.Alert.takeUnless { e is Event.Move }
         "personal" -> Event.Personal.takeUnless { e is Event.Move || e is Event.Otp || e is Event.Bill || e is Event.Statement }
         "delivery" -> if (e is Event.Move || e is Event.Otp) null else Labels.event(label, e, raw)
-        "expense", "income", "bill" -> if (e is Event.Otp) null else Labels.event(label, e, raw)
+        "expense", "income", "bill" -> if (e is Event.Otp || e is Event.Move) null else Labels.event(label, e, raw)
         else -> null
     }
 

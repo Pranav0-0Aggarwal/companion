@@ -290,7 +290,7 @@ class Repo(private val db: Db) {
             val new = when {
                 !typed -> old.copy(category = chosen, state = State.SETTLED).takeIf { r.money && (r.credit || chosen != Category.Income.label) }
                 Types.of(Kind.valueOf(r.kind)) == chosen -> old.copy(state = State.SETTLED)
-                else -> Labels.refile(chosen, old, r.paise)
+                else -> Labels.refile(chosen, old, r.paise).takeUnless { r.money }
             }
             new?.takeIf { it != old }?.let { r.id to (old to it) }
         }

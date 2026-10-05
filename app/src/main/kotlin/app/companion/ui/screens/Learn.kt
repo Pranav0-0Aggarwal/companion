@@ -37,9 +37,12 @@ import kotlinx.coroutines.withContext
 
 private val space = Regex("\\s+")
 
+private const val CAP = 400
+
 private fun RuleRow.line(): String {
-    val brand = sender?.let { Template.brand(it, body.orEmpty()) } ?: title.orEmpty()
-    val text = Template.mask(body ?: note?.takeIf { it.isNotBlank() } ?: title.orEmpty()).replace(space, " ").trim()
+    val b = body?.take(CAP)
+    val brand = sender?.let { Template.brand(it, b.orEmpty()) } ?: title.orEmpty()
+    val text = Template.mask(b ?: note?.takeIf { it.isNotBlank() }?.take(CAP) ?: title.orEmpty().take(CAP)).replace(space, " ").trim()
     val eg = if (text.length > 60) text.take(59).trimEnd() + "…" else text
     return listOf(brand, eg).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "Messages like this" }
 }
@@ -53,6 +56,7 @@ fun LearnSettings() {
     var note by remember { mutableStateOf<String?>(null) }
     val n by remember(since) { repo.corrections(since) }.collectAsStateWithLifecycle(0)
     val rules by repo.rules.collectAsStateWithLifecycle(emptyList())
+    val lines by produceState(emptyMap<RuleRow, String>(), rules) { value = withContext(Dispatchers.Default) { rules.associateWith { it.line() } } }
     val merchants by repo.learned.collectAsStateWithLifecycle(emptyList())
     val senders by repo.senderRules.collectAsStateWithLifecycle(emptyList())
     val names by repo.aliases.collectAsStateWithLifecycle(emptyList())
@@ -93,7 +97,7 @@ fun LearnSettings() {
         rules.forEachIndexed { i, r ->
             if (i > 0) Rule()
             PassLine(
-                r.line(),
+                lines[r] ?: r.title.orEmpty().ifEmpty { "Messages like this" },
                 "→ ${r.label.cap()} · caught ${r.hits}",
                 actions = { Btn("Delete") { scope.launch { repo.deleteRule(r.hash, r.task) } } },
             )

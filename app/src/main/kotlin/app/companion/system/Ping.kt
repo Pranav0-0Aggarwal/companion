@@ -49,7 +49,7 @@ object Ping {
 
     private fun mark(c: Context, name: String) = Icon.createWithBitmap(BrandMark.bitmap(c, name, (48 * c.resources.displayMetrics.density).toInt()))
 
-    private fun action(c: Context, label: String, pi: PendingIntent) = Notification.Action.Builder(icon(c), label, pi).build()
+    fun action(c: Context, label: String, pi: PendingIntent) = Notification.Action.Builder(icon(c), label, pi).build()
 
     private fun quiet(c: Context, chan: String, f: Face) =
         Notification.Builder(c, chan).setSmallIcon(R.drawable.ic_tile).setContentTitle(f.title).setContentText(f.text).build()

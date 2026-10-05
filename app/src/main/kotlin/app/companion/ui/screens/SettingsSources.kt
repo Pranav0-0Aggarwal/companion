@@ -57,6 +57,10 @@ fun Sources(on: (Source) -> Boolean, set: (Source, Boolean) -> Unit, sync: Boole
         set(Source.Notif, true)
         if (!c.listenerOn()) c.openListenerSettings()
     }
+    val chat = { s: Source, v: Boolean ->
+        set(s, v)
+        if (v && !c.listenerOn()) c.openListenerSettings()
+    }
     Toggle("SMS", "Bank, card and bill messages, past and new", on(Source.Sms), icon = Ic.Sms) { v ->
         if (!v) set(Source.Sms, false) else if (c.has(Manifest.permission.RECEIVE_SMS) && c.has(Manifest.permission.READ_SMS)) set(Source.Sms, true) else askSms()
     }
@@ -68,9 +72,9 @@ fun Sources(on: (Source) -> Boolean, set: (Source, Boolean) -> Unit, sync: Boole
     Rule(72.dp)
     GmailSource(on(Source.Mail), { set(Source.Mail, it) }, sync)
     Rule(72.dp)
-    Toggle("WhatsApp", "Only messages that need you, the rest are counted", on(Source.Wa), icon = Ic.Chat) { set(Source.Wa, it) }
+    Toggle("WhatsApp", "Chats that need you, the rest wait quietly in Inbox", on(Source.Wa), icon = Ic.Chat) { chat(Source.Wa, it) }
     Rule(72.dp)
-    Toggle("Instagram", "Only messages that need you, the rest are counted", on(Source.Ig), icon = Ic.Camera) { set(Source.Ig, it) }
+    Toggle("Instagram", "Chats that need you, the rest wait quietly in Inbox", on(Source.Ig), icon = Ic.Camera) { chat(Source.Ig, it) }
 }
 
 @Composable

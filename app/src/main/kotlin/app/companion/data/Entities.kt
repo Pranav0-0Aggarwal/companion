@@ -211,6 +211,7 @@ object Src {
 object State {
     const val ASK = Refile.ASK
     const val CHECK = Refile.CHECK
+    const val LOW = Refile.LOW
     const val SETTLED = Refile.SETTLED
     const val PAID = Refile.PAID
 }

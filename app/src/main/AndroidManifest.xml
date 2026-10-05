@@ -199,6 +199,18 @@
             android:exported="false" />
 
         <receiver
+            android:name=".system.Meet"
+            android:exported="false" />
+
+        <activity
+            android:name=".system.Joined"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <receiver
             android:name=".system.Boot"
             android:exported="false">
             <intent-filter>

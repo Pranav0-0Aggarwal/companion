@@ -82,14 +82,20 @@ class Upgrade(private val c: Context, private val db: Db) {
             if (rows.isEmpty()) break
             val held = d.aliasNames().toSet()
             val ruled = rows.filter { it.tpl in taught }
-            val from = if (ruled.isEmpty()) emptyMap() else d.senders(ruled.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender }
+            val bare = rows.filter { it.kind == "Bill" && it.merchant == null }
+            val fixed = d.corrected(rows.map { it.id }).toSet()
+            val from = (ruled + bare).let { l -> if (l.isEmpty()) emptyMap() else d.senders(l.map { it.id }).distinctBy { it.itemId }.associate { it.itemId to it.sender } }
             val raws = ruled.associate { i -> i.id to Pending.raw(c, i, from[i.id])?.takeIf { it.source == Source.Sms } }
             db.withTransaction {
                 val keys = HashMap<String, HashMap<String, Int>>()
                 rows.forEach { i ->
                     val old = i.merchant
-                    if (old != null && i.kind in NAMED && old !in held) {
-                        val clean = Merchant.resolve(old, exact = true)
+                    if (old == null && i.kind == "Bill") {
+                        from[i.id]?.let(Merchant::fromSender)?.let { n -> d.alias(Merchant.key(n)) ?: n }?.let { to -> d.setNamed(i.id, to, if (i.title == "Bill") "$to bill" else i.title) }
+                    }
+                    if (i.kind == "Credit" && i.flow == Flow.CardBill.name && (i.state == State.ASK || i.state == State.CHECK)) d.setState(i.id, State.SETTLED)
+                    if (old != null && i.kind in NAMED && old !in held && i.id !in fixed) {
+                        val clean = Merchant.resolve(old)
                         val to = clean?.let { n -> d.alias(Merchant.key(n)) ?: n }
                         if (to != null && to != old) {
                             d.setNamed(i.id, to, if (i.title.startsWith(old)) to + i.title.removePrefix(old) else i.title)
@@ -163,7 +169,7 @@ class Upgrade(private val c: Context, private val db: Db) {
 
     companion object {
         private const val TPL = "upgrade6"
-        private const val JOB = "upgrade7"
+        private const val JOB = "upgrade7b"
         private const val V8 = "upgrade8"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200

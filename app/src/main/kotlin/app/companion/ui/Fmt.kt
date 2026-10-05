@@ -2,8 +2,12 @@ package app.companion.ui
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.time.format.TextStyle
+import java.util.Locale
 import java.time.temporal.ChronoUnit
 
 private fun group(n: Long): String {
@@ -29,6 +33,7 @@ private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM")
 private val shortFmt = DateTimeFormatter.ofPattern("d MMM")
 private val fullFmt = DateTimeFormatter.ofPattern("d MMM yyyy")
 private val clockFmt = DateTimeFormatter.ofPattern("HH:mm")
+private val hmFmt = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 private val monthFmt = DateTimeFormatter.ofPattern("MMMM")
 
 fun zone(): ZoneId = ZoneId.systemDefault()
@@ -49,6 +54,12 @@ fun span(a: LocalDate, b: LocalDate): String = when {
 }
 
 fun clock(ms: Long): String = clockFmt.format(Instant.ofEpochMilli(ms).atZone(zone()))
+
+fun hm(ms: Long): String = hmFmt.format(Instant.ofEpochMilli(ms).atZone(zone()))
+
+fun dayTime(minutes: Int): String = hmFmt.format(LocalTime.of(minutes / 60, minutes % 60))
+
+fun weekday(d: LocalDate): String = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 
 fun monthName(d: LocalDate): String = monthFmt.format(d)
 

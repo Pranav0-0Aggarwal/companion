@@ -69,8 +69,12 @@ object Merchant {
         return k.isNotEmpty() && (0..t.size - k.size).any { i -> t.subList(i, i + k.size) == k }
     }
 
+    private fun house(sender: String) = Brands.db.stem(Brands.clean(sender)) { !it.bank && it.cat != Category.Transfer.label && it.cat != Category.Income.label }
+
+    fun fromSender(sender: String) = house(sender)?.name
+
     fun guess(merchant: String, sender: String, text: String = ""): String? {
-        val b = Brands.db.stem(Brands.clean(sender)) { !it.bank && it.cat != Category.Transfer.label && it.cat != Category.Income.label } ?: return null
+        val b = house(sender) ?: return null
         return b.name.takeIf { Brands.db.merchant(merchant) == null && !person(merchant) && !platform(text, b.name) }
     }
 

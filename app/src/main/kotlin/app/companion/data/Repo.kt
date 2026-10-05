@@ -6,6 +6,7 @@ import app.companion.core.Body
 import app.companion.core.Calibration
 import app.companion.core.CardFind
 import app.companion.core.Category
+import app.companion.core.Chats
 import app.companion.core.Chan
 import app.companion.core.Corrections
 import app.companion.core.Cycles
@@ -128,11 +129,20 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     fun suggested(now: Long = System.currentTimeMillis()) = d.suggested(now, now - 3 * 24 * 3600 * 1000L)
 
+    suspend fun mirrored(now: Long = System.currentTimeMillis()) = d.mirrored(now)
+
     fun inbox(since: Long) = d.inbox(since)
 
     fun links(ids: List<Long>) = d.links(ids)
 
     fun tally(fromDay: Long) = d.tally(fromDay)
+
+    fun chats(since: Long) = d.chats(since)
+
+    suspend fun important(name: String) = db.withTransaction {
+        edit { it.copy(vip = Chats.vip(it.vip, name)) }
+        d.promote(name)
+    }
 
     fun search(q: String): Flow<List<Item>> {
         val t = q.split(Regex("\\s+")).map { w -> w.filter(Char::isLetterOrDigit) }.filter { it.isNotEmpty() }
@@ -141,7 +151,7 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     suspend fun sweep(now: Long = System.currentTimeMillis()) = d.sweep(now)
 
-    suspend fun retain(now: Long = System.currentTimeMillis()) = d.blank(Body.since(profileNow().keep, now))
+    suspend fun retain(now: Long = System.currentTimeMillis()) = d.blank(Body.since(profileNow().keep, now)) + d.purgeChats(now - Chats.KEEP)
 
     suspend fun keep(days: Int) {
         edit { it.copy(keep = days) }
@@ -399,7 +409,7 @@ class Repo(private val db: Db, c: android.content.Context) {
             return null
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(tpl = tpl, ping = if (live) 0 else Alerts.seen, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
+        val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()), Chats.quiet(e, raw, p.vips)).copy(tpl = tpl, ping = if (live) 0 else Alerts.seen, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         val fp = item.fp()
         val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
         if (twin != null) {
@@ -428,7 +438,7 @@ class Repo(private val db: Db, c: android.content.Context) {
     private fun foldKey(e: Event, raw: Raw, v: Verdict, p: Profile) = when {
         e == Event.Promo -> "Promo"
         e == Event.Unknown && v is Verdict.Sure -> "Other"
-        e == Event.Personal && !Worth.dm(raw.sender, raw.title + " " + raw.body, p.vips) -> raw.source.name
+        e == Event.Personal && !Chats.chat(raw.source) && !Worth.dm(raw.sender, raw.title + " " + raw.body, p.vips) -> raw.source.name
         else -> null
     }
 
@@ -446,7 +456,7 @@ class Repo(private val db: Db, c: android.content.Context) {
             return@withTransaction Change(true, false)
         }
         val learned = cat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis())).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()), Chats.quiet(e, raw, p.vips)).copy(id = id, tpl = cur.tpl, ping = cur.ping, dup = cur.dup, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         if (n == cur || Refile.lost(cur.filed(), n.filed())) return@withTransaction Change(false, false)
         d.update(n)
         tidy(n)
@@ -494,7 +504,7 @@ class Repo(private val db: Db, c: android.content.Context) {
         val cur = d.item(id)?.takeIf { frozen(listOf(it)).isEmpty() } ?: return Change(false, false)
         val e = aliased(v.event)
         val learned = (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
-        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()))
+        val n = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()), Chats.quiet(e, raw, p.vips))
         val old = cur.filed()
         val new = n.filed()
         val go = Refile.moved(old, new)

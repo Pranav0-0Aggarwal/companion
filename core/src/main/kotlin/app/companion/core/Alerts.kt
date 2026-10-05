@@ -80,6 +80,8 @@ object Hidden {
     val due = Face("Bill due soon")
     val order = Face("Delivery update")
     val daily = Face("Daily summary")
+    val meet = Face("Meeting soon")
+    val brief = Face("Morning brief")
 }
 
 object Digest {
@@ -92,6 +94,28 @@ object Digest {
             tomorrow.takeIf { it > 0 }?.let { "${n(it, "bill", "bills")} due tomorrow" },
             spent?.let { "$it spent today" },
         ).joinToString(" · ").ifEmpty { null }
+}
+
+data class BriefOpts(val on: Boolean = true, val at: Int = 8 * 60)
+
+object Brief {
+    fun face(name: String, parts: List<String>) =
+        parts.takeIf { it.isNotEmpty() }?.let { Face(if (name.isBlank()) "Good morning" else "Morning, $name", it.joinToString(" · ")) }
+
+    fun meeting(time: String) = "First meeting $time"
+
+    fun bill(title: String, amount: String?, days: Int, weekday: String) =
+        listOfNotNull(title, amount).joinToString(" ") + when (days) {
+            0 -> " due today"
+            1 -> " due tomorrow"
+            else -> " due $weekday"
+        }
+
+    fun orders(merchant: String?, n: Int) = if (n == 1) "${merchant?.let { "$it order" } ?: "Order"} arriving" else "$n orders arriving"
+
+    fun bills(n: Int) = "$n ${if (n == 1) "bill" else "bills"}"
+
+    fun due(n: Int) = "${bills(n)} due today"
 }
 
 object Track {
@@ -125,7 +149,7 @@ object Track {
     }
 }
 
-enum class Lane { Out, Code, Due, Spent }
+enum class Lane { Out, Code, Meet, Brief, Due, Spent }
 
 object Cover {
     const val CODE = 10 * 60_000L
@@ -134,9 +158,18 @@ object Cover {
 
     fun code(at: Long, now: Long) = now - at < CODE
 
-    fun lanes(out: Boolean, code: Boolean, due: Int?, spent: Int): List<Lane> = listOfNotNull(
+    const val FROM = 6 * 60
+    const val TO = 10 * 60 + 30
+
+    fun meet(mins: Long?) = mins != null && mins <= Meets.COVER / Meets.MIN
+
+    fun brief(minute: Int, meeting: Boolean, due: Int) = minute in FROM..TO && (meeting || due > 0)
+
+    fun lanes(out: Boolean, code: Boolean, due: Int?, spent: Int, meet: Boolean = false, brief: Boolean = false): List<Lane> = listOfNotNull(
         Lane.Out.takeIf { out },
         Lane.Code.takeIf { code },
+        Lane.Meet.takeIf { meet },
+        Lane.Brief.takeIf { brief && !out && !code && !meet },
         Lane.Due.takeIf { due != null && due <= WINDOW },
         Lane.Spent.takeIf { spent > 0 },
     )

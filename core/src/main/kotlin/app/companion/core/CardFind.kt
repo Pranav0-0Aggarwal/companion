@@ -30,14 +30,14 @@ object CardFind {
     private fun wrap(d: Int) = (d - 1) % 28 + 1
 
     fun of(seen: List<Seen>, zone: ZoneId = ZoneId.systemDefault()): List<Found> =
-        seen.filter { (it.kind == "Statement" || it.kind == "CardSpend") && !it.bank.isNullOrBlank() && it.last4?.length == 4 && !debit.containsMatchIn(it.text) }
+        seen.filter { (it.kind == "Statement" || it.kind == "CardSpend" || it.kind == "Credit") && !it.bank.isNullOrBlank() && it.last4?.length == 4 && !debit.containsMatchIn(it.text) }
             .groupBy { "${Cycles.issuer(it.bank)}:${it.last4}" }
             .values.mapNotNull { g ->
                 val stmts = g.filter { it.kind == "Statement" }
-                if (stmts.isEmpty() && g.size < 2) return@mapNotNull null
+                val lim = g.sortedByDescending { it.at }.map { limits(it.text) }
+                if (stmts.isEmpty() && g.size < 2 && g.none { it.kind == "Credit" } && lim.none { it.credit != null || it.avail != null }) return@mapNotNull null
                 val day = stmts.map { Instant.ofEpochMilli(it.at).atZone(zone).dayOfMonth }.takeIf { it.isNotEmpty() }?.let(::mid)
                 val due = stmts.mapNotNull { it.due }.map { LocalDate.ofEpochDay(it).dayOfMonth }.takeIf { it.isNotEmpty() }?.let(::mid)
-                val lim = g.sortedByDescending { it.at }.map { limits(it.text) }
                 val bank = (stmts.ifEmpty { g }).groupingBy { it.bank!! }.eachCount().maxBy { it.value }.key
                 Found(bank, g.first().last4!!, day ?: due?.let { wrap(it + 28 - LAG) }, due ?: day?.let { wrap(it + LAG) }, lim.firstNotNullOfOrNull { it.credit }, lim.firstNotNullOfOrNull { it.avail })
             }

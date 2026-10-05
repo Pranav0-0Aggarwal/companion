@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.core.Alerts
 import app.companion.data.Item
 import app.companion.data.brand
 import app.companion.data.Profile
@@ -57,6 +59,7 @@ import app.companion.ui.money
 import app.companion.ui.pal
 import app.companion.ui.shortDay
 import app.companion.ui.today
+import java.time.ZoneId
 import kotlin.time.Duration.Companion.days
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,19 +102,25 @@ fun InboxScreen(go: (String) -> Unit) {
     val c = LocalContext.current
     val repo = c.sl.repo
     val snack = LocalSnack.current
+    val scope = rememberCoroutineScope()
     val items by remember { repo.inbox(System.currentTimeMillis() - 3.days.inWholeMilliseconds) }.collectAsStateWithLifecycle(emptyList<Item>())
     val tally by remember { repo.tally(today().toEpochDay()) }.collectAsStateWithLifecycle(emptyList<Tally>())
+    val chatSince = remember { Alerts.dayStart(System.currentTimeMillis(), ZoneId.systemDefault()) }
+    val chats by remember { repo.chats(chatSince) }.collectAsStateWithLifecycle(emptyList<Item>())
     val profile by repo.profile.collectAsStateWithLifecycle(Profile())
     val links by remember(items) { repo.links(items.map { it.id }) }.collectAsStateWithLifecycle(emptyList())
     val from = remember(links) { links.groupBy { it.itemId }.mapValues { it.value.first().sender } }
     var seg by rememberSaveable { mutableStateOf(InboxSeg.All) }
     val shown = remember(items, seg) { items.filter { seg == InboxSeg.All || it.src in seg.src || (seg == InboxSeg.Alerts && it.kind == "Spam") } }
     val (waiting, filed) = remember(shown) { shown.partition { it.open } }
+    val quiet = remember(chats, seg) { chats.filter { seg == InboxSeg.All || it.src in seg.src } }
+    var chatsOpen by rememberSaveable { mutableStateOf(false) }
     val asks = items.count { it.state == State.ASK }
     val checks = items.count { it.state == State.CHECK }
     val sub = listOfNotNull(
         asks.takeIf { it > 0 }?.let { "$it to file" },
         checks.takeIf { it > 0 }?.let { "$it to check" },
+        chats.size.takeIf { it > 0 }?.let { "$it ${if (it == 1) "chat" else "chats"}" },
     ).joinToString(" · ").ifEmpty { "Nothing waiting" }
     val acts = remember(repo, snack) {
         Acts(
@@ -127,14 +136,46 @@ fun InboxScreen(go: (String) -> Unit) {
                 InboxSeg.entries.forEach { s -> Chip(s.label, seg == s) { seg = s } }
             }
         }
-        if (shown.isEmpty()) {
+        item(key = "hear") { Hearing() }
+        if (shown.isEmpty() && quiet.isEmpty()) {
             val (t, b) = if (seg == InboxSeg.All) "All clear" to "you're all caught up. Anything that needs a look will wait for you here." else "Nothing in ${seg.label}" to "no ${seg.label} messages need a look right now."
             empty(Ic.Inbox, t, Voice.addr(profile.name, b))
         }
         group("Needs you", waiting, acts, from)
         group("Filed", filed, acts, from)
+        chats(quiet, chatsOpen, { chatsOpen = !chatsOpen }) { n -> scope.launch { repo.important(n) } }
         folded(tally)?.let { f ->
             item(key = "folded") { Text(f, Modifier.padding(horizontal = 28.dp, vertical = 16.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2)) }
+        }
+    }
+}
+
+private fun LazyListScope.chats(list: List<Item>, open: Boolean, toggle: () -> Unit, important: (String) -> Unit) {
+    if (list.isEmpty()) return
+    val people = list.groupBy { it.title }.values.toList()
+    item(key = "chats") {
+        Box(Modifier.animateItem().padding(top = 16.dp).part(pal, true, !open)) {
+            PassLine(
+                "${list.size} ${if (list.size == 1) "chat" else "chats"} today · not important",
+                "${people.size} ${if (people.size == 1) "person" else "people"}, kept quiet",
+                lead = Ic.Chat,
+                tone = Tone.Plain,
+                onClick = toggle,
+                trailing = { Icon(if (open) Ic.Down else Ic.Right, null, tint = pal.ink2) },
+            )
+        }
+    }
+    if (!open) return
+    itemsIndexed(people, key = { _, l -> "c${l.first().title}" }) { k, l ->
+        val last = l.first()
+        Box(Modifier.animateItem().part(pal, false, k == people.lastIndex)) {
+            PassLine(
+                last.title,
+                listOfNotNull("${l.size} ${if (l.size == 1) "message" else "messages"}", stamped(last.at), last.body?.take(80)).joinToString(" · "),
+                lead = Ic.src(last.src),
+                tone = Tone.Plain,
+                actions = { TextBtn("Mark important") { important(last.title) } },
+            )
         }
     }
 }

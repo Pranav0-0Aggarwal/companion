@@ -222,6 +222,7 @@
 {"name":"Delhivery","aliases":["delhivery","delhivery limited","delhivery courier"],"cat":"other","color":"#E31E24"},
 {"name":"Blue Dart","aliases":["bluedart","blue dart","blue dart express"],"cat":"other","color":"#003A8F"},
 {"name":"DTDC","aliases":["dtdc","dtdc express","dtdc courier"],"cat":"other","color":"#E31E24"},
+{"name":"Shipway","aliases":["shipway","shipway tracking","shipway shipping"],"cat":"other","color":"#1B6EF3"},
 {"name":"Ekart","aliases":["ekart","ekart logistics"],"cat":"other","color":"#2874F0"},
 {"name":"Xpressbees","aliases":["xpressbees","xpress bees"],"cat":"other","color":"#F9A825"},
 {"name":"Shadowfax","aliases":["shadowfax","shadowfax technologies"],"cat":"other","color":"#F58220"},

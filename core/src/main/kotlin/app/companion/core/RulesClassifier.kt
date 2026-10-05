@@ -8,6 +8,7 @@ class RulesClassifier(private val zone: ZoneId = ZoneId.systemDefault(), private
     private val card = Regex("(?i)\\bcard\\b")
     private val offer = Regex("(?i)\\bflat\\b|\\d+\\s*%|\\boff\\b|\\bcode\\s*:?\\s*[A-Z0-9]{4,}")
     private val setback = Regex("(?i)unsuccessful|fail|reject|tried|attempt|delay|cancel|resched|undeliver")
+    private val lapse = Regex("(?i)declin|fail|revers|refund|chargeback|return|cancel|pending|unsuccessful")
     private val moved = Regex("(?i)credit|debit|received|refund|\\bbill\\b|\\bdues?\\b|statement|emi\\b|application|kyc|otp|added to|loan")
 
     override fun classify(raw: Raw) = judge(Extract.from(raw, zone), raw)
@@ -39,6 +40,7 @@ class RulesClassifier(private val zone: ZoneId = ZoneId.systemDefault(), private
         val who = e.merchant != null
         val clean = !risk.containsMatchIn(t)
         return when {
+            e is Event.Credit && Flows.of(e, t) == Flow.CardBill && !lapse.containsMatchIn(t) -> 0.99f
             !clean -> 0.5f
             e is Event.Credit -> if (id && acct.containsMatchIn(t) && !card.containsMatchIn(t)) 0.99f else 0.9f
             e is Event.CardSpend && (id || who) -> 0.98f

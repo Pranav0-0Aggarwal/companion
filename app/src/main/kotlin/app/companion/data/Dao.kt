@@ -94,7 +94,7 @@ interface Dao {
     @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit') AND dup IS NULL AND at >= :since AND (flow = 'CardBill' OR category = 'Bills') ORDER BY at")
     suspend fun cardPays(since: Long): List<Item>
 
-    @Query("SELECT kind, bank, last4, at, due, COALESCE(body, '') AS text FROM items WHERE kind IN ('Statement', 'CardSpend') AND bank IS NOT NULL AND last4 IS NOT NULL AND dup IS NULL ORDER BY at DESC LIMIT 4000")
+    @Query("SELECT kind, bank, last4, at, due, COALESCE(body, '') AS text FROM items WHERE (kind IN ('Statement', 'CardSpend') OR kind = 'Credit' AND flow = 'CardBill') AND bank IS NOT NULL AND last4 IS NOT NULL AND dup IS NULL ORDER BY at DESC LIMIT 4000")
     fun cardRows(): Flow<List<CardRow>>
 
     @Query("SELECT key FROM dismissed")
@@ -131,10 +131,19 @@ interface Dao {
     fun asks(): Flow<List<Item>>
 
     @Query(
-        "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND (state IN ('ask', 'check') OR at > :since) " +
+        "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND state != 'low' AND (state IN ('ask', 'check') OR at > :since) " +
             "ORDER BY CASE state WHEN 'ask' THEN 0 WHEN 'check' THEN 1 ELSE 2 END, at DESC LIMIT 200",
     )
     fun inbox(since: Long): Flow<List<Item>>
+
+    @Query("SELECT * FROM items WHERE state = 'low' AND dup IS NULL AND at >= :since ORDER BY at DESC LIMIT 500")
+    fun chats(since: Long): Flow<List<Item>>
+
+    @Query("UPDATE items SET state = 'check' WHERE state = 'low' AND title = :title COLLATE NOCASE")
+    suspend fun promote(title: String)
+
+    @Query("DELETE FROM items WHERE state = 'low' AND at < :before")
+    suspend fun purgeChats(before: Long): Int
 
     @Query(
         "SELECT items.* FROM items JOIN items_fts ON items.id = items_fts.rowid " +
@@ -144,6 +153,9 @@ interface Dao {
 
     @Query("SELECT * FROM items WHERE start IS NOT NULL AND start > :now AND at > :since AND (ping & 8) = 0 AND dup IS NULL ORDER BY start LIMIT 5")
     fun suggested(now: Long, since: Long): Flow<List<Item>>
+
+    @Query("SELECT * FROM items WHERE start IS NOT NULL AND end IS NOT NULL AND end > :now AND (ping & 8) = 0 AND dup IS NULL AND state != 'ask' ORDER BY start LIMIT 100")
+    suspend fun mirrored(now: Long): List<Item>
 
     @Query("UPDATE items SET state = :state WHERE id = :id")
     suspend fun setState(id: Long, state: String)

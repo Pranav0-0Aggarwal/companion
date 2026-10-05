@@ -13,7 +13,7 @@ Backend only; the new screens land separately.
 - Document vault. Insurance, registration, pollution certificate, FASTag, loans and warranties are read from messages or photos (offline text recognition), stored encrypted with a hardware-backed key, and remind you 30, 7 and 1 day before expiry.
 - Database version 9.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-10-05)
 
 ### Learning that actually learns
 - One correction is enough: the rule takes effect immediately.
@@ -55,6 +55,29 @@ Backend only; the new screens land separately.
 - Calmer Inbox rows, with one suggestion and "This is…" instead of three chips.
 - Friendlier empty states.
 - The Ask sheet no longer reopens on its own.
+
+### Meetings and your day
+- Meeting reminders: a heads-up before your next call or meeting, read from the calendars you pick in Settings, Meetings. It is off until you turn it on, and calendar access is only requested then.
+- Lead time is 5 minutes for video calls and 15 minutes for in person meetings. Change either to 5, 10, 15 or 30 minutes.
+- Join opens the Meet, Zoom, Teams or Webex link. Directions opens your maps app at the location. Running late opens the share sheet with "Running about 10 minutes late, sorry!" so you decide who gets it and when to send it.
+- No double pings: if the event already has a calendar reminder at the same time or closer to the start, Companion stays quiet.
+- In the last 10 minutes an ongoing countdown stays in your notifications. On Android 16 it also appears as a Live Update in the status bar. It goes away when you join or 5 minutes after the start.
+- Today shows a "Next up" card when a meeting starts within 12 hours, with Join or Directions. A line warns you when two meetings overlap, for example "Two meetings overlap at 3:00 pm".
+- Choose which calendars count, and optionally only meetings that have a link or a location.
+- The cover screen widget shows a meeting starting within the hour, after codes and before bills. Titles stay hidden unless lock screen details are on.
+- Companion calendar: turn on "Show bills and trips in your calendar" and Companion adds a separate local calendar with bill due dates, trips and suggested plans. Samsung Calendar and Now Brief can show them. Events are added, updated and removed as your bills and trips change, and turning it off deletes the whole calendar. Your other calendars are only read, never changed.
+- Morning brief: a quiet note at 8:00 (you can change the time) with your first meeting, bills due soon and orders on the way, only the lines that apply. Tap it to open Today.
+- Between 6:00 and 10:30 the cover screen shows a compact brief with your first meeting and bills due today when nothing more urgent needs you.
+- Everything stays on your phone. Notifications hide meeting names on the lock screen unless you turn on details there.
+
+### WhatsApp and chats
+- Fixed: a new WhatsApp message that Companion judged unimportant used to be counted and thrown away, so it looked like it was never pulled. Now every chat is kept for a couple of days.
+- Inbox has a calm "Chats" section ("12 chats today · not important"), collapsed by default. Tap it to see who wrote, and tap "Mark important" next to a person so their messages show under Needs you from then on.
+- Chats that are not important never count in Needs you, never notify you and are removed after 2 days.
+- WhatsApp Business and Instagram Lite are now read too.
+- Business chats are understood like their SMS. A WhatsApp or Instagram message from Swiggy, HDFC Bank, IndiGo, Shipway or Amazon becomes a delivery, order, bill, payment or code in the right place, with the brand's name and logo.
+- A banner on Today and Inbox says when Companion can't see WhatsApp and app notifications, with a Turn on button that opens notification access. Companion also asks Android to reconnect by itself if the connection drops.
+- Turning on WhatsApp or Instagram in Settings opens notification access if it is still off. WhatsApp is on by default.
 
 ## 0.4.2 (2026-10-05)
 

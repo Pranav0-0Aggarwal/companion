@@ -5,6 +5,7 @@ data class Filed(val kind: String, val tags: String?, val category: String?, val
 object Refile {
     const val ASK = "ask"
     const val CHECK = "check"
+    const val LOW = "low"
     const val SETTLED = "settled"
     const val PAID = "paid"
     const val SOURCES = "'Sms', 'Wa', 'Ig'"

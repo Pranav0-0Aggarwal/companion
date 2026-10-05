@@ -29,6 +29,8 @@ import app.companion.sl
 import app.companion.system.CalChoice
 import app.companion.system.CalEvent
 import app.companion.system.Cals
+import app.companion.system.Mirror
+import app.companion.system.Prefs
 import app.companion.system.Plan
 import app.companion.ui.Ty
 import app.companion.ui.Voice
@@ -39,6 +41,7 @@ import app.companion.ui.dayLabel
 import app.companion.ui.has
 import app.companion.ui.kit.Btn
 import app.companion.ui.kit.Group
+import app.companion.ui.kit.Ic
 import app.companion.ui.kit.PassLine
 import app.companion.ui.kit.Rule
 import app.companion.ui.kit.Section
@@ -152,6 +155,16 @@ fun PlanSettings(modifier: Modifier = Modifier, onTasks: (Boolean) -> Unit) {
     val choices by produceState(emptyList<CalChoice>(), tick) { value = withContext(Dispatchers.IO) { Cals.choices(c) } }
     val ask = rememberPerms(*calPerms) { tick++ }
     val scope = rememberCoroutineScope()
+    var mirror by remember { mutableStateOf(Prefs.mirror(c)) }
+    val enable = {
+        mirror = true
+        Prefs.setMirror(c, true)
+        scope.launch { Mirror.sync(c) }
+    }
+    val askMirror = rememberPerms(*calPerms) { ok ->
+        tick++
+        if (ok) enable()
+    }
     Column(modifier) {
         Section("Calendar")
         Group {
@@ -168,6 +181,16 @@ fun PlanSettings(modifier: Modifier = Modifier, onTasks: (Boolean) -> Unit) {
                         Text(ch.account, style = Ty.ui(13, FontWeight.Normal).copy(color = pal.ink2))
                     }
                     if (p.cal == ch.id) Stamp("USED", ok = true)
+                }
+            }
+            Rule(72.dp)
+            Toggle("Show bills and trips in your calendar", "A Companion calendar with due dates and trips, for Samsung Calendar and Now Brief. Turning off deletes it.", mirror, icon = Ic.Bills) { on ->
+                if (on) {
+                    if (Mirror.ready(c)) enable() else askMirror()
+                } else {
+                    mirror = false
+                    Prefs.setMirror(c, false)
+                    scope.launch(Dispatchers.IO) { Mirror.drop(c) }
                 }
             }
         }

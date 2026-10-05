@@ -51,10 +51,12 @@ fun TodayScreen(go: (String) -> Unit) {
         },
     ) {
         item(key = "proc", contentType = "proc") { ProcessSlot() }
+        item(key = "hear", contentType = "hear") { Hearing() }
         item(key = "ask", contentType = "ask") { AskPill(Modifier.padding(bottom = 4.dp)) }
         itemsIndexed(live, key = { _, o -> "o${o.id}" }, contentType = { _, _ -> "code" }) { _, o ->
             app.companion.ui.kit.CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
         }
+        item(key = "meet") { MeetCard() }
         item(key = "needh") { Section("Needs you", if (d.need.size > need.size) "See all ${d.need.size}" else null) { go(if (d.asks.isEmpty()) "bills" else "inbox") } }
         if (need.isEmpty()) {
             item(key = "clear") { PassLine("All clear", "Nothing needs you right now", Modifier.part(p, true, true).animateItem(), lead = Ic.Check, tone = Tone.Green) }

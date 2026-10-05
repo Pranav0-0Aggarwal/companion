@@ -15,6 +15,7 @@ class Boot : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 Alarms.all(c)
+                Meetings.sync(c)
                 if (Dl.wants(c)) ModelJobs.fallback(c)
             } finally {
                 done.finish()

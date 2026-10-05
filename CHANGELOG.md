@@ -2,11 +2,21 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-10-05)
 
-Backend only; the new screens land separately.
+### A new app
+- Redesigned from scratch around five tabs: Today, Money, Food, Inbox and You. Today is a timeline of your day with what needs you, bills, spend and meals, and a day strip to look back. Money holds the ledger, bills, cards and trips. Food has a calorie ring, macros and meals by slot. You holds the vault, what Companion has learned, weight, privacy and settings.
+- An Ask bar on every screen opens chat as a sheet. Answers come back as cards you can tap through.
+- The cover screen gets the same care: Today, codes and Ask work on the Flex Window.
 
-- Chat. A small conversational model (Qwen3.5-2B, or LFM2.5-1.2B) replaces Needle. It runs in an isolated process, streams its answer and calls tools on your data: spend, bills, cards, meals, weight, trips, documents, reminders and calendar. Rule answers still come first. Old Needle files are deleted on upgrade.
+### Chat that answers
+- Common questions are answered instantly without the chat model: what needs me today, meal ideas ("a high protein vegetarian dinner under 600 calories"), "Swiggy vs last month", which card to use, meetings, weight trend, trips, today's meals and calories, and plain meal logs such as "had 2 idli and chai for breakfast" or "kal raat 2 plate momos aur ek roll khaya".
+- When the chat model is needed it only decides what to look up; the answer is Companion's own card and sentence, so numbers always come from your data. A request for ideas never logs a meal.
+- Meal ideas are built from the food table, under your calorie limit and vegetarian on request, with the most protein first.
+- Faster and lighter on the Galaxy Z Flip 7: the chat model now uses about 1.4 GB instead of 2.6 GB, prepares itself when you open chat, streams its reply, never repeats itself and stops when you send a new message.
+
+### Everything else
+- Chat. A small conversational model (Qwen3.5-2B) replaces Needle. It runs in an isolated process, streams its answer and calls tools on your data: spend, bills, cards, meals, weight, trips, documents, reminders and calendar. Rule answers still come first. Old Needle files are deleted on upgrade.
 - Chat that looks things up and acts. Chat can look things up: your messages and notifications (sender, date and a short snippet), a spending ledger you can filter by merchant, category, card, amount and period, top merchants, a comparison of two periods, what needs you in the Inbox, bill cycles with due date, minimum and paid status, which card gives the longest interest free window, meals for a day, your weight trend, meetings on a day (when calendar access is allowed) and trips. It can also act for you: mark a bill paid, file a payment under a category, change what an item is, mark a duplicate, rename a merchant, stop counting a merchant as spending, add a card found in your messages, set your monthly budget and dismiss an Inbox item. Nothing changes until you tap Confirm on the card that appears, and most actions offer Undo afterwards. The screen stays on while Companion is thinking.
 - Food log. Say what you ate, now or in the past ("yesterday dinner"), and calories are worked out from your own foods, brand menus and a bundled food table, with a short question when unsure. Food orders create a pending meal. Health Connect sync is optional.
 - Meal and weight reminders with an inline reply, based on your usual meal times and food payments.

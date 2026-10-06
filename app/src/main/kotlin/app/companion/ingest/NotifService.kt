@@ -51,12 +51,18 @@ class NotifService : NotificationListenerService() {
 
     private val sms by lazy { Telephony.Sms.getDefaultSmsPackage(this) }
 
-    private fun apps() = runCatching {
-        activeNotifications.filter { it.isClearable && it.packageName != packageName && (it.packageName == sms || Allow.of(it.packageName, sms) == Source.Notif) }
+    private fun gone() = runCatching {
+        activeNotifications.filter {
+            it.isClearable && when (it.packageName) {
+                packageName -> it.id != Notes.OTP
+                sms -> true
+                else -> Allow.of(it.packageName, sms) != null
+            }
+        }
     }.getOrDefault(emptyList())
 
     private fun count() {
-        shade.value = apps().size
+        shade.value = gone().count { it.packageName != packageName }
     }
 
     override fun onListenerDisconnected() {
@@ -87,10 +93,9 @@ class NotifService : NotificationListenerService() {
         fun clearApps() {
             val s = live ?: return
             runCatching {
-                val all = s.apps()
-                all.forEach { s.take(it, false) }
-                val own = s.activeNotifications.filter { it.packageName == s.packageName && it.isClearable && it.id != Notes.OTP }
-                s.cancelNotifications((all + own).map { it.key }.toTypedArray())
+                val all = s.gone()
+                all.filter { Allow.of(it.packageName, s.sms) == Source.Notif }.forEach { s.take(it, false) }
+                s.cancelNotifications(all.map { it.key }.toTypedArray())
             }
         }
     }

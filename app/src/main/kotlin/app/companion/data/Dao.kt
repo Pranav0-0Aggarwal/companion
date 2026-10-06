@@ -73,6 +73,18 @@ interface Dao {
     @Query("DELETE FROM items WHERE id = :id")
     suspend fun drop(id: Long)
 
+    @Query("DELETE FROM items WHERE id IN (:ids)")
+    suspend fun dropAll(ids: List<Long>)
+
+    @Query("SELECT * FROM items WHERE dup = :id")
+    suspend fun dupsOf(id: Long): List<Item>
+
+    @Insert
+    suspend fun addAll(items: List<Item>)
+
+    @Insert
+    suspend fun linkAll(links: List<Link>)
+
     @Query("UPDATE items SET body = NULL WHERE body IS NOT NULL AND at < :before")
     suspend fun blank(before: Long): Int
 

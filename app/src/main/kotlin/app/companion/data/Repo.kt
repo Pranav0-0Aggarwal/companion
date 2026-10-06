@@ -63,6 +63,8 @@ class Also(internal val prev: List<Pair<Long, Filed>>) {
 
 class Renamed(internal val items: List<Item>, internal val before: List<Alias>, internal val key: String, internal val learned: Boolean, internal val moved: Boolean, internal val from: String, internal val to: String)
 
+class Removed(internal val items: List<Item>, internal val links: List<Link>)
+
 class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, val note: String? = null)
 
 class Repo(private val db: Db, c: android.content.Context) {
@@ -273,6 +275,18 @@ class Repo(private val db: Db, c: android.content.Context) {
     suspend fun settleAll(items: List<Item>): Also? = db.withTransaction {
         d.settleAll(items.map { it.id })
         items.takeIf { it.isNotEmpty() }?.let { l -> Also(l.map { it.id to it.filed() }) }
+    }
+
+    suspend fun delete(id: Long): Removed? = db.withTransaction {
+        val i = d.item(id) ?: return@withTransaction null
+        val items = listOf(i) + d.dupsOf(id)
+        val ids = items.map { it.id }
+        Removed(items, d.linksNow(ids)).also { d.dropAll(ids) }
+    }
+
+    suspend fun restore(r: Removed) = db.withTransaction {
+        d.addAll(r.items)
+        d.linkAll(r.links)
     }
 
     suspend fun undo(a: Also) = db.withTransaction {

@@ -220,7 +220,7 @@ fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
                             onClick = tap,
                         )
                         AnimatedVisibility(open == i.id, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                            Detail(i, cards.firstOrNull { it.has(i) }, links, keys, { off -> scope.launch { repo.spending(i.id, off) } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }
+                            Detail(i, cards.firstOrNull { it.has(i) }, links, keys, { off -> scope.launch { repo.spending(i.id, off) } }, { open = -1; snack.go { repo.delete(i.id)?.let { snack.offer(it, "Deleted") { r -> repo.restore(r) } } } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }
                         }
                     }
                 }
@@ -269,7 +269,7 @@ internal fun Summary(spent: Long, inn: Long, budget: Long?, pace: Pacing?, away:
 }
 
 @Composable
-private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpend: (Boolean) -> Unit, onFile: (String) -> Unit) {
+private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpend: (Boolean) -> Unit, onDelete: () -> Unit, onFile: (String) -> Unit) {
     val p = pal
     var sheet by remember { mutableStateOf(false) }
     var rename by remember { mutableStateOf(false) }
@@ -292,6 +292,7 @@ private fun Detail(i: Item, card: Card?, links: Links, moved: Set<String>, onSpe
             Btn("This is…", dense = true) { sheet = true }
             if (i.merchant != null) Btn("Rename merchant", dense = true) { rename = true }
             if (key != null && i.kind == "Debit") Chip("Not spending", key in moved) { onSpend(key !in moved) }
+            Btn("Delete", dense = true, onClick = onDelete)
         }
         if (key != null && key in moved) {
             Text("Everything to ${i.merchant}, past and future, stays out of Spent.", Modifier.padding(top = 6.dp), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2))

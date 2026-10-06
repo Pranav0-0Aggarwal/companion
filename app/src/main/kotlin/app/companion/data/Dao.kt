@@ -130,6 +130,9 @@ interface Dao {
     @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL ORDER BY at DESC")
     fun asks(): Flow<List<Item>>
 
+    @Query("SELECT * FROM items WHERE state IN ('ask', 'check') AND kind != 'Spam' AND dup IS NULL")
+    suspend fun waiting(): List<Item>
+
     @Query(
         "SELECT * FROM items WHERE kind != 'Otp' AND dup IS NULL AND state != 'low' AND (state IN ('ask', 'check') OR at > :since) " +
             "ORDER BY CASE state WHEN 'ask' THEN 0 WHEN 'check' THEN 1 ELSE 2 END, at DESC LIMIT 200",

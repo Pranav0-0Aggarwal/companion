@@ -137,6 +137,11 @@ fun InboxScreen(go: (String) -> Unit) {
             }
         }
         item(key = "hear") { Hearing() }
+        if (asks + checks > 20) item(key = "tidy") {
+            TextBtn("Clean up ${asks + checks} waiting", Modifier.padding(horizontal = 16.dp)) {
+                snack.go { repo.tidy(System.currentTimeMillis())?.let { a -> snack.offer(a, "Cleaned up ${a.n}") { repo.undo(it) } } ?: snack.say("Nothing safe to clean up") }
+            }
+        }
         if (shown.isEmpty() && quiet.isEmpty()) {
             val (t, b) = if (seg == InboxSeg.All) "All clear" to "you're all caught up. Anything that needs a look will wait for you here." else "Nothing in ${seg.label}" to "no ${seg.label} messages need a look right now."
             empty(Ic.Inbox, t, Voice.addr(profile.name, b))

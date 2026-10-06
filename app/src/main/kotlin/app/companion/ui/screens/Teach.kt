@@ -1,5 +1,6 @@
 package app.companion.ui.screens
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -77,6 +78,9 @@ internal fun TypeSheet(i: Item, onClose: () -> Unit) {
                     Text("This is…", style = Ty.ui(22, FontWeight.Bold).copy(color = p.ink))
                     Text(i.title, Modifier.padding(top = 4.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
                 }
+            }
+            i.body?.let { b ->
+                SelectionContainer { Text(b, Modifier.padding(bottom = 16.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = p.ink)) }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 options.forEach { l -> Chip(l.cap(), pick == l) { pick = l } }

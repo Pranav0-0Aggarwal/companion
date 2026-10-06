@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import app.companion.core.Alerts
 import app.companion.core.Body
 import app.companion.core.Calibration
+import app.companion.core.Tidy
 import app.companion.core.CardFind
 import app.companion.core.Category
 import app.companion.core.Chats
@@ -259,6 +260,12 @@ class Repo(private val db: Db, c: android.content.Context) {
         val c = correct(moved, Calibration.CATEGORY, cat, Src.EDIT)
         i.merchant?.let { Fingerprint.norm(it) }?.let { d.learn(Learned(it, cat)) }
         Taught(listOfNotNull(t.also, c.also).reduceOrNull { a, b -> a + b }, t.sender ?: c.sender)
+    }
+
+    suspend fun tidy(now: Long): Also? = db.withTransaction {
+        val moves = d.waiting().mapNotNull { i -> Tidy.of(i.filed(), i.money, i.merchant, i.credit, i.at, now)?.let { i.id to (i.filed() to it) } }
+        moves.forEach { (id, p) -> d.refiled(id, p.second.kind, p.second.tags, p.second.category, p.second.state) }
+        moves.takeIf { it.isNotEmpty() }?.let { m -> Also(m.map { it.first to it.second.first }) }
     }
 
     suspend fun undo(a: Also) = db.withTransaction {

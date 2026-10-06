@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.chat.LogReq
 import app.companion.chat.SetKcal
+import app.companion.core.Req
 import app.companion.core.Meal
 import app.companion.core.Origin
 import app.companion.core.Spark as Series
@@ -224,7 +225,7 @@ private fun ItemLine(x: MealItemRow, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(x.name.cap(), style = Ty.ui(16, FontWeight.Medium).copy(color = p.ink), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(listOfNotNull("${x.qty.n()} ${x.unit.takeIf { it != "serving" } ?: "serving"}", x.brand).joinToString(" · "), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
+                Text(listOfNotNull("${x.qty.n()} ${x.unit.takeIf { it != "serving" } ?: "serving"}", Req.brand(x.brand)).joinToString(" · "), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
                 Origin.of(x.source)?.let { Tag(it.badge) }
             }
         }

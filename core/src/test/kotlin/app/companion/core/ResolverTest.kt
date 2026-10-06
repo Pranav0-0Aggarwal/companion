@@ -242,4 +242,11 @@ class ResolverTest {
         assertEquals(null, r.parts(Req("roti")))
         assertEquals(null, r.parts(Req("mystery stew")))
     }
+
+    @Test
+    fun placeholderBrandsAreDropped() {
+        assertNull(Req.brand("unknown"))
+        assertNull(Req.brand(" N/A "))
+        assertEquals("Pannini", Req.brand("Pannini"))
+    }
 }

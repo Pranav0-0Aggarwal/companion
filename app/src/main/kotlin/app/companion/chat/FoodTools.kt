@@ -19,7 +19,7 @@ class LogMeal(private val foods: Foods) : Base(ToolSpecs.logMeal) {
     override suspend fun run(a: Map<String, Any?>): ToolOut {
         val reqs = a.l("items").mapNotNull { it.m() }.mapNotNull { i ->
             val n = i.s("name") ?: return@mapNotNull null
-            Req(n, i.s("brand"), (i.d("qty") ?: 1.0).takeIf { it > 0 } ?: 1.0, i.s("unit"), i.s("size"), i.l("mods").mapNotNull { it as? String })
+            Req(n, Req.brand(i.s("brand")), (i.d("qty") ?: 1.0).takeIf { it > 0 } ?: 1.0, i.s("unit"), i.s("size"), i.l("mods").mapNotNull { it as? String })
         }
         if (reqs.isEmpty()) return ToolOut.Fail("items")
         val order = foods.order

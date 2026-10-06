@@ -12,7 +12,13 @@ data class Req(
     val unit: String? = null,
     val size: String? = null,
     val mods: List<String> = emptyList(),
-)
+) {
+    companion object {
+        private val none = setOf("", "unknown", "none", "na", "n a", "null", "nil", "generic", "no brand")
+
+        fun brand(b: String?) = b?.trim()?.takeUnless { Words.norm(it) in none }
+    }
+}
 
 data class Sku(
     val key: String,

@@ -2,6 +2,30 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.6.2 (2026-10-06)
+
+### Money you can trust
+- Duplicate alerts no longer inflate your spending. The same payment arriving as an SMS, an app notification, WhatsApp or email counts once, matched by its UPI reference when there is one, and two payments with different references are never merged.
+- Moving money between your own accounts no longer counts as spending or income. A debit and a matching credit minutes apart are one row, "Moved between your accounts", and Companion remembers the account so later transfers to it count too.
+- Every payment shows its sign: minus when money leaves, plus when it comes in.
+- Alerts that arrive late land on the day the app says they happened.
+- On upgrade, the last weeks are tidied once: repeated alerts are folded and past transfers are matched.
+
+### Inbox
+- Clean up settles a large backlog in one tap, with Undo: known brands are filed under their category, old informational messages are settled and checks older than a few days are accepted. Unclear payments stay for you.
+- Clear notifications empties your notification shade of everything Companion already has: app alerts, SMS, WhatsApp and Instagram, and its own notes. A live code stays.
+- Tap any card to read the full message and copy from it.
+- Notifications from every app now go through Companion and are sorted as they arrive, not only banking and shopping apps. System notifications such as calls are skipped.
+
+### Codes
+- Dismiss a code from its card, the cover screen or the notification, which can now be swiped away.
+- New codes alert with a heads up notification and can fill the cover screen. Allow "Show codes full screen" in Settings, Notifications.
+
+### Smaller things
+- Logos for 70 brands, including Amazon, Amazon Pay, Amazon Prime, Flipkart, DHL and FedEx.
+- Meals no longer show "unknown" as a brand.
+- A leaner README; the technical detail lives in docs/ARCHITECTURE.md.
+
 ## 0.6.1 (2026-10-05)
 
 ### Fixed

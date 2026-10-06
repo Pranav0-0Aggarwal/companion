@@ -457,6 +457,7 @@ class Repo(private val db: Db, c: android.content.Context) {
             return Added(merged, false)
         }
         val id = d.add(item)
+        if (item.flow == null && (item.kind == Kind.Debit.name || item.kind == Kind.Credit.name)) pairSelf(item.copy(id = id))
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         if (e is Event.Move || e is Event.Statement) item.last4?.let { l -> own = own?.plus(l) }
         fresh[id] = System.currentTimeMillis()
@@ -545,6 +546,13 @@ class Repo(private val db: Db, c: android.content.Context) {
         d.setFlow(id, flowOf(e, raw))
         if (go) tidy(d.item(id))
         return Change(go, Refile.asks(old, new))
+    }
+
+    private suspend fun pairSelf(i: Item) {
+        val other = if (i.kind == Kind.Debit.name) Kind.Credit.name else Kind.Debit.name
+        val o = d.near(listOf(other), i.paise, i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW).firstOrNull { it.dup == null && it.flow == null } ?: return
+        d.setFlow(i.id, Route.Self.name)
+        d.setFlow(o.id, Route.Self.name)
     }
 
     private suspend fun near(f: Fingerprint, i: Item): List<Item> {

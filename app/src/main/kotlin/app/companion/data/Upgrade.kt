@@ -32,7 +32,23 @@ import kotlinx.coroutines.withContext
 class Upgrade(private val c: Context, private val db: Db) {
     private val d = db.dao()
 
-    suspend fun run() = tpl() && names() && tidy() && echoes()
+    suspend fun run() = tpl() && names() && tidy() && echoes() && pairs()
+
+    private suspend fun pairs(): Boolean {
+        if (d.mark(V10) != null) return true
+        val rows = d.movesSince(System.currentTimeMillis() - 60L * 24 * 3600 * 1000).filter { it.flow == null }
+        db.withTransaction {
+            val used = HashSet<Long>()
+            rows.filter { it.kind == "Debit" }.forEach { o ->
+                val i = rows.firstOrNull { it.id !in used && it.paise == o.paise && Flows.pair(o.kind, o.at, it.kind, it.at) } ?: return@forEach
+                used += i.id
+                d.setFlow(o.id, Flow.Self.name)
+                d.setFlow(i.id, Flow.Self.name)
+            }
+            d.putMark(Mark(V10, 0, 0, 0, 0, 0, 0, 0, null, false, false))
+        }
+        return true
+    }
 
     private suspend fun echoes(): Boolean {
         if (d.mark(V9) != null) return true
@@ -193,6 +209,7 @@ class Upgrade(private val c: Context, private val db: Db) {
         private const val JOB = "upgrade7b"
         private const val V8 = "upgrade8"
         private const val V9 = "upgrade9"
+        private const val V10 = "upgrade10"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 

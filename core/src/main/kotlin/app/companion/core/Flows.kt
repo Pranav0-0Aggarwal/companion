@@ -42,5 +42,7 @@ object Flows {
         return if (invest.containsMatchIn(text)) Flow.Invest else null
     }
 
+    fun pair(out: String, outAt: Long, inn: String, inAt: Long) = out == Kind.Debit.name && inn == Kind.Credit.name && kotlin.math.abs(outAt - inAt) <= Fingerprint.WINDOW
+
     fun income(flow: String?) = flow != Flow.Self.name && flow != Flow.CardBill.name
 }

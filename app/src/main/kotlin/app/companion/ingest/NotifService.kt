@@ -3,6 +3,7 @@ package app.companion.ingest
 import android.app.Notification
 import android.content.ComponentName
 import android.os.Bundle
+import android.provider.Telephony
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import app.companion.core.Chats
@@ -21,10 +22,13 @@ class NotifService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
-        val src = Allow.of(sbn.packageName) ?: return
+        take(sbn)
+    }
+
+    private fun take(sbn: StatusBarNotification) {
         val n = sbn.notification
-        if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
-        if (Chats.chat(src) && n.flags and Notification.FLAG_ONGOING_EVENT != 0) return
+        if (sbn.packageName == packageName || Allow.status(n)) return
+        val src = Allow.of(sbn.packageName, sms) ?: return
         val x = n.extras
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val chat = Chats.chat(src)
@@ -33,7 +37,7 @@ class NotifService : NotificationListenerService() {
             listOf(if (chat) Raw(src, title, "", text, sbn.postTime) else Raw(src, sbn.packageName, title, text, sbn.postTime))
         }
         val ingest = sl.ingest
-        scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${it.at}") } }
+        scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}") } }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) = count()
@@ -44,7 +48,11 @@ class NotifService : NotificationListenerService() {
         count()
     }
 
-    private fun apps() = runCatching { activeNotifications.filter { Allow.of(it.packageName) == Source.Notif && it.isClearable } }.getOrDefault(emptyList())
+    private val sms by lazy { Telephony.Sms.getDefaultSmsPackage(this) }
+
+    private fun apps() = runCatching {
+        activeNotifications.filter { it.isClearable && it.packageName != packageName && (it.packageName == sms || Allow.of(it.packageName, sms) == Source.Notif) }
+    }.getOrDefault(emptyList())
 
     private fun count() {
         shade.value = apps().size
@@ -77,7 +85,11 @@ class NotifService : NotificationListenerService() {
 
         fun clearApps() {
             val s = live ?: return
-            runCatching { s.cancelNotifications(s.apps().map { it.key }.toTypedArray()) }
+            runCatching {
+                val all = s.apps()
+                all.forEach(s::take)
+                s.cancelNotifications(all.map { it.key }.toTypedArray())
+            }
         }
     }
 }

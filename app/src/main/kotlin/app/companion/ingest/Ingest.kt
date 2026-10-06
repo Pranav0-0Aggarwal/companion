@@ -6,6 +6,7 @@ import app.companion.core.Chats
 import app.companion.core.Classifier
 import app.companion.core.Gaps
 import app.companion.core.Raw
+import app.companion.core.Source
 import app.companion.data.Repo
 import app.companion.data.State
 import app.companion.system.Live
@@ -21,7 +22,7 @@ class Ingest(private val app: Context, private val repo: Repo, private val rules
     suspend fun handle(raw: Raw, key: String? = null, refresh: Boolean = true) {
         if (key != null && !first(key)) return
         val p = repo.profileNow()
-        if (!p.on(raw.source)) return
+        if (!p.on(raw.source) || raw.source == Source.Notif && raw.sender == Allow.GMAIL && p.mail) return
         val r = Chats.route(raw, p.vips)
         val v = rules.classify(r)
         val added = repo.add(r, v, p, true) ?: return

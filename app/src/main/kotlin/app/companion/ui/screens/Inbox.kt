@@ -141,7 +141,7 @@ fun InboxScreen(go: (String) -> Unit) {
         item(key = "hear") { Hearing() }
         val notifs = waiting.filter { it.src == "Notif" }
         if (notifs.isNotEmpty() || shade > 0) item(key = "notifs") {
-            TextBtn("Clear app notifications", Modifier.padding(horizontal = 16.dp)) {
+            TextBtn("Clear notifications", Modifier.padding(horizontal = 16.dp)) {
                 NotifService.clearApps()
                 if (notifs.isEmpty()) snack.say("Cleared from your notifications") else snack.go { repo.settleAll(notifs)?.let { a -> snack.offer(a, "Dismissed ${a.n}") { repo.undo(it) } } }
             }

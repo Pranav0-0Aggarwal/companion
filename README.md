@@ -12,7 +12,7 @@ A private Android companion that reads your SMS, app notifications, WhatsApp and
 ## Features
 
 - **Today.** One timeline for the day: payments, deliveries, bills due, meetings from your calendar, meals and anything that needs you.
-- **Inbox.** Every message and notification is sorted into spends, bills, deliveries, alerts, promos and spam. Tap a card to read the full message, correct it once and similar ones follow. Clean up settles a whole backlog in one tap and Clear notifications empties your notification shade of everything Companion already has, both with Undo.
+- **Inbox.** Every message and notification is sorted into spends, bills, deliveries, alerts, promos and spam. Tap a card to read the full message, correct it once and similar ones follow. Clean up settles a whole backlog in one tap, with Undo, and Clear notifications empties your notification shade of everything Companion already has.
 - **Money.** A ledger with categories, a monthly budget, bills and card cycles, the card with the longest interest free window, and trips. Duplicate alerts are caught by their UPI reference and transfers between your own accounts stay out of spending.
 - **Codes.** OTPs appear with a countdown, copy in one tap, fill the cover screen when they arrive and disappear at expiry. Dismiss one from the card or the notification.
 - **Ask.** Chat in English or Hinglish: "Swiggy this week", "what needs me", "suggest a veg lunch under 600 kcal". Common questions are answered instantly without a model. Anything that changes data waits for your Confirm and offers Undo.

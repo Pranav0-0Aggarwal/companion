@@ -37,10 +37,12 @@ class NotifService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         up.value = true
+        live = this
     }
 
     override fun onListenerDisconnected() {
         up.value = false
+        live = null
         requestRebind(ComponentName(this, NotifService::class.java))
     }
 
@@ -60,5 +62,16 @@ class NotifService : NotificationListenerService() {
 
     companion object {
         val up = MutableStateFlow<Boolean?>(null)
+        @Volatile private var live: NotifService? = null
+
+        fun clear(posts: List<Triple<String, Long, String>>) {
+            val s = live ?: return
+            val at = posts.map { it.first to it.second }.toSet()
+            val titled = posts.map { it.first to it.third }.toSet()
+            runCatching {
+                s.activeNotifications.filter { n -> (n.packageName to n.postTime) in at || (n.packageName to n.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()) in titled }
+                    .forEach { s.cancelNotification(it.key) }
+            }
+        }
     }
 }

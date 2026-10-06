@@ -35,6 +35,7 @@ import app.companion.data.cal
 import app.companion.data.money
 import app.companion.data.tagList
 import app.companion.sl
+import app.companion.ingest.NotifService
 import app.companion.ui.Ty
 import app.companion.ui.Voice
 import app.companion.ui.clock
@@ -137,6 +138,14 @@ fun InboxScreen(go: (String) -> Unit) {
             }
         }
         item(key = "hear") { Hearing() }
+        val notifs = waiting.filter { it.src == "Notif" }
+        if (notifs.isNotEmpty()) item(key = "notifs") {
+            TextBtn("Dismiss ${notifs.size} app ${if (notifs.size == 1) "notification" else "notifications"}", Modifier.padding(horizontal = 16.dp)) {
+                val titles = notifs.associate { it.id to it.title }
+                NotifService.clear(links.filter { it.src == "Notif" && it.itemId in titles }.map { Triple(it.sender, it.at, titles.getValue(it.itemId)) })
+                snack.go { repo.settleAll(notifs)?.let { a -> snack.offer(a, "Dismissed ${a.n}") { repo.undo(it) } } }
+            }
+        }
         if (asks + checks > 20) item(key = "tidy") {
             TextBtn("Clean up ${asks + checks} waiting", Modifier.padding(horizontal = 16.dp)) {
                 snack.go { repo.tidy(System.currentTimeMillis())?.let { a -> snack.offer(a, "Cleaned up ${a.n}") { repo.undo(it) } } ?: snack.say("Nothing safe to clean up") }

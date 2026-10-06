@@ -270,6 +270,11 @@ class Repo(private val db: Db, c: android.content.Context) {
         moves.takeIf { it.isNotEmpty() }?.let { m -> Also(m.map { it.first to it.second.first }) }
     }
 
+    suspend fun settleAll(items: List<Item>): Also? = db.withTransaction {
+        d.settleAll(items.map { it.id })
+        items.takeIf { it.isNotEmpty() }?.let { l -> Also(l.map { it.id to it.filed() }) }
+    }
+
     suspend fun undo(a: Also) = db.withTransaction {
         a.prev.asReversed().forEach { (id, f) -> d.refiled(id, f.kind, f.tags, f.category, f.state) }
     }

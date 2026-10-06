@@ -19,13 +19,13 @@ class Ingest(private val app: Context, private val repo: Repo, private val rules
         seen.add(key).also { if (seen.size > MAX) seen.remove(seen.first()) }
     }
 
-    suspend fun handle(raw: Raw, key: String? = null, refresh: Boolean = true) {
+    suspend fun handle(raw: Raw, key: String? = null, refresh: Boolean = true, live: Boolean = true) {
         if (key != null && !first(key)) return
         val p = repo.profileNow()
         if (!p.on(raw.source) || raw.source == Source.Notif && raw.sender == Allow.GMAIL && p.mail) return
         val r = Chats.route(raw, p.vips)
         val v = rules.classify(r)
-        val added = repo.add(r, v, p, true) ?: return
+        val added = repo.add(r, v, p, live) ?: return
         if (added.item.state == State.LOW) return
         if (refresh && (added.fresh || added.item.kind == "Otp")) Live.refresh(app)
         runCatching { hooks.after(r, added) }.onFailure { if (it is CancellationException) throw it }

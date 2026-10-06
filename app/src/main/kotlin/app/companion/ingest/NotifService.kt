@@ -10,6 +10,7 @@ import app.companion.core.Chats
 import app.companion.core.Raw
 import app.companion.core.Source
 import app.companion.sl
+import app.companion.system.Notes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,10 +23,10 @@ class NotifService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
-        take(sbn)
+        take(sbn, true)
     }
 
-    private fun take(sbn: StatusBarNotification) {
+    private fun take(sbn: StatusBarNotification, live: Boolean) {
         val n = sbn.notification
         if (sbn.packageName == packageName || Allow.status(n)) return
         val src = Allow.of(sbn.packageName, sms) ?: return
@@ -37,7 +38,7 @@ class NotifService : NotificationListenerService() {
             listOf(if (chat) Raw(src, title, "", text, sbn.postTime) else Raw(src, sbn.packageName, title, text, sbn.postTime))
         }
         val ingest = sl.ingest
-        scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}") } }
+        scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}", live = live) } }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) = count()
@@ -87,8 +88,9 @@ class NotifService : NotificationListenerService() {
             val s = live ?: return
             runCatching {
                 val all = s.apps()
-                all.forEach(s::take)
-                s.cancelNotifications(all.map { it.key }.toTypedArray())
+                all.forEach { s.take(it, false) }
+                val own = s.activeNotifications.filter { it.packageName == s.packageName && it.isClearable && it.id != Notes.OTP }
+                s.cancelNotifications((all + own).map { it.key }.toTypedArray())
             }
         }
     }

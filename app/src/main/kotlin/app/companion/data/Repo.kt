@@ -103,6 +103,8 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     fun otps(now: Long = System.currentTimeMillis()) = d.otps(now)
 
+    suspend fun dropOtp(id: Long) = d.expire(id, System.currentTimeMillis())
+
     suspend fun otpsNow(now: Long = System.currentTimeMillis()) = d.otpsNow(now)
 
     suspend fun billsNow() = cycles().map { it.first() }

@@ -130,6 +130,9 @@ interface Dao {
     @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL ORDER BY at DESC")
     fun asks(): Flow<List<Item>>
 
+    @Query("UPDATE items SET expires = :now WHERE id = :id AND kind = 'Otp'")
+    suspend fun expire(id: Long, now: Long)
+
     @Query("SELECT * FROM items WHERE state IN ('ask', 'check') AND kind != 'Spam' AND dup IS NULL")
     suspend fun waiting(): List<Item>
 

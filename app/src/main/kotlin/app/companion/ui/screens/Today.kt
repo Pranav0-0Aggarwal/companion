@@ -101,7 +101,7 @@ fun TodayScreen(go: (String) -> Unit) {
             item(key = "hear", contentType = "hear") { Hearing() }
             if (live) {
                 itemsIndexed(codes, key = { _, o -> "o${o.id}" }, contentType = { _, _ -> "code" }) { _, o ->
-                    app.companion.ui.kit.CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
+                    app.companion.ui.kit.CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, { snack.go { repo.dropOtp(o.id); app.companion.system.Live.refresh(c) } }, Modifier.animateItem().padding(start = 16.dp, end = 16.dp, top = 12.dp))
                 }
             }
             if (tl.items.isEmpty()) {

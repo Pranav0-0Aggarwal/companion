@@ -84,6 +84,15 @@ fun NotifySettings() {
             }
             Rule(72.dp)
             Toggle("Show details on lock screen", "Amounts, merchants and codes stay hidden when off", o.lock, icon = Ic.Lock) { set(o.copy(lock = it)) }
+            if (!c.getSystemService(android.app.NotificationManager::class.java).canUseFullScreenIntent()) {
+                Rule(72.dp)
+                PassLine(
+                    "Show codes full screen",
+                    "Allow it so a new code fills the cover screen",
+                    lead = Ic.Bell,
+                    onClick = { c.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, android.net.Uri.parse("package:${c.packageName}"))) },
+                )
+            }
             Rule(72.dp)
             PassLine(
                 "System notification settings",

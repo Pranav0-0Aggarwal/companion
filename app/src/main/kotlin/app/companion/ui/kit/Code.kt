@@ -67,7 +67,7 @@ private fun via(src: String) = when (src) {
 }
 
 @Composable
-fun CodeCard(o: Item, onNotOtp: () -> Unit, modifier: Modifier = Modifier, big: Boolean = false) {
+fun CodeCard(o: Item, onNotOtp: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier, big: Boolean = false) {
     Secure()
     val p = pal
     val ctx = LocalContext.current
@@ -93,6 +93,9 @@ fun CodeCard(o: Item, onNotOtp: () -> Unit, modifier: Modifier = Modifier, big: 
             Column(Modifier.weight(1f).padding(top = 6.dp)) {
                 Text(o.title, style = Ty.ui(15).copy(color = p.ink), maxLines = 1)
                 Text(o.note.ifBlank { "One-time code" }.replaceFirstChar(Char::uppercase), style = Ty.ui(13, FontWeight.Normal).copy(color = p.ink2), maxLines = 1)
+            }
+            Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable(onClickLabel = "Dismiss code", onClick = onDismiss), contentAlignment = Alignment.Center) {
+                Icon(Ic.Close, "Dismiss code", Modifier.size(18.dp), tint = p.ink2)
             }
             val r by animateFloatAsState(if (open) 180f else 0f, Motion.soft(), label = "chev")
             Box(

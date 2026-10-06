@@ -24,14 +24,14 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
 object Live {
-    const val OTP = "otp"
+    const val OTP = "codes"
     const val BILLS = "bills"
     private const val SWEEP = "sweep"
 
     fun boot(app: Application) {
         app.getSystemService(NotificationManager::class.java).createNotificationChannels(
             listOf(
-                NotificationChannel(OTP, "Codes", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(OTP, "Codes", NotificationManager.IMPORTANCE_HIGH),
                 NotificationChannel(BILLS, "Bills", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(Ping.SPENDS, "Spending", NotificationManager.IMPORTANCE_LOW),
                 NotificationChannel(Ping.DELIVERIES, "Deliveries", NotificationManager.IMPORTANCE_DEFAULT),
@@ -42,6 +42,7 @@ object Live {
                 NotificationChannel(Meetings.LIVE, "Meeting countdown", NotificationManager.IMPORTANCE_LOW),
             ),
         )
+        app.getSystemService(NotificationManager::class.java).deleteNotificationChannel("otp")
         val daily = PeriodicWorkRequestBuilder<Reminders>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(app).enqueueUniquePeriodicWork("reminders", ExistingPeriodicWorkPolicy.KEEP, daily)
         Prefs.since(app)

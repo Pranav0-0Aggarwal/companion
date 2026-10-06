@@ -102,7 +102,8 @@ fun FlexScreen(go: (String) -> Unit, fold: FoldingFeature) {
 @Composable
 private fun Glance(d: Day, tl: Tl, goal: Int?, modifier: Modifier) {
     val p = pal
-    val repo = LocalContext.current.sl.repo
+    val c = LocalContext.current
+    val repo = c.sl.repo
     val snack = LocalSnack.current
     val now = rememberNow(1000, active = d.otps.isNotEmpty())
     val live by remember(d.otps) { derivedStateOf(structuralEqualityPolicy()) { d.otps.filter { (it.expires ?: 0) > now.value } } }
@@ -114,7 +115,7 @@ private fun Glance(d: Day, tl: Tl, goal: Int?, modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(d.hello, Modifier.padding(start = 8.dp), style = Ty.ui(15, FontWeight.Medium).copy(color = p.ink2))
-        if (o != null) CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, big = true)
+        if (o != null) CodeCard(o, { snack.teach(repo) { repo.notOtp(o.id) } }, { snack.go { repo.dropOtp(o.id); app.companion.system.Live.refresh(c) } }, big = true)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             val f = tl.fig(true)
             Tile(f.label, Modifier.weight(1f)) {

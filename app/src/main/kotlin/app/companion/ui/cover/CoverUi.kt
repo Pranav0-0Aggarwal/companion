@@ -209,7 +209,7 @@ private fun NowPage(v: Cov) {
         }
         Focus.Code -> {
             val i = v.otp!!
-            if (!v.reveal) Hidden(v) else CodeCard(i, { scope.launch { repo.notOtp(i.id) } }, big = true)
+            if (!v.reveal) Hidden(v) else CodeCard(i, { scope.launch { repo.notOtp(i.id) } }, { scope.launch { repo.dropOtp(i.id); app.companion.system.Live.refresh(c) } }, big = true)
         }
         Focus.Meet -> {
             val m = v.meet!!

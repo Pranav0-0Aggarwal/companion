@@ -26,10 +26,10 @@ class Reconcile(private val db: Db) {
     }
 
     suspend fun pair(i: Item) {
-        if (i.flow != null || !i.leg) return
+        if (i.flow != null || i.leg() == null) return
         val near = d.near(listOf(Kind.Debit.name, Kind.Credit.name), i.paise, i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW)
-            .filter { it.dup == null && it.flow == null && it.leg }
-        selves(Transfers.pairs((near + i).distinctBy { it.id }.map { it.legOf() }).filter { (o, n) -> i.id == o.id || i.id == n.id }, near + i)
+            .filter { it.dup == null && it.flow == null && it.leg() != null }
+        selves(Transfers.pairs((near + i).distinctBy { it.id }.mapNotNull { it.leg() }).filter { (o, n) -> i.id == o.id || i.id == n.id }, near + i)
     }
 
     suspend fun sweep(since: Long) = db.withTransaction {
@@ -40,8 +40,8 @@ class Reconcile(private val db: Db) {
             d.moveDups(id, keep)
             d.setDup(id, keep)
         }
-        val live = rows.filter { it.id !in dups && it.leg && (it.flow == null || it.flow == Flow.Self.name) }
-        selves(Transfers.pairs(live.map { it.legOf() }), live)
+        val live = rows.filter { it.id !in dups && it.leg() != null && (it.flow == null || it.flow == Flow.Self.name) }
+        selves(Transfers.pairs(live.mapNotNull { it.leg() }), live)
         val own = d.movedNow().toSet()
         live.filter { it.flow == null && !it.credit && key(it) in own }.forEach { d.setFlow(it.id, Flow.Self.name) }
     }
@@ -68,10 +68,6 @@ class Reconcile(private val db: Db) {
     }
 
     private fun key(i: Item) = i.merchant?.let { Fingerprint.norm(it) }
-
-    private val Item.leg get() = kind == Kind.Debit.name || kind == Kind.Credit.name
-
-    private fun Item.legOf() = Leg(id, kind == Kind.Debit.name, paise, at)
 
     private companion object {
         const val DUE = 45L * 24 * 3600 * 1000

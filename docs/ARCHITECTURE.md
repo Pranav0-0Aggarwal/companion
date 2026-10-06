@@ -23,7 +23,7 @@ llama.cpp is built as static libraries with `BUILD_SHARED_LIBS=OFF`, `GGML_CPU_A
 
 ## Duplicates and transfers
 
-`Dupes` in core decides when two money messages are the same payment. The 12 digit UPI reference (RRN or UTR) leads: the same reference is one payment even days apart, and two different references never merge. Without references, two SMS match only within 10 minutes on the same amount and account or merchant, an app, WhatsApp or mail alert matches an earlier message of the same amount and account within 3 days, and a repeated alert from the same sender matches itself. A matching copy is linked to the first item instead of adding a new one. A debit and a credit of the same amount within 10 minutes are a self transfer and stay out of spending and income.
+`Dupes` in core decides when two money messages are the same payment. The 12 digit UPI reference (RRN or UTR) leads: the same reference is one payment even days apart, and two different references never merge. Without references, two SMS match only within 10 minutes on the same amount and account or merchant, an app, WhatsApp or mail alert matches an earlier message of the same amount and account within 3 days, and a repeated alert from the same sender matches itself. A matching copy is linked to the first item instead of adding a new one. A debit and a credit of the same amount within 10 minutes are a self transfer and stay out of spending and income. The payee of a matched transfer is remembered as your own account, so a later one sided transfer to it counts too. `Reconcile` in the app is the only place that applies these rules, for new messages and for the one time passes, and the Ledger and Today show each matched transfer as one "Moved between your accounts" row.
 
 ## Ask
 

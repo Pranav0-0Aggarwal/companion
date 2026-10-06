@@ -1,5 +1,7 @@
 package app.companion.ui.screens
 
+import app.companion.data.lines
+import app.companion.data.Line
 import android.Manifest
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -40,6 +42,7 @@ import kotlinx.coroutines.withContext
 sealed class Ev(val key: String, val at: Long?, val rank: Int = 0) {
     class Meal(val e: Eaten, val paid: Item?) : Ev("m${e.meal.id}", e.meal.at)
     class Spend(val i: Item) : Ev("s${i.id}", i.at)
+    class Moved(val m: Line.Moved) : Ev("v${m.out.id}", m.out.at)
     class Meet(val m: Meeting, val clash: String?) : Ev("e${m.id}:${m.start}", m.start)
     class Order(val o: Ping.Order) : Ev("o${o.key}", o.at)
     class Bill(val b: Item, val paid: Boolean) : Ev("b${b.id}", null)
@@ -121,7 +124,7 @@ private fun build(day: LocalDate, today: LocalDate, prof: Profile, money: List<I
     val clashes = Meets.clashes(ext.meets).flatMap { listOf(it.a to it.b.title, it.b to it.a.title) }.toMap()
     val evs = buildList {
         meals.forEach { e -> add(Ev.Meal(e, if (e.meal.src == "order") here.firstOrNull { it.at == e.meal.at } else null)) }
-        here.filter { it.id !in taken }.forEach { add(Ev.Spend(it)) }
+        here.filter { it.id !in taken }.lines().forEach { add(if (it is Line.Moved) Ev.Moved(it) else Ev.Spend((it as Line.One).i)) }
         ext.meets.filter { dateOf(it.start) == day }.forEach { add(Ev.Meet(it, clashes[it])) }
         ext.orders.filter { dateOf(it.at) == day }.forEach { add(Ev.Order(it)) }
         bills.filter { b -> b.dueDate?.let { it == day || live && it < day } == true }.forEach { add(Ev.Bill(it, false)) }

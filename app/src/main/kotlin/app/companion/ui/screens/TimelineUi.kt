@@ -63,6 +63,8 @@ import java.time.LocalDate
 import kotlinx.coroutines.launch
 import app.companion.ui.money as amt
 
+const val MOVED = "Moved between your accounts"
+
 class Beat(val title: String, val sub: String, val amount: String?)
 
 fun Ev.beat(): Beat = when (this) {
@@ -70,7 +72,8 @@ fun Ev.beat(): Beat = when (this) {
         val m = e.meal
         Beat(m.slot.cap(), if (e.items.isEmpty()) "Not logged" else "${Math.round(e.kcal)} kcal", paid?.let { amt(it.paise, it.currency) })
     }
-    is Ev.Spend -> Beat(i.shown(), (i.meta() + listOfNotNull("moved".takeIf { i.paying })).joinToString(" · "), (if (i.credit && !i.moved) "+" else "") + amt(i.paise, i.currency))
+    is Ev.Spend -> Beat(i.shown(), (i.meta() + listOfNotNull("moved".takeIf { i.paying })).joinToString(" · "), (if (i.credit) "+" else "−") + amt(i.paise, i.currency))
+    is Ev.Moved -> Beat(MOVED, m.sub, amt(m.out.paise, m.out.currency))
     is Ev.Meet -> Beat(m.title.ifBlank { "Meeting" }, "${hm(m.start)} to ${hm(m.end)}", null)
     is Ev.Order -> Beat("${o.merchant ?: "Order"} order", Track.word(o.stage), null)
     is Ev.Bill -> Beat(b.title, b.dueDate?.let { "Due ${shortDay(it)}" }.orEmpty(), b.paise.takeIf { it > 0 }?.let { amt(it, b.currency) })
@@ -123,9 +126,10 @@ fun TlRow(e: Ev, past: Boolean, now: Long, today: LocalDate, go: (String) -> Uni
             is Ev.Spend -> e.i.let { i ->
                 MoneyRow(
                     i.shown(), i.meta().joinToString(" · "), amt(i.paise, i.currency), i.credit,
-                    lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.credit && i.moved, onClick = { Pick.item.value = i.id; go("ledger") },
+                    lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.moved, onClick = { Pick.item.value = i.id; go("ledger") },
                 )
             }
+            is Ev.Moved -> MoneyRow(MOVED, e.m.sub, amt(e.m.out.paise, e.m.out.currency), false, lead = Ic.Swap, moved = true, sign = false, onClick = { Pick.item.value = e.m.out.id; go("ledger") })
             is Ev.Meet -> MeetCard(e, now)
             is Ev.Order -> OrderCard(e)
             is Ev.Bill -> BillCard(e, today, go)

@@ -51,12 +51,13 @@ fun MoneyRow(
     stamp: String? = null,
     tags: List<String> = emptyList(),
     moved: Boolean = false,
+    sign: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
     val p = pal
     BoxWithConstraints(modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
         val tight = maxWidth < Tight
-        val shown = if (credit && !moved) "+$amount" else amount
+        val shown = if (!sign) amount else if (credit) "+$amount" else "−$amount"
         val figure: @Composable (Modifier) -> Unit = {
             Text(shown, it, style = Ty.mono(16, FontWeight.SemiBold).copy(color = if (moved) p.ink2 else if (credit) p.green else p.ink), maxLines = 1, softWrap = false)
         }

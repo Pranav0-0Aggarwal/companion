@@ -1,5 +1,8 @@
 package app.companion.data
 
+import app.companion.core.Transfers
+import app.companion.core.Leg
+import app.companion.core.Kind
 import app.companion.core.Body
 import app.companion.core.CardPay
 import app.companion.core.Category
@@ -52,6 +55,30 @@ val Item.brand get() = when {
     (src == "Sms" || (src == "Wa" || src == "Ig") && kind != "Personal") && kind in headed && Merchant.brand(title) != null -> title
     else -> null
 }
+fun Item.leg() = Leg(id, kind == Kind.Debit.name, paise, at).takeIf { kind == Kind.Debit.name || kind == Kind.Credit.name }
+
+val Item.account get() = listOfNotNull(bank, last4?.let { "··$it" }).joinToString(" ").ifEmpty { null }
+
+sealed class Line {
+    class One(val i: Item) : Line()
+
+    class Moved(val out: Item, val inn: Item) : Line() {
+        val sub get() = "${out.account ?: "Your account"} to ${inn.account ?: "your other account"}"
+    }
+}
+
+fun List<Item>.lines(): List<Line> {
+    val mate = Transfers.pairs(filter { it.flow == Flow.Self.name }.mapNotNull { it.leg() })
+        .flatMap { (o, n) -> listOf(o.id to n.id, n.id to o.id) }.toMap()
+    val byId = associateBy { it.id }
+    val done = HashSet<Long>()
+    return mapNotNull { i ->
+        val m = mate[i.id]?.let(byId::get) ?: return@mapNotNull Line.One(i)
+        if (!done.add(i.id) || !done.add(m.id)) return@mapNotNull null
+        if (i.kind == Kind.Debit.name) Line.Moved(i, m) else Line.Moved(m, i)
+    }
+}
+
 fun Item.ref() = app.companion.core.Dupes.ref(listOfNotNull(title, note, body).joinToString("\n"))
 
 fun Item.spent() = Spent(kind, category, merchant, title, last4, at, flow)

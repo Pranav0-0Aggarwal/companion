@@ -1,5 +1,7 @@
 package app.companion.ui.screens
 
+import app.companion.data.lines
+import app.companion.data.Line
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedVisibility
@@ -205,13 +207,17 @@ fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
                     style = Ty.ui(14).copy(color = p.ink2),
                 )
             }
-            list.forEachIndexed { k, i ->
+            val lines = list.lines()
+            lines.forEachIndexed { k, l ->
+                val i = if (l is Line.Moved) l.out else (l as Line.One).i
                 item(key = i.id, contentType = "txn") {
-                    Column(Modifier.animateItem().part(p, k == 0, k == list.lastIndex)) {
-                        MoneyRow(
+                    Column(Modifier.animateItem().part(p, k == 0, k == lines.lastIndex)) {
+                        val tap = { open = if (open == i.id) -1 else i.id }
+                        if (l is Line.Moved) MoneyRow(MOVED, l.sub, amt(i.paise, i.currency), false, lead = Ic.Swap, moved = true, sign = false, onClick = tap)
+                        else MoneyRow(
                             i.shown(), i.srcLine(links), amt(i.paise, i.currency), i.credit,
-                            lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.credit && i.moved,
-                            onClick = { open = if (open == i.id) -1 else i.id },
+                            lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.moved,
+                            onClick = tap,
                         )
                         AnimatedVisibility(open == i.id, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                             Detail(i, cards.firstOrNull { it.has(i) }, links, keys, { off -> scope.launch { repo.spending(i.id, off) } }) { c -> snack.teach(repo) { repo.file(i.id, c) } }

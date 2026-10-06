@@ -24,7 +24,6 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -54,6 +53,12 @@ import app.companion.ui.hm
 import app.companion.ui.inr
 import app.companion.ui.money
 import java.time.LocalTime
+import kotlinx.coroutines.flow.first
+import kotlin.math.roundToInt
+import java.time.LocalDate
+import androidx.glance.text.TextAlign
+import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.width
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -63,10 +68,12 @@ private val ink = ColorProvider(Color(0xFFF2F3F5))
 private val ink2 = ColorProvider(Color(0xFFA3A8B0))
 private val accent = ColorProvider(Color(0xFF7EA6FF))
 private val red = ColorProvider(Color(0xFFFF6B61))
+private val onAccent = ColorProvider(Color(0xFF0B1220))
 
 internal class Seen(
     val out: Ping.Order?, val otp: Item?, val bill: Item?, val days: Int?, val total: Long, val n: Int, val name: String, val opts: Opts,
     val meet: Meeting?, val first: Meeting?, val due0: Int, val brief: Boolean, val now: Long,
+    val next: Meeting?, val needs: Int, val kcal: Int,
 )
 
 class CoverWidget : GlanceAppWidget() {
@@ -84,6 +91,7 @@ class CoverWidget : GlanceAppWidget() {
             repo.otpsNow(now).firstOrNull { Cover.code(it.at, now) },
             bill, bill?.dueDate?.let { daysTo(it) }, total, n, repo.profileNow().name, Prefs.get(context),
             soon.next?.takeIf { Cover.meet(Meets.mins(it.start, now)) }, soon.first, due0, Cover.brief(minute, soon.first != null, due0), now,
+            soon.next, repo.needCount(), repo.life.eatenOn(LocalDate.now()).first().sumOf { it.kcal }.roundToInt(),
         )
         provideContent { Face(context, seen) }
     }
@@ -91,7 +99,7 @@ class CoverWidget : GlanceAppWidget() {
 
 @OptIn(ExperimentalGlanceApi::class)
 private fun open(c: Context, route: String): Action {
-    val i = CoverActivity.intent(c, when (route) { "bills" -> 4; "ledger" -> 1; else -> 0 })
+    val i = CoverActivity.intent(c, when (route) { "bills" -> 4; "food" -> 3; "ask" -> 2; "ledger" -> 1; else -> 0 })
     return CoverActivity.options(c)?.let { actionStartActivity(i, actionParametersOf(), it) } ?: actionStartActivity(i)
 }
 
@@ -103,50 +111,72 @@ private fun copy(code: String): Action = actionRunCallback<CopyAction>(actionPar
 
 private class Line(val head: String, val big: String, val foot: String?, val tap: Action, val warn: Boolean = false)
 
-private class Small(val text: String, val tap: Action, val warn: Boolean = false)
+private class Tile(val label: String, val value: String, val sub: String, val tap: Action, val warn: Boolean = false)
 
 @Composable
 private fun Face(c: Context, s: Seen) {
-    val o = s.opts
-    val lanes = Cover.lanes(s.out != null, s.otp != null, s.days, s.n, s.meet != null, s.brief)
-    val lines = lanes.map { lane -> line(c, s, lane) to small(c, s, lane) }
-    Column(
-        GlanceModifier.fillMaxSize().background(ground).cornerRadius(28.dp).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val first = lines.firstOrNull()
-        if (first == null) {
-            Column(GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp).clickable(open(c, "today"))) {
-                Text(Voice.greet(s.name, 0), style = TextStyle(color = ink, fontSize = 24.sp, fontWeight = FontWeight.Bold))
-                Text("Nothing needs you", style = TextStyle(color = ink2, fontSize = 16.sp))
+    val hero = Cover.lanes(s.out != null, s.otp != null, s.days, s.n, s.meet != null, s.brief).firstOrNull()?.takeIf { it != Lane.Spent }
+    Column(GlanceModifier.fillMaxSize().background(ground).cornerRadius(28.dp).padding(12.dp)) {
+        Row(GlanceModifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, bottom = 8.dp).clickable(open(c, "today")), verticalAlignment = Alignment.CenterVertically) {
+            Text(Voice.hello(s.name, LocalTime.now().hour), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(if (s.needs > 0) "${s.needs} need you" else "All clear", style = TextStyle(color = if (s.needs > 0) accent else ink2, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+        }
+        if (hero != null) Hero(line(c, s, hero))
+        tiles(c, s, hero).chunked(2).forEach { row ->
+            Row(GlanceModifier.fillMaxWidth().defaultWeight().padding(top = 8.dp)) {
+                row.forEachIndexed { k, t ->
+                    if (k > 0) Spacer(GlanceModifier.width(8.dp))
+                    Cell(t, GlanceModifier.defaultWeight().fillMaxHeight())
+                }
             }
-        } else {
-            Primary(first.first)
-            lines.drop(1).take(2).forEach { Row(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) { Secondary(it.second) } }
-            if (lines.size <= 2) Text("Open", GlanceModifier.fillMaxWidth().padding(top = 10.dp, start = 8.dp).clickable(open(c, "today")), style = TextStyle(color = accent, fontSize = 16.sp, fontWeight = FontWeight.Medium))
+        }
+        Row(GlanceModifier.fillMaxWidth().padding(top = 8.dp)) {
+            Pill("Ask", open(c, "ask"), GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.width(8.dp))
+            Pill("Log a meal", open(c, "food"), GlanceModifier.defaultWeight())
         }
     }
 }
 
+private fun tiles(c: Context, s: Seen, hero: Lane?): List<Tile> {
+    val m = s.next
+    return listOfNotNull(
+        Tile("Spent today", Cover.amount(s.opts, inr(s.total)), "${s.n} ${if (s.n == 1) "payment" else "payments"}", open(c, "ledger")),
+        if (hero == Lane.Meet) null else Tile(
+            "Next meeting", m?.let { hm(it.start) } ?: "None",
+            m?.let { if (s.opts.lock) it.title.ifBlank { "Meeting" } else Meets.until(it.start, s.now) } ?: "rest of today",
+            if (m?.join != null) join(c, m) else open(c, "today"),
+        ),
+        s.bill?.takeIf { hero != Lane.Due }?.let { Tile("Next bill", Cover.due(s.days!!), it.title, open(c, "bills"), s.days < 0) },
+        Tile("Food", "${s.kcal}", "kcal today", open(c, "food")),
+        Tile("Inbox", "${s.needs}", if (s.needs == 1) "needs you" else "need you", open(c, "today")),
+    ).take(4)
+}
+
 @Composable
-private fun Primary(l: Line) {
-    Column(GlanceModifier.fillMaxWidth().background(card).cornerRadius(24.dp).padding(horizontal = 18.dp, vertical = 16.dp).clickable(l.tap)) {
-        Text(l.head, style = TextStyle(color = if (l.warn) red else ink2, fontSize = 16.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-        Spacer(GlanceModifier.height(4.dp))
-        Text(l.big, style = TextStyle(color = ink, fontSize = 48.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-        if (l.foot != null) {
-            Spacer(GlanceModifier.height(4.dp))
-            Text(l.foot, style = TextStyle(color = accent, fontSize = 16.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-        }
+private fun Hero(l: Line) {
+    Column(GlanceModifier.fillMaxWidth().background(card).cornerRadius(22.dp).padding(horizontal = 16.dp, vertical = 12.dp).clickable(l.tap)) {
+        Text(l.head, style = TextStyle(color = if (l.warn) red else ink2, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+        Text(l.big, style = TextStyle(color = ink, fontSize = 34.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        if (l.foot != null) Text(l.foot, style = TextStyle(color = accent, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
     }
 }
 
 @Composable
-private fun Secondary(s: Small) {
+private fun Cell(t: Tile, modifier: GlanceModifier) {
+    Column(modifier.background(card).cornerRadius(20.dp).padding(horizontal = 14.dp, vertical = 10.dp).clickable(t.tap), verticalAlignment = Alignment.CenterVertically) {
+        Text(t.label, style = TextStyle(color = ink2, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+        Text(t.value, style = TextStyle(color = if (t.warn) red else ink, fontSize = 24.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(t.sub, style = TextStyle(color = ink2, fontSize = 12.sp), maxLines = 1)
+    }
+}
+
+@Composable
+private fun Pill(text: String, tap: Action, modifier: GlanceModifier) {
     Text(
-        s.text,
-        GlanceModifier.fillMaxWidth().background(card).cornerRadius(20.dp).padding(horizontal = 18.dp, vertical = 12.dp).clickable(s.tap),
-        style = TextStyle(color = if (s.warn) red else ink, fontSize = 18.sp, fontWeight = FontWeight.Medium),
+        text,
+        modifier.background(accent).cornerRadius(20.dp).padding(vertical = 10.dp).clickable(tap),
+        style = TextStyle(color = onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
         maxLines = 1,
     )
 }
@@ -179,16 +209,4 @@ private fun line(c: Context, s: Seen, lane: Lane): Line = when (lane) {
         Line("${b.title} · ${Cover.due(d)}", if (b.paise > 0) Cover.amount(s.opts, money(b.paise, b.currency)) else "Due", null, open(c, "bills"), d < 0)
     }
     Lane.Spent -> Line("Spent today", Cover.amount(s.opts, inr(s.total)), "${s.n} ${if (s.n == 1) "payment" else "payments"}", open(c, "ledger"))
-}
-
-private fun small(c: Context, s: Seen, lane: Lane): Small = when (lane) {
-    Lane.Out -> Small("${s.out!!.merchant ?: "Order"} out for delivery", open(c, "today"))
-    Lane.Code -> if (!s.opts.lock) Small("Code ready · open to view", open(c, "today")) else Small("${s.otp!!.title} ${codeText(s.otp.code.orEmpty())}", copy(s.otp.code.orEmpty()))
-    Lane.Meet -> {
-        val m = s.meet!!
-        Small(if (s.opts.lock) "${m.title.ifBlank { "Meeting" }} · ${Meets.until(m.start, s.now)}" else "Meeting ${Meets.until(m.start, s.now)}", if (m.join != null) join(c, m) else open(c, "today"))
-    }
-    Lane.Brief -> Small(listOfNotNull(s.first?.let { Brief.meeting(hm(it.start)) }, Brief.due(s.due0).takeIf { s.due0 > 0 }).joinToString(" · "), open(c, "today"))
-    Lane.Due -> Small("${s.bill!!.title} · ${Cover.due(s.days!!)}", open(c, "bills"), s.days < 0)
-    Lane.Spent -> Small("${Cover.amount(s.opts, inr(s.total))} spent · ${s.n}", open(c, "ledger"))
 }

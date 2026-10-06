@@ -2,6 +2,12 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.6.3 (2026-10-06)
+
+- Delete a transaction from its details, together with any copies of it, with Undo.
+- The Galaxy Z Flip 7 cover screen now gets the cover layout when you open Companion there.
+- The cover widget is now a full at a glance panel: a greeting and what needs you, the most urgent thing (a code, a delivery, a meeting or a bill) up top, tiles for spending, your next meeting or bill, food and Inbox, and Ask and Log a meal buttons.
+
 ## 0.6.2 (2026-10-06)
 
 ### Money you can trust

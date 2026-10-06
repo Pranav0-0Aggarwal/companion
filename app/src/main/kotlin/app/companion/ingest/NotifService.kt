@@ -20,6 +20,7 @@ class NotifService : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        count()
         val src = Allow.of(sbn.packageName) ?: return
         val n = sbn.notification
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
@@ -35,9 +36,18 @@ class NotifService : NotificationListenerService() {
         scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${it.at}") } }
     }
 
+    override fun onNotificationRemoved(sbn: StatusBarNotification) = count()
+
     override fun onListenerConnected() {
         up.value = true
         live = this
+        count()
+    }
+
+    private fun apps() = runCatching { activeNotifications.filter { Allow.of(it.packageName) == Source.Notif && it.isClearable } }.getOrDefault(emptyList())
+
+    private fun count() {
+        shade.value = apps().size
     }
 
     override fun onListenerDisconnected() {
@@ -62,16 +72,12 @@ class NotifService : NotificationListenerService() {
 
     companion object {
         val up = MutableStateFlow<Boolean?>(null)
+        val shade = MutableStateFlow(0)
         @Volatile private var live: NotifService? = null
 
-        fun clear(posts: List<Triple<String, Long, String>>) {
+        fun clearApps() {
             val s = live ?: return
-            val at = posts.map { it.first to it.second }.toSet()
-            val titled = posts.map { it.first to it.third }.toSet()
-            runCatching {
-                s.activeNotifications.filter { n -> (n.packageName to n.postTime) in at || (n.packageName to n.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()) in titled }
-                    .forEach { s.cancelNotification(it.key) }
-            }
+            runCatching { s.cancelNotifications(s.apps().map { it.key }.toTypedArray()) }
         }
     }
 }

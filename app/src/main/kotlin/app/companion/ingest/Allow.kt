@@ -11,6 +11,7 @@ object Allow {
         "com.msf.kbank.mobile" to Source.Notif,
         "com.dreamplug.androidapp" to Source.Notif,
         "com.indwealth.android" to Source.Notif,
+        "in.indwealth" to Source.Notif,
         "in.amazon.mShop.android.shopping" to Source.Notif,
         "com.google.android.apps.nbu.paisa.user" to Source.Notif,
         "com.phonepe.app" to Source.Notif,

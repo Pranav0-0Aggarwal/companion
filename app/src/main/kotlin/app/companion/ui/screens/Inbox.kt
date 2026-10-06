@@ -115,6 +115,7 @@ fun InboxScreen(go: (String) -> Unit) {
     val shown = remember(items, seg) { items.filter { seg == InboxSeg.All || it.src in seg.src || (seg == InboxSeg.Alerts && it.kind == "Spam") } }
     val (waiting, filed) = remember(shown) { shown.partition { it.open } }
     val quiet = remember(chats, seg) { chats.filter { seg == InboxSeg.All || it.src in seg.src } }
+    val shade by NotifService.shade.collectAsStateWithLifecycle()
     var chatsOpen by rememberSaveable { mutableStateOf(false) }
     val asks = items.count { it.state == State.ASK }
     val checks = items.count { it.state == State.CHECK }
@@ -139,11 +140,10 @@ fun InboxScreen(go: (String) -> Unit) {
         }
         item(key = "hear") { Hearing() }
         val notifs = waiting.filter { it.src == "Notif" }
-        if (notifs.isNotEmpty()) item(key = "notifs") {
-            TextBtn("Dismiss ${notifs.size} app ${if (notifs.size == 1) "notification" else "notifications"}", Modifier.padding(horizontal = 16.dp)) {
-                val titles = notifs.associate { it.id to it.title }
-                NotifService.clear(links.filter { it.src == "Notif" && it.itemId in titles }.map { Triple(it.sender, it.at, titles.getValue(it.itemId)) })
-                snack.go { repo.settleAll(notifs)?.let { a -> snack.offer(a, "Dismissed ${a.n}") { repo.undo(it) } } }
+        if (notifs.isNotEmpty() || shade > 0) item(key = "notifs") {
+            TextBtn("Clear app notifications", Modifier.padding(horizontal = 16.dp)) {
+                NotifService.clearApps()
+                if (notifs.isEmpty()) snack.say("Cleared from your notifications") else snack.go { repo.settleAll(notifs)?.let { a -> snack.offer(a, "Dismissed ${a.n}") { repo.undo(it) } } }
             }
         }
         if (asks + checks > 20) item(key = "tidy") {

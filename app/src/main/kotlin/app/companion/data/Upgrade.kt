@@ -11,7 +11,9 @@ import androidx.work.WorkerParameters
 import app.companion.ai.Pending
 import app.companion.core.Calibration
 import app.companion.core.Category
+import app.companion.core.Dupes
 import app.companion.core.Fingerprint
+import app.companion.core.Sig
 import app.companion.core.Flow
 import app.companion.core.Flows
 import app.companion.core.Guard
@@ -51,7 +53,7 @@ class Upgrade(private val c: Context, private val db: Db) {
     }
 
     private suspend fun echoes(): Boolean {
-        if (d.mark(V9) != null) return true
+        if (d.mark(V11) != null) return true
         val rows = d.movesSince(System.currentTimeMillis() - 14L * 24 * 3600 * 1000)
         val from = d.linksNow(rows.map { it.id }).groupBy { it.itemId }
         db.withTransaction {
@@ -60,13 +62,13 @@ class Upgrade(private val c: Context, private val db: Db) {
                 val fb = b.fp() ?: return@forEachIndexed
                 val lb = from[b.id].orEmpty()
                 val a = rows.subList(0, k).lastOrNull { a ->
-                    a.id !in gone && a.fp()?.let { fa -> from[a.id].orEmpty().any { la -> lb.any { l -> Fingerprint.echo(fa, a.at, la.src, la.sender, fb, b.at, l.src, l.sender) } } } == true
+                    a.id !in gone && a.fp()?.let { fa -> from[a.id].orEmpty().any { la -> lb.any { l -> Dupes.same(Sig(fa, a.at, la.src, la.sender, a.ref()), Sig(fb, b.at, l.src, l.sender, b.ref())) } } } == true
                 } ?: return@forEachIndexed
                 d.moveDups(b.id, a.id)
                 d.setDup(b.id, a.id)
                 gone += b.id
             }
-            d.putMark(Mark(V9, 0, 0, 0, 0, 0, 0, 0, null, false, false))
+            d.putMark(Mark(V11, 0, 0, 0, 0, 0, 0, 0, null, false, false))
         }
         return true
     }
@@ -208,8 +210,8 @@ class Upgrade(private val c: Context, private val db: Db) {
         private const val TPL = "upgrade6"
         private const val JOB = "upgrade7b"
         private const val V8 = "upgrade8"
-        private const val V9 = "upgrade9"
         private const val V10 = "upgrade10"
+        private const val V11 = "upgrade11"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 

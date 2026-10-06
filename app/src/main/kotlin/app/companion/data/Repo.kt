@@ -15,6 +15,8 @@ import app.companion.core.Dup
 import app.companion.core.Event
 import app.companion.core.Filed
 import app.companion.core.Fingerprint
+import app.companion.core.Sig
+import app.companion.core.Dupes
 import app.companion.core.Found
 import app.companion.core.Flows
 import app.companion.core.Labels
@@ -439,9 +441,10 @@ class Repo(private val db: Db, c: android.content.Context) {
         val twin = fp?.let { f ->
             val cands = near(f, item)
             val from = d.linksNow(cands.map { it.id }).groupBy { it.itemId }
+            val me = Sig(f, item.at, raw.source.name, raw.sender, Dupes.ref(raw.text()))
             cands.filter { o ->
                 val g = o.fp() ?: return@filter false
-                Fingerprint.same(g, o.at, f, item.at) || from[o.id].orEmpty().any { l -> Fingerprint.echo(g, o.at, l.src, l.sender, f, item.at, raw.source.name, raw.sender) }
+                from[o.id].orEmpty().ifEmpty { listOf(null) }.any { l -> Dupes.same(Sig(g, o.at, l?.src ?: o.src, l?.sender, o.ref()), me) }
             }.minByOrNull { abs(it.at - item.at) }
         }
         if (twin != null) {
@@ -557,7 +560,7 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     private suspend fun near(f: Fingerprint, i: Item): List<Item> {
         if (f.group == Group.Code) return d.nearCode(i.code.orEmpty(), i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW)
-        val span = if (f.group == Group.Due) 45L * 24 * 3600 * 1000 else Fingerprint.ECHO
+        val span = if (f.group == Group.Due) 45L * 24 * 3600 * 1000 else Dupes.SPAN
         return d.near(f.kinds(), f.paise, i.at - span, i.at + span)
     }
 }

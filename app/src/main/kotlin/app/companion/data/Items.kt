@@ -52,6 +52,8 @@ val Item.brand get() = when {
     (src == "Sms" || (src == "Wa" || src == "Ig") && kind != "Personal") && kind in headed && Merchant.brand(title) != null -> title
     else -> null
 }
+fun Item.ref() = app.companion.core.Dupes.ref(listOfNotNull(title, note, body).joinToString("\n"))
+
 fun Item.spent() = Spent(kind, category, merchant, title, last4, at, flow)
 val Item.moved get() = flow != null || cardPay
 

@@ -63,7 +63,9 @@ sealed class Line {
     class One(val i: Item) : Line()
 
     class Moved(val out: Item, val inn: Item) : Line() {
-        val sub get() = "${out.account ?: "Your account"} to ${inn.account ?: "your other account"}"
+        private val back get() = out.account != null && out.account == inn.account
+        val title get() = if (back) "Out and back" else "Moved between your accounts"
+        val sub get() = if (back) out.account.orEmpty() else "${out.account ?: "Your account"} to ${inn.account ?: "your other account"}"
     }
 }
 

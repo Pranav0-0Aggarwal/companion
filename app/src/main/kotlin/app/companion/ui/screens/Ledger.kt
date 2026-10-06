@@ -213,7 +213,7 @@ fun LedgerScreen(go: (String) -> Unit, lead: @Composable () -> Unit) {
                 item(key = i.id, contentType = "txn") {
                     Column(Modifier.animateItem().part(p, k == 0, k == lines.lastIndex)) {
                         val tap = { open = if (open == i.id) -1 else i.id }
-                        if (l is Line.Moved) MoneyRow(MOVED, l.sub, amt(i.paise, i.currency), false, lead = Ic.Swap, moved = true, sign = false, onClick = tap)
+                        if (l is Line.Moved) MoneyRow(l.title, l.sub, amt(i.paise, i.currency), false, lead = Ic.Swap, moved = true, sign = false, onClick = tap)
                         else MoneyRow(
                             i.shown(), i.srcLine(links), amt(i.paise, i.currency), i.credit,
                             lead = Ic.of(i.category), brand = i.brand, stamp = i.stamp(), tags = i.tagged(), moved = i.moved,

@@ -17,8 +17,8 @@ object Reveal {
 }
 
 object Fit {
-    const val W = 420
-    const val H = 520
+    const val W = 480
+    const val H = 600
 
     fun cover(wDp: Int, hDp: Int) = wDp <= W && hDp <= H
 }

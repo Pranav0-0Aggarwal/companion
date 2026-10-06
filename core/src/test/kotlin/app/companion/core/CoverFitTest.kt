@@ -34,9 +34,9 @@ class CoverFitTest {
     @Test
     fun `only a small window in both directions switches to the cover layout`() {
         assertTrue(Fit.cover(361, 399))
-        assertTrue(Fit.cover(420, 520))
-        assertFalse(Fit.cover(421, 399))
-        assertFalse(Fit.cover(361, 521))
+        assertTrue(Fit.cover(474, 523))
+        assertFalse(Fit.cover(481, 399))
+        assertFalse(Fit.cover(361, 601))
         assertFalse(Fit.cover(360, 840))
     }
 }

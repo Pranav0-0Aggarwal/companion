@@ -43,6 +43,7 @@ import app.companion.core.text
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -435,7 +436,14 @@ class Repo(private val db: Db, c: android.content.Context) {
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
         val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()), Chats.quiet(e, raw, p.vips)).copy(tpl = tpl, ping = if (live) 0 else Alerts.seen, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
         val fp = item.fp()
-        val twin = fp?.let { f -> near(f, item).firstOrNull { o -> o.fp()?.let { Fingerprint.same(it, o.at, f, item.at) } == true } }
+        val twin = fp?.let { f ->
+            val cands = near(f, item)
+            val from = d.linksNow(cands.map { it.id }).groupBy { it.itemId }
+            cands.filter { o ->
+                val g = o.fp() ?: return@filter false
+                Fingerprint.same(g, o.at, f, item.at) || from[o.id].orEmpty().any { l -> Fingerprint.echo(g, o.at, l.src, l.sender, f, item.at, raw.source.name, raw.sender) }
+            }.minByOrNull { abs(it.at - item.at) }
+        }
         if (twin != null) {
             d.link(Link(itemId = twin.id, src = raw.source.name, sender = raw.sender, at = raw.at))
             val merged = twin.copy(
@@ -541,7 +549,7 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     private suspend fun near(f: Fingerprint, i: Item): List<Item> {
         if (f.group == Group.Code) return d.nearCode(i.code.orEmpty(), i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW)
-        val span = if (f.group == Group.Due) 45L * 24 * 3600 * 1000 else Fingerprint.WINDOW
+        val span = if (f.group == Group.Due) 45L * 24 * 3600 * 1000 else Fingerprint.ECHO
         return d.near(f.kinds(), f.paise, i.at - span, i.at + span)
     }
 }

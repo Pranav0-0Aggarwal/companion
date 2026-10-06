@@ -35,7 +35,7 @@ class NotifService : NotificationListenerService() {
         val chat = Chats.chat(src)
         val items = (if (chat) messages(src, x, title) else emptyList()).ifEmpty {
             val text = (x.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: x.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
-            listOf(if (chat) Raw(src, title, "", text, sbn.postTime) else Raw(src, sbn.packageName, title, text, sbn.postTime))
+            listOf(if (chat) Raw(src, title, "", text, sbn.postTime) else Raw(src, sbn.packageName, title, text, n.`when`.takeIf { it in 1..sbn.postTime } ?: sbn.postTime))
         }
         val ingest = sl.ingest
         scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}", live = live) } }

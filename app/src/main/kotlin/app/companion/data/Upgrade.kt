@@ -32,7 +32,28 @@ import kotlinx.coroutines.withContext
 class Upgrade(private val c: Context, private val db: Db) {
     private val d = db.dao()
 
-    suspend fun run() = tpl() && names() && tidy()
+    suspend fun run() = tpl() && names() && tidy() && echoes()
+
+    private suspend fun echoes(): Boolean {
+        if (d.mark(V9) != null) return true
+        val rows = d.movesSince(System.currentTimeMillis() - 14L * 24 * 3600 * 1000)
+        val from = d.linksNow(rows.map { it.id }).groupBy { it.itemId }
+        db.withTransaction {
+            val gone = HashSet<Long>()
+            rows.forEachIndexed { k, b ->
+                val fb = b.fp() ?: return@forEachIndexed
+                val lb = from[b.id].orEmpty()
+                val a = rows.subList(0, k).lastOrNull { a ->
+                    a.id !in gone && a.fp()?.let { fa -> from[a.id].orEmpty().any { la -> lb.any { l -> Fingerprint.echo(fa, a.at, la.src, la.sender, fb, b.at, l.src, l.sender) } } } == true
+                } ?: return@forEachIndexed
+                d.moveDups(b.id, a.id)
+                d.setDup(b.id, a.id)
+                gone += b.id
+            }
+            d.putMark(Mark(V9, 0, 0, 0, 0, 0, 0, 0, null, false, false))
+        }
+        return true
+    }
 
     private suspend fun tpl(): Boolean {
         val m = d.mark(TPL)
@@ -171,6 +192,7 @@ class Upgrade(private val c: Context, private val db: Db) {
         private const val TPL = "upgrade6"
         private const val JOB = "upgrade7b"
         private const val V8 = "upgrade8"
+        private const val V9 = "upgrade9"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 

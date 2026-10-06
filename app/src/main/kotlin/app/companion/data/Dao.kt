@@ -58,6 +58,9 @@ interface Dao {
     @Query("SELECT * FROM links WHERE itemId IN (:ids) ORDER BY at")
     fun links(ids: List<Long>): Flow<List<Link>>
 
+    @Query("SELECT * FROM links WHERE itemId IN (:ids)")
+    suspend fun linksNow(ids: List<Long>): List<Link>
+
     @Query("SELECT * FROM items WHERE kind = 'Otp' AND expires > :now ORDER BY at DESC")
     fun otps(now: Long): Flow<List<Item>>
 
@@ -129,6 +132,9 @@ interface Dao {
 
     @Query("SELECT * FROM items WHERE state = 'ask' AND kind != 'Spam' AND dup IS NULL ORDER BY at DESC")
     fun asks(): Flow<List<Item>>
+
+    @Query("SELECT * FROM items WHERE kind IN ('Debit', 'Credit', 'CardSpend') AND dup IS NULL AND at >= :since ORDER BY at")
+    suspend fun movesSince(since: Long): List<Item>
 
     @Query("UPDATE items SET state = 'settled' WHERE id IN (:ids) AND state IN ('ask', 'check')")
     suspend fun settleAll(ids: List<Long>)

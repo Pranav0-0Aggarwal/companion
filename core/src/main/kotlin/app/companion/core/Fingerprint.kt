@@ -14,6 +14,7 @@ data class Fingerprint(
 ) {
     companion object {
         const val WINDOW = 10 * 60 * 1000L
+        const val ECHO = 3 * 24 * 60 * 60 * 1000L
 
         fun of(e: Event): Fingerprint? = when (e) {
             is Event.Debit -> Fingerprint(Group.Out, e.paise, e.last4, norm(e.merchant), null, null)
@@ -37,6 +38,13 @@ data class Fingerprint(
                 Group.Due -> a.paise == b.paise && a.due == b.due && ident(a, b)
                 else -> a.paise == b.paise && kotlin.math.abs(atA - atB) <= WINDOW && ident(a, b)
             }
+        }
+
+        fun echo(a: Fingerprint, atA: Long, srcA: String, fromA: String?, b: Fingerprint, atB: Long, srcB: String, fromB: String?): Boolean {
+            if (a.group != b.group || a.paise != b.paise || a.group == Group.Code || a.group == Group.Due) return false
+            if (kotlin.math.abs(atA - atB) > ECHO || srcA == "Sms" && srcB == "Sms") return false
+            if (srcA != srcB) return ident(a, b)
+            return fromA != null && fromA == fromB && (ident(a, b) || a.last4 == null && b.last4 == null && a.merchant == null && b.merchant == null)
         }
 
         private fun ident(a: Fingerprint, b: Fingerprint): Boolean {

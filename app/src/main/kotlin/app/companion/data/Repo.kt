@@ -15,15 +15,12 @@ import app.companion.core.Dup
 import app.companion.core.Event
 import app.companion.core.Filed
 import app.companion.core.Fingerprint
-import app.companion.core.Sig
-import app.companion.core.Dupes
 import app.companion.core.Found
 import app.companion.core.Flows
 import app.companion.core.Labels
 import app.companion.core.Paid
 import app.companion.core.Phase
 import app.companion.core.Merchant
-import app.companion.core.Group
 import app.companion.core.Kind
 import app.companion.core.Repeat
 import app.companion.core.Rules
@@ -45,7 +42,6 @@ import app.companion.core.text
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -71,6 +67,7 @@ class Taught(val also: Also? = null, val sender: Pair<String, String>? = null, v
 
 class Repo(private val db: Db, c: android.content.Context) {
     private val d = db.dao()
+    private val rec = Reconcile(db)
     val life = Lives(db)
     val docs = Docs(c.applicationContext, db)
     val fresh = ConcurrentHashMap<Long, Long>()
@@ -437,16 +434,7 @@ class Repo(private val db: Db, c: android.content.Context) {
         }
         val learned = learnedCat ?: (e as? Event.Move)?.merchant?.let { Fingerprint.norm(it) }?.let { d.learned(it) }
         val item = Items.of(e, raw, v, learned, Body.since(p.keep, System.currentTimeMillis()), Chats.quiet(e, raw, p.vips)).copy(tpl = tpl, ping = if (live) 0 else Alerts.seen, model = v.guess?.label, mprob = v.guess?.prob, flow = flowOf(e, raw))
-        val fp = item.fp()
-        val twin = fp?.let { f ->
-            val cands = near(f, item)
-            val from = d.linksNow(cands.map { it.id }).groupBy { it.itemId }
-            val me = Sig(f, item.at, raw.source.name, raw.sender, Dupes.ref(raw.text()))
-            cands.filter { o ->
-                val g = o.fp() ?: return@filter false
-                from[o.id].orEmpty().ifEmpty { listOf(null) }.any { l -> Dupes.same(Sig(g, o.at, l?.src ?: o.src, l?.sender, o.ref()), me) }
-            }.minByOrNull { abs(it.at - item.at) }
-        }
+        val twin = rec.twin(item, raw)
         if (twin != null) {
             d.link(Link(itemId = twin.id, src = raw.source.name, sender = raw.sender, at = raw.at))
             val merged = twin.copy(
@@ -460,7 +448,7 @@ class Repo(private val db: Db, c: android.content.Context) {
             return Added(merged, false)
         }
         val id = d.add(item)
-        if (item.flow == null && (item.kind == Kind.Debit.name || item.kind == Kind.Credit.name)) pairSelf(item.copy(id = id))
+        rec.pair(item.copy(id = id))
         d.link(Link(itemId = id, src = raw.source.name, sender = raw.sender, at = raw.at))
         if (e is Event.Move || e is Event.Statement) item.last4?.let { l -> own = own?.plus(l) }
         fresh[id] = System.currentTimeMillis()
@@ -549,18 +537,5 @@ class Repo(private val db: Db, c: android.content.Context) {
         d.setFlow(id, flowOf(e, raw))
         if (go) tidy(d.item(id))
         return Change(go, Refile.asks(old, new))
-    }
-
-    private suspend fun pairSelf(i: Item) {
-        val other = if (i.kind == Kind.Debit.name) Kind.Credit.name else Kind.Debit.name
-        val o = d.near(listOf(other), i.paise, i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW).firstOrNull { it.dup == null && it.flow == null } ?: return
-        d.setFlow(i.id, Route.Self.name)
-        d.setFlow(o.id, Route.Self.name)
-    }
-
-    private suspend fun near(f: Fingerprint, i: Item): List<Item> {
-        if (f.group == Group.Code) return d.nearCode(i.code.orEmpty(), i.at - Fingerprint.WINDOW, i.at + Fingerprint.WINDOW)
-        val span = if (f.group == Group.Due) 45L * 24 * 3600 * 1000 else Dupes.SPAN
-        return d.near(f.kinds(), f.paise, i.at - span, i.at + span)
     }
 }

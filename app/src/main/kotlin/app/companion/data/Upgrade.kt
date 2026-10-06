@@ -11,9 +11,7 @@ import androidx.work.WorkerParameters
 import app.companion.ai.Pending
 import app.companion.core.Calibration
 import app.companion.core.Category
-import app.companion.core.Dupes
 import app.companion.core.Fingerprint
-import app.companion.core.Sig
 import app.companion.core.Flow
 import app.companion.core.Flows
 import app.companion.core.Guard
@@ -34,42 +32,12 @@ import kotlinx.coroutines.withContext
 class Upgrade(private val c: Context, private val db: Db) {
     private val d = db.dao()
 
-    suspend fun run() = tpl() && names() && tidy() && echoes() && pairs()
+    suspend fun run() = tpl() && names() && tidy() && reconcile()
 
-    private suspend fun pairs(): Boolean {
-        if (d.mark(V10) != null) return true
-        val rows = d.movesSince(System.currentTimeMillis() - 60L * 24 * 3600 * 1000).filter { it.flow == null }
-        db.withTransaction {
-            val used = HashSet<Long>()
-            rows.filter { it.kind == "Debit" }.forEach { o ->
-                val i = rows.firstOrNull { it.id !in used && it.paise == o.paise && Flows.pair(o.kind, o.at, it.kind, it.at) } ?: return@forEach
-                used += i.id
-                d.setFlow(o.id, Flow.Self.name)
-                d.setFlow(i.id, Flow.Self.name)
-            }
-            d.putMark(Mark(V10, 0, 0, 0, 0, 0, 0, 0, null, false, false))
-        }
-        return true
-    }
-
-    private suspend fun echoes(): Boolean {
-        if (d.mark(V11) != null) return true
-        val rows = d.movesSince(System.currentTimeMillis() - 14L * 24 * 3600 * 1000)
-        val from = d.linksNow(rows.map { it.id }).groupBy { it.itemId }
-        db.withTransaction {
-            val gone = HashSet<Long>()
-            rows.forEachIndexed { k, b ->
-                val fb = b.fp() ?: return@forEachIndexed
-                val lb = from[b.id].orEmpty()
-                val a = rows.subList(0, k).lastOrNull { a ->
-                    a.id !in gone && a.fp()?.let { fa -> from[a.id].orEmpty().any { la -> lb.any { l -> Dupes.same(Sig(fa, a.at, la.src, la.sender, a.ref()), Sig(fb, b.at, l.src, l.sender, b.ref())) } } } == true
-                } ?: return@forEachIndexed
-                d.moveDups(b.id, a.id)
-                d.setDup(b.id, a.id)
-                gone += b.id
-            }
-            d.putMark(Mark(V11, 0, 0, 0, 0, 0, 0, 0, null, false, false))
-        }
+    private suspend fun reconcile(): Boolean {
+        if (d.mark(V12) != null) return true
+        Reconcile(db).sweep(System.currentTimeMillis() - 60L * 24 * 3600 * 1000)
+        d.putMark(Mark(V12, 0, 0, 0, 0, 0, 0, 0, null, false, false))
         return true
     }
 
@@ -210,8 +178,7 @@ class Upgrade(private val c: Context, private val db: Db) {
         private const val TPL = "upgrade6"
         private const val JOB = "upgrade7b"
         private const val V8 = "upgrade8"
-        private const val V10 = "upgrade10"
-        private const val V11 = "upgrade11"
+        private const val V12 = "upgrade12"
         private val NAMED = setOf("Debit", "Credit", "CardSpend", "Bill", "Delivery")
         private const val PAGE = 200
 

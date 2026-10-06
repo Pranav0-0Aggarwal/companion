@@ -11,6 +11,14 @@ object Dupes {
 
     fun ref(text: String?) = text?.let { refRx.find(it)?.groupValues?.get(1) }
 
+    fun sweep(rows: List<Pair<Long, List<Sig>>>): Map<Long, Long> {
+        val keep = LinkedHashMap<Long, Long>()
+        rows.forEachIndexed { k, (id, sigs) ->
+            rows.subList(0, k).lastOrNull { (o, olds) -> o !in keep && olds.any { a -> sigs.any { b -> same(a, b) } } }?.let { keep[id] = it.first }
+        }
+        return keep
+    }
+
     fun same(a: Sig, b: Sig): Boolean {
         val x = a.fp
         val y = b.fp

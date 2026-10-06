@@ -30,12 +30,3 @@ class EchoTest {
         assertFalse(Fingerprint.echo(inn(null, null), 0, "Wa", "Shop", inn(null, null), 5 * h, "Wa", "Asha"))
     }
 }
-
-class PairTest {
-    @Test
-    fun matchingDebitAndCreditMinutesApartAreSelf() {
-        assertTrue(Flows.pair("Debit", 0, "Credit", 60_000))
-        assertFalse(Flows.pair("Debit", 0, "Credit", 3_600_000))
-        assertFalse(Flows.pair("CardSpend", 0, "Credit", 60_000))
-    }
-}

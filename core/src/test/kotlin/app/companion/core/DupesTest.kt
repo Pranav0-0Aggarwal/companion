@@ -36,4 +36,12 @@ class DupesTest {
         assertTrue(Dupes.same(Sig(out("4021", null), 0, "Sms", "AX-ICICIB", null), Sig(out("4021", null), 30 * h, "Notif", "in.indwealth", null)))
         assertFalse(Dupes.same(Sig(out("4021", null), 0, "Sms", "AX-ICICIB", null), Sig(out("4021", null), 30 * h, "Sms", "AX-ICICIB", null)))
     }
+
+    @Test
+    fun sweepPointsLaterCopiesAtTheFirst() {
+        val sms = Sig(out("4021", null), 0, "Sms", "AX-ICICIB", null)
+        val app = Sig(out("4021", null), 30 * h, "Notif", "in.indwealth", null)
+        val other = Sig(out("4021", null), 31 * h, "Sms", "AX-ICICIB", null)
+        assertEquals(mapOf(2L to 1L), Dupes.sweep(listOf(1L to listOf(sms), 2L to listOf(app), 3L to listOf(other))))
+    }
 }

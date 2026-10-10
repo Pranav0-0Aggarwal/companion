@@ -1,0 +1,33 @@
+{
+  "aad" : "CL1",
+  "confirmCode" : "753176",
+  "kMacToPhone" : "556ddb790d655b604562bb74bc38fbf66cb88c762b71d1e8f48443442e599452",
+  "kPhoneToMac" : "9e8953fc3b6e6efec5ba91dcb3d2659dac76554d56644984b6ac09635ec037ad",
+  "macPrivate" : "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+  "macPublic" : "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
+  "msg1" : {
+    "ciphertextAndTag" : "56aa3686339245e5b4cfee863a3db8f5afdf61811a73374851b6e232",
+    "counter" : 0,
+    "dir" : 1,
+    "nonce" : "000000010000000000000000",
+    "plaintext" : "{\"t\":\"auth\"}",
+    "sealedMessage" : "01000000000000000056aa3686339245e5b4cfee863a3db8f5afdf61811a73374851b6e232"
+  },
+  "msg2" : {
+    "ciphertextAndTag" : "39da1f71a107b6554b904672e1df7c28f165df32cfae7ff8df9e7b438237253724a024adc766cdb77d3e12be11364eb3d2b3",
+    "counter" : 7,
+    "dir" : 2,
+    "nonce" : "000000020000000000000007",
+    "plaintext" : "{\"t\":\"ok\",\"name\":\"Galaxy Z Flip7\"}",
+    "sealedMessage" : "01000000000000000739da1f71a107b6554b904672e1df7c28f165df32cfae7ff8df9e7b438237253724a024adc766cdb77d3e12be11364eb3d2b3"
+  },
+  "nm" : "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+  "np" : "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+  "okm" : "556ddb790d655b604562bb74bc38fbf66cb88c762b71d1e8f48443442e5994529e8953fc3b6e6efec5ba91dcb3d2659dac76554d56644984b6ac09635ec037ad",
+  "pairUrl" : "companion:\/\/pair?v=1&k=hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo&s=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8&n=Pranav%E2%80%99s%20MacBook%20Pro",
+  "phonePrivate" : "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
+  "phonePublic" : "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
+  "S" : "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "shared" : "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
+  "sharedMatches" : true
+}

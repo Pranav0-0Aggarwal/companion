@@ -181,3 +181,5 @@ dependencies {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach { dependsOn(":core:test") }

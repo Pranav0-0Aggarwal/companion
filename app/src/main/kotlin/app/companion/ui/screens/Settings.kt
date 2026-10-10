@@ -37,7 +37,7 @@ private val reads = listOf(
 )
 
 @Composable
-fun SettingsScreen(back: () -> Unit) {
+fun SettingsScreen(back: () -> Unit, link: () -> Unit) {
     val c = LocalContext.current
     val repo = c.sl.repo
     val scope = rememberCoroutineScope()
@@ -58,6 +58,8 @@ fun SettingsScreen(back: () -> Unit) {
             item(key = "vip-form") { VipForm(p) { v -> save { it.copy(vip = v) } } }
             item(key = "reads") { Section("What Gmail reads") }
             item(key = "reads-list") { Group { Reads() } }
+            item(key = "mac") { Section("Mac") }
+            item(key = "link") { LinkRow(link) }
             item(key = "notify") { NotifySettings() }
             item(key = "meet") { MeetSettings() }
             item(key = "plan") { PlanSettings(onTasks = { if (it) tasks() }) }

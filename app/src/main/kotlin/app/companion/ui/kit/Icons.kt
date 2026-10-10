@@ -29,6 +29,7 @@ object Ic {
     val Search = icon("search", "M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0", "M20 20l-3.5-3.5")
     val Sparkle = icon("sparkle", "M12 3c.5 4 2.5 6 7 7-4.5 1-6.5 3-7 7-.5-4-2.5-6-7-7 4.5-1 6.5-3 7-7z", "M19 15.5c.2 1.2.8 1.8 2 2-1.2.2-1.8.8-2 2-.2-1.2-.8-1.8-2-2 1.2-.2 1.8-.8 2-2z")
     val Mic = icon("mic", "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z", "M5 11a7 7 0 0 0 14 0M12 18v3")
+    val Link = icon("link", "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1", "M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1")
     val Settings = icon("settings", "M4 7h9M17 7h3M4 17h3M11 17h9", "M15 5v4M9 15v4")
     val More = icon("more", "M12 5h.01M12 12h.01M12 19h.01")
     val Add = icon("add", "M12 5v14M5 12h14")

@@ -29,6 +29,8 @@ import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
+import app.companion.link.LinkHub
+import app.companion.link.LinkStore
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -55,8 +57,11 @@ class Services(val app: Application) {
     val ingest by lazy { Ingest(app, repo, rules, pending, hooks) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
+    val link by lazy { LinkHub(app, this) }
 
     fun wipe() {
+        link.stop()
+        LinkStore.wipe(app)
         runBlocking(Dispatchers.IO) {
             repo.allTasks().forEach { Alarms.cancel(app, it.id) }
             Meetings.stop(app)
@@ -86,6 +91,7 @@ class CompanionApp : Application() {
         Upgrade.boot(this)
         Thread { Models.purge(this) }.start()
         Meetings.watch(this)
+        if (LinkStore.on(this)) sl.link.start()
     }
 
     override fun onTrimMemory(level: Int) {

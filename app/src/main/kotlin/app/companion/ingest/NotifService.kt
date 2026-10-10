@@ -24,6 +24,7 @@ class NotifService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
         take(sbn, true)
+        if (sbn.packageName != packageName) sl.link.notif(sbn) { Ranking().also { currentRanking.getRanking(sbn.key, it) }.importance }
     }
 
     private fun take(sbn: StatusBarNotification, live: Boolean) {

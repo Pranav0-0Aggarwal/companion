@@ -2,6 +2,16 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.7.0 (2026-10-11)
+
+### Mac link
+- Link Companion to Notchy on your Mac over Bluetooth. Scan the code Notchy shows with your phone camera, check the 6 digit code on both screens and tap Link. Settings, Mac link shows the status, pairs and unpairs.
+- Everything is end to end encrypted between your phone and that one Mac, with keys that never leave the two devices. Companion adds no internet access for it.
+- Choose what your Mac sees, each switch off until you turn it on: codes, spending and bills, things that need you, battery, tasks and meetings, notifications from apps you pick, and your clipboard in either direction.
+- From the Mac you can add a task or reminder, mark a task done, mark a bill paid, dismiss an item, search your ledger, ask Companion a question and set your clipboard.
+- Ring my phone: your Mac can play the alarm sound for up to 15 seconds, even on silent, with a Stop button in the notification.
+- Light on the battery: low power advertising only while the link is on, paired and no Mac is connected, no polling, no wake locks and no foreground service. Allow notification access so Android keeps Companion running in the background.
+
 ## 0.6.3 (2026-10-06)
 
 - Delete a transaction from its details, together with any copies of it, with Undo.

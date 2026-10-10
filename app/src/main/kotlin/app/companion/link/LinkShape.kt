@@ -33,7 +33,7 @@ object LinkShape {
     fun alert(i: Item): Obj {
         val odd = i.money && i.paise > 0
         return (if (i.bill) mapOf("bill" to i.id) else emptyMap()) + mapOf(
-            "id" to i.id, "kind" to i.kind,
+            "id" to i.id, "kind" to if (i.bill) "Bill" else i.kind,
             "title" to if (odd) "Odd charge: ${money(i.paise, i.currency)} at ${i.merchant ?: i.title}" else i.title,
             "sub" to listOfNotNull(card(i), clock(i.at)).joinToString(" · "), "paise" to i.paise, "at" to i.at,
         )
@@ -47,6 +47,11 @@ object LinkShape {
     fun hit(i: Item): Obj = mapOf("id" to i.id, "kind" to i.kind, "title" to i.title, "sub" to listOfNotNull(card(i), clock(i.at)).joinToString(" · "), "paise" to i.paise, "at" to i.at)
 
     fun task(t: Task): Obj = mapOf("id" to t.id, "title" to t.title, "due" to day(t.due), "remindAt" to t.remindAt, "done" to t.done)
+
+    fun today(greeting: String, spent: Long, n: Int, month: Long, budget: Long, otps: List<Obj>, needs: List<Obj>, bills: List<Obj>, tasks: List<Obj>, meets: List<Obj>, recent: List<Obj>): Obj = mapOf(
+        "greeting" to greeting, "spent" to mapOf("paise" to spent, "n" to n), "month" to mapOf("paise" to month, "budget" to budget),
+        "otps" to otps, "needs" to needs, "bills" to bills, "tasks" to tasks, "meets" to meets, "recent" to recent,
+    )
 
     fun meet(m: Meeting): Obj = mapOf("title" to m.title, "start" to m.start, "end" to m.end, "link" to m.join?.url)
 }

@@ -80,7 +80,7 @@ class LinkHub(private val app: Application, sl: Services) {
         LinkStore.setShare(app, k, on)
         scope.launch {
             if (authed) {
-                push(mapOf("t" to "share", "share" to LinkMsg.shares(LinkStore.shares(app))))
+                push(LinkMsg.shareEvent(LinkStore.shares(app)))
                 events.sync()
             }
             reconcile()
@@ -179,7 +179,7 @@ class LinkHub(private val app: Application, sl: Services) {
         val keys = LinkStore.keys(app)
         val np = LinkCrypto.random(16)
         session = LinkCrypto.session(keys.priv, pair.mac, pair.secret, nm, np)
-        gatt.send(LinkMsg.plain(Json.write(mapOf("t" to "hello", "v" to 1, "np" to LinkCrypto.b64(np), "pk" to LinkCrypto.b64(keys.pub)))))
+        gatt.send(LinkMsg.plain(Json.write(LinkMsg.hello(np, keys.pub))))
         timeout()
     }
 
@@ -197,7 +197,7 @@ class LinkHub(private val app: Application, sl: Services) {
     private fun accept() {
         authed = true
         wait?.cancel()
-        push(mapOf("t" to "ok", "name" to (Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL), "share" to LinkMsg.shares(LinkStore.shares(app))))
+        push(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
         conn?.let(events::start)
         gatt.calmDown()
         reconcile()

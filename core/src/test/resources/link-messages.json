@@ -1,0 +1,566 @@
+{
+ "hello": {
+  "mac": {
+   "t": "hello",
+   "v": 1,
+   "nm": "oKGio6SlpqeoqaqrrK2urw=="
+  },
+  "phone": {
+   "t": "hello",
+   "v": 1,
+   "np": "sLGys7S1tre4ubq7vL2+vw==",
+   "pk": "3p7bfXt9wbTTW2HC7OQ1Nz+DQ8hbeGdNrfx+FG+IK08="
+  },
+  "auth": {
+   "t": "auth"
+  },
+  "ok": {
+   "t": "ok",
+   "name": "Galaxy Z Flip7",
+   "share": {
+    "otp": true,
+    "money": true,
+    "alerts": true,
+    "clipIn": false,
+    "clipOut": false,
+    "ask": true,
+    "battery": true,
+    "tasks": true,
+    "notifs": false
+   }
+  }
+ },
+ "req": {
+  "today": {
+   "t": "today",
+   "id": 1
+  },
+  "ledger": {
+   "t": "ledger",
+   "id": 2,
+   "days": 31
+  },
+  "bills": {
+   "t": "bills",
+   "id": 3
+  },
+  "search": {
+   "t": "search",
+   "id": 4,
+   "q": "swiggy"
+  },
+  "ask": {
+   "t": "ask",
+   "id": 5,
+   "q": "how much did I spend today"
+  },
+  "pay": {
+   "t": "pay",
+   "id": 6,
+   "item": 7
+  },
+  "dismiss": {
+   "t": "dismiss",
+   "id": 7,
+   "item": 9
+  },
+  "otp_drop": {
+   "t": "otp_drop",
+   "id": 8,
+   "item": 1
+  },
+  "tasks": {
+   "t": "tasks",
+   "id": 9
+  },
+  "task_add": {
+   "t": "task_add",
+   "id": 10,
+   "title": "Pay rent",
+   "remindAt": 1760230800000,
+   "key": "6F1C2B8E-4D3A-4B7F-9E21-0A5C7D9E1F34"
+  },
+  "task_add_bare": {
+   "t": "task_add",
+   "id": 11,
+   "title": "Buy milk",
+   "key": "0B6E8F1A-2C4D-4E5F-8A9B-1C2D3E4F5A6B"
+  },
+  "task_done": {
+   "t": "task_done",
+   "id": 12,
+   "item": 4
+  },
+  "ring": {
+   "t": "ring",
+   "id": 13
+  },
+  "clip": {
+   "t": "clip",
+   "id": 14,
+   "text": "copied on the Mac"
+  },
+  "ping": {
+   "t": "ping",
+   "id": 15
+  }
+ },
+ "res": {
+  "empty": {
+   "t": "res",
+   "id": 6,
+   "ok": true,
+   "data": {}
+  },
+  "task_add": {
+   "t": "res",
+   "id": 10,
+   "ok": true,
+   "data": {
+    "id": 4
+   }
+  },
+  "err_off": {
+   "t": "res",
+   "id": 1,
+   "ok": false,
+   "err": "off"
+  },
+  "err_gone": {
+   "t": "res",
+   "id": 6,
+   "ok": false,
+   "err": "gone"
+  },
+  "today": {
+   "t": "res",
+   "id": 1,
+   "ok": true,
+   "data": {
+    "greeting": "Good evening",
+    "spent": {
+     "paise": 124000,
+     "n": 4
+    },
+    "month": {
+     "paise": 3187000,
+     "budget": 5000000
+    },
+    "otps": [
+     {
+      "id": 1,
+      "code": "482913",
+      "from": "HDFC Bank",
+      "at": 1760000000000,
+      "expires": 1760000600000
+     }
+    ],
+    "needs": [
+     {
+      "id": 9,
+      "kind": "Debit",
+      "title": "Odd charge: ₹4,999 at XYZ",
+      "sub": "HDFC •1234 · 08:53",
+      "paise": 499900,
+      "at": 1760000000000
+     },
+     {
+      "id": 7,
+      "bill": 7,
+      "kind": "Bill",
+      "title": "HDFC credit card",
+      "sub": "due 12 Oct · HDFC •1234",
+      "paise": 1234500,
+      "at": 1760000000000
+     }
+    ],
+    "bills": [
+     {
+      "id": 7,
+      "title": "HDFC credit card",
+      "bank": "HDFC",
+      "last4": "1234",
+      "paise": 1234500,
+      "min": 50000,
+      "cur": "INR",
+      "due": 1760227200000,
+      "state": "open"
+     }
+    ],
+    "tasks": [
+     {
+      "id": 4,
+      "title": "Pay rent",
+      "due": 1760227200000,
+      "remindAt": 1760230800000,
+      "done": false
+     }
+    ],
+    "meets": [
+     {
+      "title": "Standup",
+      "start": 1760004000000,
+      "end": 1760007600000,
+      "link": "https://meet.google.com/abc-defg-hij"
+     }
+    ],
+    "recent": [
+     {
+      "id": 5,
+      "kind": "Debit",
+      "title": "Swiggy",
+      "merchant": "Swiggy",
+      "paise": 45000,
+      "cur": "INR",
+      "at": 1760000000000,
+      "category": "Food",
+      "card": "HDFC •1234",
+      "mode": "UPI"
+     }
+    ]
+   }
+  },
+  "ledger": {
+   "t": "res",
+   "id": 2,
+   "ok": true,
+   "data": {
+    "txns": [
+     {
+      "id": 5,
+      "kind": "Debit",
+      "title": "Swiggy",
+      "merchant": "Swiggy",
+      "paise": 45000,
+      "cur": "INR",
+      "at": 1760000000000,
+      "category": "Food",
+      "card": "HDFC •1234",
+      "mode": "UPI"
+     }
+    ]
+   }
+  },
+  "bills": {
+   "t": "res",
+   "id": 3,
+   "ok": true,
+   "data": {
+    "open": [
+     {
+      "id": 7,
+      "title": "HDFC credit card",
+      "bank": "HDFC",
+      "last4": "1234",
+      "paise": 1234500,
+      "min": 50000,
+      "cur": "INR",
+      "due": 1760227200000,
+      "state": "open"
+     }
+    ],
+    "paid": [
+     {
+      "id": 8,
+      "title": "HDFC credit card",
+      "bank": "HDFC",
+      "last4": "1234",
+      "paise": 1234500,
+      "min": 50000,
+      "cur": "INR",
+      "due": 1757548800000,
+      "state": "paid"
+     }
+    ]
+   }
+  },
+  "search": {
+   "t": "res",
+   "id": 4,
+   "ok": true,
+   "data": {
+    "items": [
+     {
+      "id": 5,
+      "kind": "Debit",
+      "title": "Swiggy",
+      "sub": "HDFC •1234 · 08:53",
+      "paise": 45000,
+      "at": 1760000000000
+     }
+    ]
+   }
+  },
+  "ask": {
+   "t": "res",
+   "id": 5,
+   "ok": true,
+   "data": {
+    "text": "You spent ₹1,240 today."
+   }
+  },
+  "tasks": {
+   "t": "res",
+   "id": 9,
+   "ok": true,
+   "data": {
+    "tasks": [
+     {
+      "id": 4,
+      "title": "Pay rent",
+      "due": 1760227200000,
+      "remindAt": 1760230800000,
+      "done": false
+     },
+     {
+      "id": 6,
+      "title": "Call bank",
+      "due": null,
+      "remindAt": null,
+      "done": true
+     }
+    ]
+   }
+  }
+ },
+ "ev": {
+  "otp": {
+   "t": "otp",
+   "id": 1,
+   "code": "482913",
+   "from": "HDFC Bank",
+   "at": 1760000000000,
+   "expires": 1760000600000
+  },
+  "otp_gone": {
+   "t": "otp_gone",
+   "item": 1
+  },
+  "alert": {
+   "t": "alert",
+   "id": 9,
+   "kind": "Debit",
+   "title": "Odd charge: ₹4,999 at XYZ",
+   "sub": "HDFC •1234 · 08:53",
+   "paise": 499900,
+   "at": 1760000000000
+  },
+  "alert_bill": {
+   "t": "alert",
+   "id": 7,
+   "bill": 7,
+   "kind": "Bill",
+   "title": "HDFC credit card",
+   "sub": "due 12 Oct · HDFC •1234",
+   "paise": 1234500,
+   "at": 1760000000000
+  },
+  "battery": {
+   "t": "battery",
+   "pct": 80,
+   "charging": true
+  },
+  "clip": {
+   "t": "clip",
+   "text": "copied on the phone"
+  },
+  "dirty": {
+   "t": "dirty",
+   "what": "today"
+  },
+  "share": {
+   "t": "share",
+   "share": {
+    "otp": true,
+    "money": true,
+    "alerts": true,
+    "clipIn": false,
+    "clipOut": false,
+    "ask": true,
+    "battery": true,
+    "tasks": true,
+    "notifs": false
+   }
+  },
+  "notif": {
+   "t": "notif",
+   "id": "0|com.whatsapp|1|null|10123",
+   "app": "com.whatsapp",
+   "appName": "WhatsApp",
+   "title": "Riya",
+   "text": "Are you free tonight?",
+   "at": 1760000000000
+  }
+ },
+ "shape": {
+  "otp": {
+   "id": 1,
+   "code": "482913",
+   "from": "HDFC Bank",
+   "at": 1760000000000,
+   "expires": 1760000600000
+  },
+  "txn": {
+   "id": 5,
+   "kind": "Debit",
+   "title": "Swiggy",
+   "merchant": "Swiggy",
+   "paise": 45000,
+   "cur": "INR",
+   "at": 1760000000000,
+   "category": "Food",
+   "card": "HDFC •1234",
+   "mode": "UPI"
+  },
+  "bill": {
+   "id": 7,
+   "title": "HDFC credit card",
+   "bank": "HDFC",
+   "last4": "1234",
+   "paise": 1234500,
+   "min": 50000,
+   "cur": "INR",
+   "due": 1760227200000,
+   "state": "open"
+  },
+  "paid": {
+   "id": 8,
+   "title": "HDFC credit card",
+   "bank": "HDFC",
+   "last4": "1234",
+   "paise": 1234500,
+   "min": 50000,
+   "cur": "INR",
+   "due": 1757548800000,
+   "state": "paid"
+  },
+  "alert": {
+   "id": 9,
+   "kind": "Debit",
+   "title": "Odd charge: ₹4,999 at XYZ",
+   "sub": "HDFC •1234 · 08:53",
+   "paise": 499900,
+   "at": 1760000000000
+  },
+  "alert_bill": {
+   "id": 7,
+   "bill": 7,
+   "kind": "Bill",
+   "title": "HDFC credit card",
+   "sub": "due 12 Oct · HDFC •1234",
+   "paise": 1234500,
+   "at": 1760000000000
+  },
+  "hit": {
+   "id": 5,
+   "kind": "Debit",
+   "title": "Swiggy",
+   "sub": "HDFC •1234 · 08:53",
+   "paise": 45000,
+   "at": 1760000000000
+  },
+  "task": {
+   "id": 4,
+   "title": "Pay rent",
+   "due": 1760227200000,
+   "remindAt": 1760230800000,
+   "done": false
+  },
+  "task_bare": {
+   "id": 6,
+   "title": "Call bank",
+   "due": null,
+   "remindAt": null,
+   "done": true
+  },
+  "meet": {
+   "title": "Standup",
+   "start": 1760004000000,
+   "end": 1760007600000,
+   "link": "https://meet.google.com/abc-defg-hij"
+  },
+  "today": {
+   "greeting": "Good evening",
+   "spent": {
+    "paise": 124000,
+    "n": 4
+   },
+   "month": {
+    "paise": 3187000,
+    "budget": 5000000
+   },
+   "otps": [
+    {
+     "id": 1,
+     "code": "482913",
+     "from": "HDFC Bank",
+     "at": 1760000000000,
+     "expires": 1760000600000
+    }
+   ],
+   "needs": [
+    {
+     "id": 9,
+     "kind": "Debit",
+     "title": "Odd charge: ₹4,999 at XYZ",
+     "sub": "HDFC •1234 · 08:53",
+     "paise": 499900,
+     "at": 1760000000000
+    },
+    {
+     "id": 7,
+     "bill": 7,
+     "kind": "Bill",
+     "title": "HDFC credit card",
+     "sub": "due 12 Oct · HDFC •1234",
+     "paise": 1234500,
+     "at": 1760000000000
+    }
+   ],
+   "bills": [
+    {
+     "id": 7,
+     "title": "HDFC credit card",
+     "bank": "HDFC",
+     "last4": "1234",
+     "paise": 1234500,
+     "min": 50000,
+     "cur": "INR",
+     "due": 1760227200000,
+     "state": "open"
+    }
+   ],
+   "tasks": [
+    {
+     "id": 4,
+     "title": "Pay rent",
+     "due": 1760227200000,
+     "remindAt": 1760230800000,
+     "done": false
+    }
+   ],
+   "meets": [
+    {
+     "title": "Standup",
+     "start": 1760004000000,
+     "end": 1760007600000,
+     "link": "https://meet.google.com/abc-defg-hij"
+    }
+   ],
+   "recent": [
+    {
+     "id": 5,
+     "kind": "Debit",
+     "title": "Swiggy",
+     "merchant": "Swiggy",
+     "paise": 45000,
+     "cur": "INR",
+     "at": 1760000000000,
+     "category": "Food",
+     "card": "HDFC •1234",
+     "mode": "UPI"
+    }
+   ]
+  }
+ }
+}

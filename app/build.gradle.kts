@@ -90,6 +90,8 @@ android {
     compileSdk = 37
     ndkVersion = "28.2.13676358"
 
+    sourceSets.getByName("test").resources.directories += "../core/src/test/resources"
+
     defaultConfig {
         applicationId = "app.companion"
         minSdk = 34

@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.service.notification.StatusBarNotification
 import app.companion.Services
+import app.companion.core.LinkMsg
 import app.companion.data.dueDate
 import java.time.LocalDate
 import java.time.ZoneId
@@ -59,9 +60,12 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
             alerts.clear()
             seeded = false
         }
-        watch("battery" in on)
         clip(focused && "clipOut" in on)
-        scope?.launch { scan() }
+        scope?.launch {
+            scanOtps()
+            watch("battery" in on)
+            scanAlerts()
+        }
     }
 
     fun focus(on: Boolean) {
@@ -79,33 +83,38 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
         val text = (x.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: x.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(TEXT)
         if (title.isEmpty() && text.isEmpty()) return
         val name = runCatching { c.packageManager.getApplicationInfo(pkg, 0).loadLabel(c.packageManager).toString() }.getOrDefault(pkg)
-        send(mapOf("t" to "notif", "id" to sbn.key, "app" to pkg, "appName" to name, "title" to title, "text" to text, "at" to sbn.postTime))
+        send(LinkMsg.notif(sbn.key, pkg, name, title, text, sbn.postTime))
     }
 
     private fun send(o: Obj) {
         scope?.launch { out(o) }
     }
 
-    private fun dirty(what: String) = send(mapOf("t" to "dirty", "what" to what))
+    private fun dirty(what: String) = send(LinkMsg.dirty(what))
 
     private suspend fun scan() {
-        val on = shares()
+        scanOtps()
+        scanAlerts()
+    }
+
+    private suspend fun scanOtps() {
+        if ("otp" !in shares()) return
+        val live = sl.repo.otpsNow().associateBy { it.id }
+        live.filterKeys { otps.add(it) }.values.forEach { out(mapOf("t" to "otp") + LinkShape.otp(it)) }
+        otps.filter { it !in live }.forEach {
+            otps.remove(it)
+            out(LinkMsg.otpGone(it))
+        }
+    }
+
+    private suspend fun scanAlerts() {
+        if ("alerts" !in shares()) return
         val repo = sl.repo
-        if ("otp" in on) {
-            val live = repo.otpsNow().associateBy { it.id }
-            live.filterKeys { otps.add(it) }.values.forEach { out(mapOf("t" to "otp") + LinkShape.otp(it)) }
-            otps.filter { it !in live }.forEach {
-                otps.remove(it)
-                out(mapOf("t" to "otp_gone", "item" to it))
-            }
-        }
-        if ("alerts" in on) {
-            val now = System.currentTimeMillis()
-            val soon = LocalDate.now(ZoneId.systemDefault()).plusDays(BILL_DAYS)
-            val fresh = repo.needing(NEEDS).map { it to LinkShape.alert(it) } + repo.billsNow().filter { it.dueDate?.let { d -> !d.isAfter(soon) } == true }.map { it to LinkShape.due(it) }
-            fresh.filter { (i, _) -> alerts.add(i.id) && (seeded || i.at >= now - RECENT) }.forEach { (_, a) -> out(mapOf("t" to "alert") + a) }
-            seeded = true
-        }
+        val now = System.currentTimeMillis()
+        val soon = LocalDate.now(ZoneId.systemDefault()).plusDays(BILL_DAYS)
+        val fresh = repo.needing(NEEDS).map { it to LinkShape.alert(it) } + repo.billsNow().filter { it.dueDate?.let { d -> !d.isAfter(soon) } == true }.map { it to LinkShape.due(it) }
+        fresh.filter { (i, _) -> alerts.add(i.id) && (seeded || i.at >= now - RECENT) }.forEach { (_, a) -> out(mapOf("t" to "alert") + a) }
+        seeded = true
     }
 
     private val power = object : BroadcastReceiver() {
@@ -132,14 +141,14 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
         if (level >= 0 && pct / 5 == level / 5 && chg == charging) return
         level = pct
         charging = chg
-        send(mapOf("t" to "battery", "pct" to pct, "charging" to chg))
+        send(LinkMsg.battery(pct, chg))
     }
 
     private val copied = ClipboardManager.OnPrimaryClipChangedListener {
         val d = cm.primaryClipDescription
         if (d == null || d.label == "code" || d.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return@OnPrimaryClipChangedListener
         val text = cm.primaryClip?.getItemAt(0)?.coerceToText(c)?.toString()?.take(CLIP)?.takeIf { it.isNotBlank() && it != echo } ?: return@OnPrimaryClipChangedListener
-        send(mapOf("t" to "clip", "text" to text))
+        send(LinkMsg.clip(text))
     }
 
     private fun clip(on: Boolean) {

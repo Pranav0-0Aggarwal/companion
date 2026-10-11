@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import android.service.notification.StatusBarNotification
 import app.companion.Services
 import app.companion.core.Json
@@ -145,12 +146,14 @@ class LinkHub(private val app: Application, sl: Services) {
             gatt.open()
             gatt.advertise(!gatt.connected)
         } else {
+            if (gatt.connected) log("reconcile: closing, stage=$s")
             end()
             gatt.close()
         }
     }
 
     private fun up() {
+        log("up")
         end()
         conn = CoroutineScope(scope.coroutineContext + Job(scope.coroutineContext[Job]))
         timeout()
@@ -159,6 +162,7 @@ class LinkHub(private val app: Application, sl: Services) {
     }
 
     private fun down() {
+        log("down")
         end()
         reconcile()
     }
@@ -179,7 +183,7 @@ class LinkHub(private val app: Application, sl: Services) {
         wait?.cancel()
         wait = scope.launch {
             delay(HANDSHAKE)
-            gatt.disconnect()
+            refuse("handshake timeout")
         }
     }
 
@@ -192,29 +196,35 @@ class LinkHub(private val app: Application, sl: Services) {
     }
 
     private fun hello(m: ByteArray) {
-        if (session != null) return gatt.disconnect()
-        val j = runCatching { Json.obj(m.decodeToString(1)) }.getOrNull() ?: return
+        if (session != null) return refuse("hello: session already set")
+        val j = runCatching { Json.obj(m.decodeToString(1)) }.getOrNull() ?: return log("hello: json parse failed")
         val nm = runCatching { LinkCrypto.unb64(j["nm"] as String) }.getOrNull()
         val pair = LinkStore.pair(app)
-        if (j["t"] != "hello" || (j["v"] as? Number)?.toInt() != 1 || nm?.size != 16 || pair == null) return gatt.disconnect()
+        val v = (j["v"] as? Number)?.toInt()
+        if (j["t"] != "hello") return refuse("hello: t != hello")
+        if (v != 1) return refuse("hello: v=$v")
+        if (nm?.size != 16) return refuse("hello: nm size=${nm?.size}")
+        if (pair == null) return refuse("hello: pair null")
         val np = LinkCrypto.random(16)
-        val keys = runCatching { LinkStore.keys(app).also { session = LinkCrypto.session(it.priv, pair.mac, pair.secret, nm, np) } }.getOrNull() ?: return gatt.disconnect()
+        val keys = runCatching { LinkStore.keys(app).also { session = LinkCrypto.session(it.priv, pair.mac, pair.secret, nm, np) } }
+            .onFailure { log("hello: keys/session threw ${it.javaClass.simpleName}: ${it.message}") }.getOrNull() ?: return gatt.disconnect()
         gatt.send(LinkMsg.plain(Json.write(LinkMsg.hello(np, keys.pub))))
         timeout()
     }
 
     private fun sealed(m: ByteArray) {
-        val s = session ?: return gatt.disconnect()
+        val s = session ?: return refuse("sealed: no session")
         val plain = try {
             s.open(m)
-        } catch (_: Exception) {
-            return gatt.disconnect()
+        } catch (e: Exception) {
+            return refuse("sealed: open failed ${e.javaClass.simpleName}")
         }
-        val j = runCatching { Json.obj(plain.decodeToString()) }.getOrNull() ?: return
-        if (authed) request(j) else if (j["t"] == "auth") accept() else gatt.disconnect()
+        val j = runCatching { Json.obj(plain.decodeToString()) }.getOrNull() ?: return log("sealed: json parse failed")
+        if (authed) request(j) else if (j["t"] == "auth") accept() else refuse("sealed: not authed, t=${j["t"]}")
     }
 
     private fun accept() {
+        log("authed")
         authed = true
         wait?.cancel()
         send(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
@@ -257,6 +267,15 @@ class LinkHub(private val app: Application, sl: Services) {
     private fun send(o: Obj) {
         val s = session?.takeIf { authed } ?: return
         gatt.send(s.seal(Json.write(o).encodeToByteArray()))
+    }
+
+    private fun log(s: String) {
+        Log.w("CompanionLink", s)
+    }
+
+    private fun refuse(s: String) {
+        log(s)
+        gatt.disconnect()
     }
 
     private companion object {

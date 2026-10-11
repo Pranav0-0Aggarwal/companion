@@ -17,6 +17,7 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.ParcelUuid
+import android.util.Log
 import app.companion.core.Cccd
 import app.companion.core.LinkFrames
 import app.companion.core.LinkGattRule
@@ -78,15 +79,23 @@ class LinkGatt(
         val a = bm?.adapter?.bluetoothLeAdvertiser
         if (on && !advertising && a != null) {
             advertising = true
+            log("advertise on")
             a.startAdvertising(SETTINGS, DATA, advert)
         } else if (!on && advertising) {
             advertising = false
+            log("advertise off")
             a?.stopAdvertising(advert)
         }
     }
 
     fun disconnect() {
-        dev?.let { server?.cancelConnection(it) }
+        val d = dev ?: return
+        server?.cancelConnection(d)
+        drop()
+    }
+
+    private fun log(s: String) {
+        Log.w("CompanionLink", s)
     }
 
     fun send(msg: ByteArray) {
@@ -153,7 +162,10 @@ class LinkGatt(
 
     private fun lost(d: BluetoothDevice) {
         mtus.remove(d.address)
-        if (d == dev) drop()
+        if (d == dev) {
+            log("lost active device")
+            drop()
+        }
     }
 
     private val callback = object : BluetoothGattServerCallback() {
@@ -179,6 +191,7 @@ class LinkGatt(
         override fun onDescriptorWriteRequest(d: BluetoothDevice, id: Int, desc: BluetoothGattDescriptor, prepared: Boolean, response: Boolean, offset: Int, value: ByteArray) {
             scope.launch {
                 val r = if (desc.uuid == CCCD && !prepared && offset == 0) LinkGattRule.cccd(dev, d, value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) else Cccd.Reject
+                log("cccd $r")
                 if (response) server?.sendResponse(d, id, if (r == Cccd.Reject) BluetoothGatt.GATT_FAILURE else BluetoothGatt.GATT_SUCCESS, 0, null)
                 when (r) {
                     Cccd.Accept -> start(d)
@@ -206,6 +219,7 @@ class LinkGatt(
 
     private val advert = object : AdvertiseCallback() {
         override fun onStartFailure(errorCode: Int) {
+            log("advertise failed code=$errorCode")
             scope.launch { advertising = false }
         }
     }

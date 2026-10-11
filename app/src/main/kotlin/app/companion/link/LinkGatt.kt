@@ -17,7 +17,9 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.ParcelUuid
+import app.companion.core.Cccd
 import app.companion.core.LinkFrames
+import app.companion.core.LinkGattRule
 import app.companion.core.LinkReassembler
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +43,7 @@ class LinkGatt(
     private var calm: Job? = null
     private var rx = LinkReassembler()
     private val out = ArrayDeque<ByteArray>()
+    private val mtus = HashMap<String, Int>()
     private var mtu = MTU
     private var seq = 0
     private var subscribed = false
@@ -67,6 +70,7 @@ class LinkGatt(
         server?.close()
         server = null
         tx = null
+        mtus.clear()
         if (dev != null) drop()
     }
 
@@ -137,34 +141,36 @@ class LinkGatt(
         down()
     }
 
-    private fun link(d: BluetoothDevice, state: Int) {
-        if (state == BluetoothProfile.STATE_CONNECTED) {
-            if (dev != null) {
-                if (dev != d) server?.cancelConnection(d)
-                return
-            }
-            dev = d
-            mtu = MTU
-            seq = 0
-            rx = LinkReassembler()
-            up()
-        } else if (d == dev) {
-            drop()
-        }
+    private fun start(d: BluetoothDevice) {
+        dev = d
+        mtu = mtus[d.address] ?: MTU
+        seq = 0
+        rx = LinkReassembler()
+        subscribed = true
+        up()
+        pump()
+    }
+
+    private fun lost(d: BluetoothDevice) {
+        mtus.remove(d.address)
+        if (d == dev) drop()
     }
 
     private val callback = object : BluetoothGattServerCallback() {
         override fun onConnectionStateChange(d: BluetoothDevice, status: Int, state: Int) {
-            scope.launch { link(d, state) }
+            if (state != BluetoothProfile.STATE_CONNECTED) scope.launch { lost(d) }
         }
 
         override fun onMtuChanged(d: BluetoothDevice, m: Int) {
-            scope.launch { if (d == dev) mtu = m }
+            scope.launch {
+                mtus[d.address] = m
+                if (d == dev) mtu = m
+            }
         }
 
         override fun onCharacteristicWriteRequest(d: BluetoothDevice, id: Int, ch: BluetoothGattCharacteristic, prepared: Boolean, response: Boolean, offset: Int, value: ByteArray) {
             scope.launch {
-                val ok = d == dev && ch.uuid == RX && !prepared && offset == 0
+                val ok = d == dev && subscribed && ch.uuid == RX && !prepared && offset == 0
                 if (response) server?.sendResponse(d, id, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE, 0, null)
                 if (ok) rx.feed(value)?.let(got)
             }
@@ -172,18 +178,20 @@ class LinkGatt(
 
         override fun onDescriptorWriteRequest(d: BluetoothDevice, id: Int, desc: BluetoothGattDescriptor, prepared: Boolean, response: Boolean, offset: Int, value: ByteArray) {
             scope.launch {
-                val ok = d == dev && desc.uuid == CCCD && !prepared && offset == 0
-                if (ok) {
-                    subscribed = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-                    pump()
+                val r = if (desc.uuid == CCCD && !prepared && offset == 0) LinkGattRule.cccd(dev, d, value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) else Cccd.Reject
+                if (response) server?.sendResponse(d, id, if (r == Cccd.Reject) BluetoothGatt.GATT_FAILURE else BluetoothGatt.GATT_SUCCESS, 0, null)
+                when (r) {
+                    Cccd.Accept -> start(d)
+                    Cccd.Restart -> { drop(); start(d) }
+                    Cccd.Drop -> drop()
+                    else -> {}
                 }
-                if (response) server?.sendResponse(d, id, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE, 0, null)
             }
         }
 
         override fun onDescriptorReadRequest(d: BluetoothDevice, id: Int, offset: Int, desc: BluetoothGattDescriptor) {
             scope.launch {
-                val v = if (subscribed) BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE else BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+                val v = if (d == dev && subscribed) BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE else BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
                 server?.sendResponse(d, id, BluetoothGatt.GATT_SUCCESS, 0, v)
             }
         }

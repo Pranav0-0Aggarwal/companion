@@ -54,6 +54,7 @@ import app.companion.ui.openListenerSettings
 import app.companion.ui.pal
 import app.companion.ui.rememberPerms
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private val perms = arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE)
@@ -87,12 +88,12 @@ private val all = rows + more
 
 private fun Row.ok(c: Context) = if (key == "dnd") c.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted else perms.all(c::has)
 
-private fun Stage.sub(name: String?) = when (this) {
+private fun Stage.sub(name: String?, hint: Boolean = false) = when (this) {
     Stage.Off -> "Off"
     Stage.Unpaired -> "Not paired"
     Stage.NoPermission -> "Allow Bluetooth to connect"
     Stage.BluetoothOff -> "Bluetooth is off"
-    Stage.Waiting -> "Waiting for $name"
+    Stage.Waiting -> if (hint) "Waiting for $name. Open Notchy on your Mac" else "Waiting for $name"
     Stage.Linking -> "Connecting to $name"
     Stage.Connected -> "Connected to $name"
 }
@@ -108,6 +109,14 @@ fun LinkScreen(back: () -> Unit) {
     val c = LocalContext.current
     val hub = c.sl.link
     val s by hub.state.collectAsStateWithLifecycle()
+    var slow by remember { mutableStateOf(false) }
+    LaunchedEffect(s.stage) {
+        slow = false
+        if (s.stage == Stage.Waiting) {
+            delay(30_000)
+            slow = true
+        }
+    }
     val snack = LocalSnack.current
     var unpair by remember { mutableStateOf(false) }
     var apps by remember { mutableStateOf(false) }
@@ -163,7 +172,7 @@ fun LinkScreen(back: () -> Unit) {
         } else {
             item(key = "status") {
                 Group {
-                    PassLine(s.name ?: "Mac", s.stage.sub(s.name), lead = Ic.Link, tone = if (s.stage == Stage.Connected) Tone.Green else Tone.Accent)
+                    PassLine(s.name ?: "Mac", s.stage.sub(s.name, slow), lead = Ic.Link, tone = if (s.stage == Stage.Connected) Tone.Green else Tone.Accent)
                     Rule(72.dp)
                     Toggle("Link on", "Advertises over Bluetooth only while no Mac is connected", s.stage != Stage.Off, icon = Ic.Bolt) { if (!it) hub.enable(false) else ask() }
                     if (s.stage == Stage.NoPermission) {

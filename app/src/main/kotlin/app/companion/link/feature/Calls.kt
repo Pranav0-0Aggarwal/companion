@@ -19,6 +19,7 @@ import android.telephony.TelephonyManager
 import app.companion.core.CallInfo
 import app.companion.core.LinkCrypto
 import app.companion.core.LinkMsg
+import app.companion.link.Diag
 import app.companion.link.LinkBad
 import app.companion.link.LinkFeature
 import app.companion.link.Obj
@@ -123,6 +124,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         o(c)
         if (c["state"] == "active" && wantMac) {
             wantMac = false
+            Diag.log("call: answered, relay to mac")
             relay?.invoke(c["id"] as String)
         }
     }
@@ -210,6 +212,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
 
     private fun move(mac: Boolean) {
         val id = synchronized(this) { sent?.get("id") as? String } ?: gone()
+        Diag.log("call: move mac=$mac")
         (if (mac) relay else reclaim)?.invoke(id)
     }
 

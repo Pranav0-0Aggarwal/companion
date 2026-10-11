@@ -7,6 +7,7 @@ import app.companion.core.BulkFrame
 import app.companion.core.BulkPipe
 import app.companion.core.CallRestore
 import app.companion.core.LinkMsg
+import app.companion.link.Diag
 import app.companion.link.LinkBad
 import app.companion.link.LinkFeature
 import app.companion.link.Obj
@@ -58,7 +59,9 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
             cur = s
         }
         scope.launch {
-            if (!powers().bridge.up.value) return@launch fail(s, "powers")
+            val up = powers().bridge.up.value
+            Diag.log("call: toMac bridge=$up")
+            if (!up) return@launch fail(s, "powers")
             out?.invoke(LinkMsg.bulkWant("call", id))
             delay(WAIT)
             if (s.pipe == null) fail(s, "nowifi")
@@ -67,11 +70,13 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
 
     fun toPhone(id: String) {
         val s = synchronized(this) { cur?.takeIf { it.id == id } } ?: return
+        Diag.log("call: toPhone pipe=${s.pipe != null}")
         scope.launch { s.pipe?.let { runCatching(it::close) } ?: fail(s, null) }
     }
 
     suspend fun serve(p: BulkPipe) {
         val s = synchronized(this) { cur?.takeIf { it.id == p.ref && it.pipe == null }?.also { it.pipe = p } } ?: return
+        Diag.log("call: serve start")
         val b = powers().bridge
         val am = app.getSystemService(AudioManager::class.java)
         val q = Channel<ByteArray>(QUEUE, BufferOverflow.DROP_OLDEST)
@@ -97,6 +102,7 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
                         delay(w)
                     }
                 }
+                Diag.log("call: audio on mac")
                 out?.invoke(LinkMsg.callAudio("mac"))
                 while (true) {
                     val (t, body) = p.read()
@@ -114,12 +120,14 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
             q.close()
             b.on.remove(BulkFrame.AUDIO, cb)
             synchronized(this) { if (cur === s) cur = null }
+            Diag.log("call: serve end ${why ?: "ended"}")
             out?.invoke(LinkMsg.callAudio("phone", why))
         }
     }
 
     private fun fail(s: Sess, why: String?) {
         synchronized(this) { if (cur === s) cur = null else return }
+        Diag.log("call: fail ${why ?: "none"}")
         out?.invoke(LinkMsg.callAudio("phone", why))
     }
 

@@ -206,6 +206,11 @@
    "t": "dnd",
    "id": 36,
    "on": true
+  },
+  "voip_decline": {
+   "t": "voip_decline",
+   "id": 38,
+   "call": "a1b2c3d4e5f6"
   }
  },
  "res": {
@@ -528,6 +533,13 @@
   "call_audio": {
    "t": "call_audio",
    "where": "mac"
+  },
+  "voip": {
+   "t": "voip",
+   "id": "a1b2c3d4e5f6",
+   "app": "WhatsApp",
+   "state": "ringing",
+   "name": "Riya"
   },
   "notif_v2": {
    "t": "notif",

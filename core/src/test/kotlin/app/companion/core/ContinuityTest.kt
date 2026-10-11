@@ -366,6 +366,33 @@ class ContinuityTest {
     }
 
     @Test
+    fun `voip ids are stable twelve hex`() {
+        assertEquals(Voip.id("0|com.whatsapp|1|null|10123"), Voip.id("0|com.whatsapp|1|null|10123"))
+        assertEquals(true, Regex("[0-9a-f]{12}").matches(Voip.id("0|com.whatsapp|1|null|10123")))
+        assertEquals("e3b0c44298fc", Voip.id(""))
+    }
+
+    @Test
+    fun `voip state tells ringing from active`() {
+        assertEquals("ringing", Voip.state(true, false, emptyList()))
+        assertEquals("ringing", Voip.state(false, false, listOf("Decline", "ANSWER")))
+        assertEquals("active", Voip.state(false, true, listOf("Hang up")))
+        assertEquals("active", Voip.state(true, true, emptyList()))
+        assertEquals("active", Voip.state(false, false, listOf("Hang up")))
+    }
+
+    @Test
+    fun `voip decline picks the right action`() {
+        assertEquals(0, Voip.decline(listOf("Decline", "Answer")))
+        assertEquals(1, Voip.decline(listOf("Answer", "Reject")))
+        assertEquals(0, Voip.decline(listOf("Hang up")))
+        assertEquals(1, Voip.decline(listOf("Accept", "Nope")))
+        assertEquals(0, Voip.decline(listOf("Nope", "Answer")))
+        assertEquals(null, Voip.decline(listOf("Answer", "Reply", "Mute")))
+        assertEquals(null, Voip.decline(emptyList()))
+    }
+
+    @Test
     fun `handoff opens only web urls`() {
         assertTrue(HandoffUrl.openable("https://example.com"))
         assertTrue(HandoffUrl.openable("HTTP://example.com/a?b=c"))

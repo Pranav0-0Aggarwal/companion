@@ -19,6 +19,7 @@ import android.telephony.TelephonyManager
 import app.companion.core.CallInfo
 import app.companion.core.LinkCrypto
 import app.companion.core.LinkMsg
+import app.companion.core.Voip
 import app.companion.link.Diag
 import app.companion.link.LinkBad
 import app.companion.link.LinkFeature
@@ -31,7 +32,7 @@ import kotlinx.coroutines.delay
 
 class Calls(private val app: Application, private val powers: () -> Powers) : LinkFeature {
     override val key = "calls"
-    override val cmds = setOf("call_answer", "call_end", "call_reject", "call_dial", "call_mute", "call_hold", "call_dtmf", "call_move")
+    override val cmds = setOf("call_answer", "call_end", "call_reject", "call_dial", "call_mute", "call_hold", "call_dtmf", "call_move", "voip_decline")
 
     private data class Fb(val id: String, val state: String, val started: Long?, val since: Long)
     private data class Note(val id: String?, val name: String?, val number: String?, val photo: String?, val at: Long)
@@ -46,6 +47,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
     private var note: Note? = null
     private var sent: Obj? = null
     private var wantMac = false
+    private val voips = HashMap<String, Pair<String, StatusBarNotification>>()
 
     override fun start(sc: CoroutineScope, out: (Obj) -> Unit) {
         stop()
@@ -61,6 +63,8 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         synchronized(this) {
             val id = sent?.get("id") as? String
             if (id != null) out?.invoke(LinkMsg.call(id, "ended", null, null, null, null, ctl()))
+            voips.keys.forEach { out?.invoke(LinkMsg.voip(it, "ended", null)) }
+            voips.clear()
             out = null
             fb = null
             note = null
@@ -83,6 +87,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
             "call_hold" -> if (full) (c ?: gone()).let { if (on(q)) it.hold() else it.unhold() } else throw LinkBad("unsupported")
             "call_dtmf" -> if (full) tone(c ?: gone(), q) else throw LinkBad("unsupported")
             "call_move" -> move(mac)
+            "voip_decline" -> decline(q["call"] as? String ?: throw LinkBad("call"))
         }
         return emptyMap()
     }
@@ -101,6 +106,37 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
             if (fb?.state == "dialing" && x.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)) fb = fb?.copy(state = "active", started = System.currentTimeMillis())
         }
         report()
+    }
+
+    fun voipPosted(sbn: StatusBarNotification) {
+        val n = sbn.notification
+        if (out == null || sbn.packageName !in Voip.pkgs || n.category != Notification.CATEGORY_CALL) return
+        val id = Voip.id(sbn.key)
+        val st = Voip.state(n.fullScreenIntent != null, n.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER), titles(n))
+        val name = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.takeIf { it.isNotBlank() }
+        synchronized(this) {
+            if (voips.put(id, st to sbn)?.first == st) return
+            Diag.log("voip: $st")
+            out?.invoke(LinkMsg.voip(id, st, name))
+        }
+    }
+
+    fun voipRemoved(sbn: StatusBarNotification) {
+        val id = Voip.id(sbn.key)
+        synchronized(this) {
+            if (voips.remove(id) == null) return
+            Diag.log("voip: ended")
+            out?.invoke(LinkMsg.voip(id, "ended", null))
+        }
+    }
+
+    private fun titles(n: Notification) = n.actions.orEmpty().map { it.title?.toString().orEmpty() }
+
+    private fun decline(id: String) {
+        val n = synchronized(this) { voips[id]?.second }?.takeIf { it.packageName in Voip.pkgs }?.notification ?: gone()
+        val i = Voip.decline(titles(n)) ?: gone()
+        Diag.log("voip: decline")
+        (n.actions[i].actionIntent ?: gone()).send()
     }
 
     @Synchronized

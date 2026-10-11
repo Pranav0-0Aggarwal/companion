@@ -42,6 +42,8 @@ object LinkMsg {
     fun call(id: String, state: String, number: String?, name: String?, photo: String?, started: Long?, ctl: String) =
         compact("t" to "call", "id" to id, "state" to state, "number" to number, "name" to name, "photo" to photo, "started" to started, "ctl" to ctl)
 
+    fun voip(id: String, state: String, name: String?) = compact("t" to "voip", "id" to id, "app" to "WhatsApp", "state" to state, "name" to name)
+
     fun callAudio(where: String, why: String? = null) = compact("t" to "call_audio", "where" to where, "why" to why)
 
     fun notif(id: String, app: String, appName: String, title: String, text: String, at: Long, key: String, conv: String, canReply: Boolean, actions: List<Map<String, String>>, person: Map<String, String>?) =

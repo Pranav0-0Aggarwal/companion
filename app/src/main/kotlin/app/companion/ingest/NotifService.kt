@@ -27,6 +27,7 @@ class NotifService : NotificationListenerService() {
         count()
         LiveFeed.posted(sbn)
         Calls.live?.fromNotification(sbn)
+        Calls.live?.voipPosted(sbn)
         take(sbn, true)
         if (sbn.packageName != packageName) sl.link.notif(sbn) { Ranking().also { currentRanking.getRanking(sbn.key, it) }.importance }
     }
@@ -49,6 +50,7 @@ class NotifService : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         count()
         LiveFeed.removed(sbn)
+        Calls.live?.voipRemoved(sbn)
     }
 
     override fun onListenerConnected() {

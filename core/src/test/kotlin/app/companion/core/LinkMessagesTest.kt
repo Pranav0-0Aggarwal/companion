@@ -54,6 +54,7 @@ class LinkMessagesTest {
         assertEquals(ev["bridge_want"], norm(LinkMsg.bridgeWant("192.168.1.20", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")))
         assertEquals(ev["call"], norm(LinkMsg.call("c1", "ringing", "+919812345678", "Riya", null, 1_760_000_000_000, "full")))
         assertEquals(ev["call_audio"], norm(LinkMsg.callAudio("mac")))
+        assertEquals(ev["voip"], norm(LinkMsg.voip("a1b2c3d4e5f6", "ringing", "Riya")))
         assertEquals(ev["notif_v2"], norm(LinkMsg.notif("0|com.whatsapp|1|null|10123", "com.whatsapp", "WhatsApp", "Riya", "Are you free tonight?", 1_760_000_000_000, "0|com.whatsapp|1|null|10123", "com.whatsapp|riya@s.whatsapp.net", true, listOf(mapOf("id" to "0", "title" to "Mark as read")), mapOf("name" to "Riya"))))
         assertEquals(ev["live"], norm(LinkMsg.live("0|in.swiggy.android|7|null|10200", "in.swiggy.android", "Swiggy", "Order on the way", "Arriving in 12 min", 60, 100, 1_760_000_720_000, null, null)))
         assertEquals(ev["live_gone"], norm(LinkMsg.liveGone("0|in.swiggy.android|7|null|10200")))

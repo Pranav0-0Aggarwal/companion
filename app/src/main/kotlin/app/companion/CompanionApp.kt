@@ -29,6 +29,7 @@ import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
+import app.companion.link.Diag
 import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
 import app.companion.link.bulk.Bulk
@@ -92,6 +93,7 @@ class CompanionApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Diag.init(this)
         Merchant.source { assets.open("brands.json").use { it.readBytes().decodeToString() } }
         if (Process.isIsolated()) return
         Dl.load(this)

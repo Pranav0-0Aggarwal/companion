@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import android.service.notification.StatusBarNotification
 import app.companion.Services
 import app.companion.core.Json
@@ -154,6 +153,7 @@ class LinkHub(private val app: Application, sl: Services) {
 
     private fun up() {
         log("up")
+        Diag.add("link_ups")
         end()
         conn = CoroutineScope(scope.coroutineContext + Job(scope.coroutineContext[Job]))
         timeout()
@@ -225,6 +225,7 @@ class LinkHub(private val app: Application, sl: Services) {
 
     private fun accept() {
         log("authed")
+        Diag.add("link_authed")
         authed = true
         wait?.cancel()
         send(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
@@ -270,11 +271,12 @@ class LinkHub(private val app: Application, sl: Services) {
     }
 
     private fun log(s: String) {
-        Log.w("CompanionLink", s)
+        Diag.log(s)
     }
 
     private fun refuse(s: String) {
         log(s)
+        Diag.add("link_refused")
         gatt.disconnect()
     }
 

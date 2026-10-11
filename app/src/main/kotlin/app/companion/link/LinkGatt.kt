@@ -17,7 +17,6 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.os.ParcelUuid
-import android.util.Log
 import app.companion.core.Cccd
 import app.companion.core.LinkFrames
 import app.companion.core.LinkGattRule
@@ -95,11 +94,13 @@ class LinkGatt(
     }
 
     private fun log(s: String) {
-        Log.w("CompanionLink", s)
+        Diag.log(s)
     }
 
     fun send(msg: ByteArray) {
         if (dev == null) return
+        Diag.add("ble_tx_bytes", msg.size.toLong())
+        Diag.add("ble_tx_msgs")
         LinkFrames.split(msg, seq++ and 63, minOf(mtu, ATT) - 4).forEach(out::add)
         pump()
         if (msg.size > BULK) bulk()
@@ -184,7 +185,11 @@ class LinkGatt(
             scope.launch {
                 val ok = d == dev && subscribed && ch.uuid == RX && !prepared && offset == 0
                 if (response) server?.sendResponse(d, id, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE, 0, null)
-                if (ok) rx.feed(value)?.let(got)
+                if (ok) rx.feed(value)?.let {
+                    Diag.add("ble_rx_bytes", it.size.toLong())
+                    Diag.add("ble_rx_msgs")
+                    got(it)
+                }
             }
         }
 

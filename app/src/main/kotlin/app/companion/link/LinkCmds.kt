@@ -47,6 +47,7 @@ class LinkCmds(private val c: Context, private val sl: Services, private val sha
         "ring" -> LinkRing.start(c)
         "bridge_started" -> powers.started()
         "ping" -> Unit
+        "diag" -> Diag.snapshot((q["since"] as? Number)?.toLong() ?: 0L)
         else -> LinkFeatures.of(t)?.let { f -> need(f.key) { f.run(t, q) } } ?: throw LinkBad("unknown")
     }.let { if (it is Map<*, *>) @Suppress("UNCHECKED_CAST") (it as Obj) else emptyMap() }
 

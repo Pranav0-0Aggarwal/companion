@@ -14,10 +14,11 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
-import android.util.Log
 import app.companion.R
 import app.companion.core.LinkMsg
+import app.companion.link.Diag
 import app.companion.link.LinkStore
 import app.companion.link.Obj
 import app.companion.system.Notices
@@ -47,6 +48,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private var link: Job? = null
     @Volatile private var gen = 0
     private var obs: ContentObserver? = null
+    private var wifiAt = 0L
     val bridge = BridgeClient(scope)
     private val reason = MutableStateFlow<String?>(null)
     val why: StateFlow<String?> = reason
@@ -106,7 +108,8 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     private suspend fun relink() {
         val g = gen
-        if (pending() || !LinkStore.shares(app).any { it == "calls" || it == "mirror" }) return log("powers: idle, shares=${LinkStore.shares(app)}")
+        if (pending()) return log("powers: pending")
+        if (!LinkStore.shares(app).any { it == "calls" || it == "mirror" }) return log("powers: idle, no calls/mirror")
         if (bridge.up.value || bridge.connect()) return tell(true)
         if (!granted()) return tell(false, "setup")
         launch(wifiIp() ?: return log("powers: no wifi ip"), g)
@@ -116,6 +119,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private fun launch(ip: String, g: Int) {
         if (g != gen) return
         log("powers: want")
+        Diag.add("bridge_wants")
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip))
         arm()
@@ -137,7 +141,11 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         disarm()
         val up = bridge.connect() && runCatching { bridge.cmd("caps") }.isSuccess
         adbWifi(false)
-        if (up) tell(true) else bridge.close()
+        Diag.add(if (up) "bridge_up" else "bridge_fail")
+        if (up) tell(true) else {
+            log("powers: bridge did not answer")
+            bridge.close()
+        }
         return mapOf("up" to up)
     }
 
@@ -146,6 +154,11 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         if (!granted()) return
         main.removeCallbacks(unwatch)
         unwatch()
+        if (on && wifiAt == 0L) wifiAt = SystemClock.elapsedRealtime()
+        if (!on && wifiAt != 0L) {
+            Diag.add("adb_wifi_ms", SystemClock.elapsedRealtime() - wifiAt)
+            wifiAt = 0L
+        }
         if (on) {
             obs = object : ContentObserver(main) {
                 override fun onChange(self: Boolean) {
@@ -185,7 +198,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     }
 
     private fun log(s: String) {
-        Log.w("CompanionLink", s)
+        Diag.log(s)
     }
 
     private companion object {

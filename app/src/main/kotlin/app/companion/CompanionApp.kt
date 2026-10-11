@@ -31,6 +31,7 @@ import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
 import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
+import app.companion.link.feature.Calls
 import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
@@ -98,6 +99,7 @@ class CompanionApp : Application() {
         LinkFeatures.all += Messages
         LinkFeatures.all += LiveFeed(this)
         Files.register(this)
+        LinkFeatures.all += Calls(this) { sl.link.powers }
         if (LinkStore.on(this)) sl.link.start()
     }
 

@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.service.notification.StatusBarNotification
 import app.companion.Services
+import app.companion.bridge.Input
 import app.companion.core.LinkMsg
 import app.companion.data.dueDate
 import app.companion.link.feature.ClipImage
@@ -149,7 +150,7 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
 
     private val copied = ClipboardManager.OnPrimaryClipChangedListener {
         val d = cm.primaryClipDescription
-        if (d == null || d.label == "code" || d.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return@OnPrimaryClipChangedListener
+        if (d == null || d.label == "code" || d.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true || d.extras?.getBoolean(Input.RESTORED) == true) return@OnPrimaryClipChangedListener
         val item = cm.primaryClip?.getItemAt(0)
         val uri = item?.uri
         if (d.hasMimeType("image/*") && uri != null) {

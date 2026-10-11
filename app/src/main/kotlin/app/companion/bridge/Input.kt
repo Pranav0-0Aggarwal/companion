@@ -18,6 +18,7 @@ import app.companion.core.Json
 object Input {
     private const val PASTE = 279
     private const val RESTORE = 300L
+    const val RESTORED = "app.companion.clip.restored"
     private var down = 0L
     private var touch: Pair<Int, Int>? = null
     private val inject by lazy { runCatching { bind("InputManagerGlobal") }.getOrElse { bind("InputManager") } }
@@ -45,12 +46,14 @@ object Input {
         }
     }
 
+    @Synchronized
     fun release() {
         touch?.let { (x, y) -> runCatching { touch(2, x, y) } }
     }
 
     private fun num(q: Map<String, Any?>, k: String) = (q[k] as? Number)?.toInt() ?: -1
 
+    @Synchronized
     private fun touch(a: Int, x: Int, y: Int) {
         val act = when (a) {
             0 -> MotionEvent.ACTION_DOWN
@@ -102,7 +105,9 @@ object Input {
     private fun paste(ctx: Context, s: String) {
         val cm = ClipboardManager::class.java.getDeclaredConstructor(Context::class.java, Handler::class.java).apply { isAccessible = true }
             .newInstance(ctx, Handler(Looper.getMainLooper()))
-        val saved = cm.primaryClip
+        val saved = cm.primaryClip?.also { c ->
+            c.description.extras = PersistableBundle(c.description.extras ?: PersistableBundle()).apply { putBoolean(RESTORED, true) }
+        }
         cm.setPrimaryClip(ClipData.newPlainText("", s).apply { description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) } })
         key(PASTE)
         Handler(Looper.getMainLooper()).postDelayed({ runCatching { if (saved != null) cm.setPrimaryClip(saved) else cm.clearPrimaryClip() } }, RESTORE)

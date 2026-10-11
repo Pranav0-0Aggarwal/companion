@@ -11,7 +11,9 @@ import app.companion.link.Obj
 import app.companion.link.bulk.Bulk
 import app.companion.link.powers.BridgeClient
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -23,6 +25,8 @@ object MacMirror : LinkFeature {
     override val cmds = emptySet<String>()
     private const val BEAT = 5_000L
     private const val DEAD = 15_000L
+    private const val QUEUE = 30
+    private val IDR = """{"k":"idr"}""".encodeToByteArray()
     private val BEAT_MSG = mapOf("t" to "ka")
     private val args = setOf("on", "maxH", "fps", "bps")
     private var bridge: () -> BridgeClient = { error("unset") }
@@ -43,8 +47,22 @@ object MacMirror : LinkFeature {
         val old = pipe
         pipe = p
         old?.close()
+        val q = Channel<ByteArray>(QUEUE)
+        var skip = false
         val video: (ByteArray) -> Unit = { body ->
-            runCatching { VideoFrame.split(body).forEach { p.send(BulkFrame.VIDEO, it) } }.onFailure { p.close() }
+            val sync = body[0].toInt() and (VideoFrame.CONFIG or VideoFrame.KEY) != 0
+            if (skip && sync) skip = false
+            if (!skip && q.trySend(body).isFailure) {
+                skip = true
+                runCatching { b.stream(BridgeWire.INPUT, IDR) }
+            }
+        }
+        val out = launch(Dispatchers.IO) {
+            try {
+                for (f in q) VideoFrame.split(f).forEach { p.send(BulkFrame.VIDEO, it) }
+            } catch (_: Exception) {
+                p.close()
+            }
         }
         val meta: (ByteArray) -> Unit = { body ->
             runCatching {
@@ -56,11 +74,11 @@ object MacMirror : LinkFeature {
         b.on[BridgeWire.VIDEO] = video
         b.on[BridgeWire.JSON] = meta
         val seen = AtomicLong(now())
-        val gone = launch {
+        val gone = launch(Dispatchers.IO) {
             b.up.first { !it }
             p.close()
         }
-        val dog = launch {
+        val dog = launch(Dispatchers.IO) {
             while (now() - seen.get() < DEAD) {
                 delay(BEAT)
                 runCatching { p.sendJson(BEAT_MSG) }.onFailure { p.close() }
@@ -79,6 +97,8 @@ object MacMirror : LinkFeature {
         } finally {
             gone.cancel()
             dog.cancel()
+            q.close()
+            out.cancel()
             b.on.remove(BridgeWire.VIDEO, video)
             b.on.remove(BridgeWire.JSON, meta)
             if (pipe === p) {

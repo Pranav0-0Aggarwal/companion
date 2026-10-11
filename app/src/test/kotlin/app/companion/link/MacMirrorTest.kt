@@ -117,6 +117,24 @@ class MacMirrorTest {
     }
 
     @Test
+    fun `a slow Mac never blocks the bridge reader and costs one idr per overflow`() {
+        val fake = Fake()
+        relay(fake) { mac, done ->
+            mac.sendJson(mapOf("t" to "mirror", "on" to true))
+            assertTrue(fake.first.await(5, TimeUnit.SECONDS))
+            val until = System.nanoTime() + 5_000_000_000
+            while (fake.on[BridgeWire.VIDEO] == null && System.nanoTime() < until) Thread.sleep(10)
+            val p = ByteArray(60_000)
+            val t0 = System.nanoTime()
+            repeat(3000) { fake.on.getValue(BridgeWire.VIDEO)(p) }
+            assertTrue(System.nanoTime() - t0 < 4_000_000_000)
+            assertEquals(1, fake.sent.count { it.first == BridgeWire.INPUT })
+            mac.close()
+            assertTrue(done.await(5, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
     fun `a bridge side stop is forwarded and ends the session`() {
         val fake = Fake()
         relay(fake) { mac, done ->

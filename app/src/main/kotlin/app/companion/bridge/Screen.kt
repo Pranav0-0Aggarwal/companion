@@ -56,9 +56,8 @@ object Screen {
         runCatching { s.tx(BridgeWire.JSON, Json.write(mapOf("t" to "mirror", "ok" to false, "why" to why)).encodeToByteArray()) }
     }
 
-    @Synchronized
     fun idr() {
-        cur?.let { redo(it, true) }
+        cur?.let { s -> s.post { redo(s, true) } }
     }
 
     private fun arg(q: Map<String, Any?>, k: String, d: Int, r: IntRange) = (q[k] as? Number)?.toInt()?.coerceIn(r) ?: d
@@ -103,6 +102,10 @@ object Screen {
         fun open(): String? {
             runCatching { dm?.registerDisplayListener(watch, h) }
             return build()
+        }
+
+        fun post(r: Runnable) {
+            h.post(r)
         }
 
         fun rebuild(force: Boolean): String? {
@@ -188,6 +191,13 @@ object Screen {
             AutoCloseable { v.release() }
         }.getOrNull()
 
+        private fun fit(w: Int, h: Int, i: Info): Rect {
+            val k = minOf(w.toDouble() / i.w, h.toDouble() / i.h)
+            val dw = (i.w * k).toInt()
+            val dh = (i.h * k).toInt()
+            return Rect((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2)
+        }
+
         private fun legacy(sf: Surface, w: Int, h: Int, i: Info): AutoCloseable? = runCatching {
             val int = Int::class.javaPrimitiveType
             val c = Class.forName("android.view.SurfaceControl")
@@ -195,7 +205,7 @@ object Screen {
             c.getMethod("openTransaction").invoke(null)
             try {
                 c.getMethod("setDisplaySurface", IBinder::class.java, Surface::class.java).invoke(null, t, sf)
-                c.getMethod("setDisplayProjection", IBinder::class.java, int, Rect::class.java, Rect::class.java).invoke(null, t, 0, Rect(0, 0, i.w, i.h), Rect(0, 0, w, h))
+                c.getMethod("setDisplayProjection", IBinder::class.java, int, Rect::class.java, Rect::class.java).invoke(null, t, 0, Rect(0, 0, i.w, i.h), fit(w, h, i))
                 c.getMethod("setDisplayLayerStack", IBinder::class.java, int).invoke(null, t, i.stack)
             } finally {
                 c.getMethod("closeTransaction").invoke(null)

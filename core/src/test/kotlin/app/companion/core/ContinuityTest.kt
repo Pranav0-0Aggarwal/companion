@@ -3,6 +3,7 @@ package app.companion.core
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class ContinuityTest {
     private val v = Json.obj(checkNotNull(javaClass.getResourceAsStream("/link-vectors.json")).use { it.readBytes().decodeToString() })
@@ -47,17 +48,22 @@ class ContinuityTest {
         val okm = ByteArray(64) { 7 }
         val token = ByteArray(16) { it.toByte() }
         java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { srv ->
+            var err: Throwable? = null
             val t = Thread {
-                srv.accept().use { s ->
-                    val inp = java.io.DataInputStream(s.getInputStream())
-                    val tok = ByteArray(16).also(inp::readFully)
-                    kotlin.test.assertContentEquals(token, tok)
-                    val k = BulkCrypto.keys(okm, token, "files_in")
-                    val mac = BulkFrame(LinkSession(k.copyOfRange(0, 32), k.copyOfRange(32, 64), 1, 2, aad = BulkCrypto.AAD))
-                    s.getOutputStream().write(mac.seal(BulkFrame.DATA, "hi".toByteArray()))
-                    val (ty, body) = mac.read(inp)
-                    assertEquals(BulkFrame.JSON, ty)
-                    assertEquals("{\"t\":\"done\"}", body.decodeToString())
+                try {
+                    srv.accept().use { s ->
+                        val inp = java.io.DataInputStream(s.getInputStream())
+                        val tok = ByteArray(16).also(inp::readFully)
+                        kotlin.test.assertContentEquals(token, tok)
+                        val k = BulkCrypto.keys(okm, token, "files_in")
+                        val mac = BulkFrame(LinkSession(k.copyOfRange(0, 32), k.copyOfRange(32, 64), 1, 2, aad = BulkCrypto.AAD))
+                        s.getOutputStream().write(mac.seal(BulkFrame.DATA, "hi".toByteArray()))
+                        val (ty, body) = mac.read(inp)
+                        assertEquals(BulkFrame.JSON, ty)
+                        assertEquals("{\"t\":\"done\"}", body.decodeToString())
+                    }
+                } catch (e: Throwable) {
+                    err = e
                 }
             }.apply { start() }
             val sock = java.net.Socket("127.0.0.1", srv.localPort).apply { getOutputStream().write(token) }
@@ -66,6 +72,8 @@ class ContinuityTest {
                 p.sendJson(mapOf("t" to "done"))
             }
             t.join(2000)
+            assertFalse(t.isAlive)
+            err?.let { throw it }
         }
     }
 
@@ -78,7 +86,7 @@ class ContinuityTest {
     @Test
     fun `only rfc1918 literals pass`() {
         listOf("10.0.0.1", "172.16.0.1", "172.31.255.254", "192.168.0.1").forEach(BulkAddr::check)
-        listOf("172.15.0.1", "172.32.0.1", "192.169.0.1", "11.0.0.1", "127.0.0.1", "010.0.0.1", "10.0.0", "10.0.0.256", "10.0.0.1.1", "localhost", "", "::1", "+10.0.0.1").forEach {
+        listOf("172.15.0.1", "172.32.0.1", "192.169.0.1", "11.0.0.1", "127.0.0.1", "010.0.0.1", "10.0.0", "10.0.0.256", "10.0.0.1.1", "localhost", "", "::1", "+10.0.0.1", "\u0661\u0660.0.0.1", "10.0.0.\u0661").forEach {
             assertFailsWith<IllegalArgumentException>(it) { BulkAddr.check(it) }
         }
     }

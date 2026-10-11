@@ -5,7 +5,7 @@ import java.net.Socket
 
 object BulkAddr {
     fun check(ip: String) {
-        val p = ip.split('.').map { s -> s.takeIf { it.length in 1..3 && it.all(Char::isDigit) && (it.length == 1 || it[0] != '0') }?.toInt() }
+        val p = ip.split('.').map { s -> s.takeIf { it.length in 1..3 && it.all { c -> c in '0'..'9' } && (it.length == 1 || it[0] != '0') }?.toInt() }
         require(p.size == 4 && p.all { it != null && it <= 255 } && (p[0] == 10 || p[0] == 172 && p[1]!! in 16..31 || p[0] == 192 && p[1] == 168)) { "ip" }
     }
 }

@@ -17,6 +17,7 @@ import app.companion.core.LinkCrypto
 import app.companion.core.LinkMsg
 import app.companion.core.LinkPair
 import app.companion.core.LinkSession
+import app.companion.link.bulk.Bulk
 import app.companion.ui.has
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -156,6 +157,7 @@ class LinkHub(private val app: Application, sl: Services) {
         conn = null
         wait?.cancel()
         events.stop()
+        Bulk.closeAll()
         LinkFeatures.all.forEach(LinkFeature::stop)
         session = null
         authed = false

@@ -50,7 +50,6 @@ open class BridgeClient(private val scope: CoroutineScope) {
             s.soTimeout = 0
         } catch (_: IOException) {
             s.close()
-            Diag.log("bridge connect: refused")
             return@withContext false
         }
         synchronized(this@BridgeClient) {

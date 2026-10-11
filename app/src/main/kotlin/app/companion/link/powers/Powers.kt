@@ -124,10 +124,8 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         if (g != gen) return
         log("powers: want")
         Diag.add("bridge_wants")
-        val k = ByteArray(32).also(SecureRandom()::nextBytes)
-        val hex = BridgeAuth.hex(k)
-        prefs.edit().putString(KEY, hex).apply()
-        bridge.key = k
+        val hex = prefs.getString(KEY, null)?.takeIf { BridgeAuth.key(it) != null } ?: BridgeAuth.hex(ByteArray(32).also(SecureRandom()::nextBytes)).also { prefs.edit().putString(KEY, it).apply() }
+        bridge.key = BridgeAuth.key(hex)
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip, hex))
         arm()
@@ -153,6 +151,10 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         if (up) tell(true) else {
             log("powers: bridge did not answer")
             bridge.close()
+            if (reason.value == "setup" && granted()) scope.launch {
+                delay(2_000)
+                onLinked()
+            }
         }
         return mapOf("up" to up)
     }

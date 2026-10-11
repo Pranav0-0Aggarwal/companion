@@ -51,7 +51,7 @@ class LinkMessagesTest {
         val ev = sec("ev")
         assertEquals(ev["bulk_want"], norm(LinkMsg.bulkWant("files_out", "r1")))
         assertEquals(ev["bridge"], norm(LinkMsg.bridge(true)))
-        assertEquals(ev["bridge_want"], norm(LinkMsg.bridgeWant()))
+        assertEquals(ev["bridge_want"], norm(LinkMsg.bridgeWant("192.168.1.20")))
         assertEquals(ev["call"], norm(LinkMsg.call("c1", "ringing", "+919812345678", "Riya", null, 1_760_000_000_000, "full")))
         assertEquals(ev["call_audio"], norm(LinkMsg.callAudio("mac")))
         assertEquals(ev["notif_v2"], norm(LinkMsg.notif("0|com.whatsapp|1|null|10123", "com.whatsapp", "WhatsApp", "Riya", "Are you free tonight?", 1_760_000_000_000, "0|com.whatsapp|1|null|10123", "com.whatsapp|riya@s.whatsapp.net", true, listOf(mapOf("id" to "0", "title" to "Mark as read")), mapOf("name" to "Riya"))))

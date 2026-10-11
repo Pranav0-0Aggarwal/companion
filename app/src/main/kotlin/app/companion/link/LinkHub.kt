@@ -18,6 +18,7 @@ import app.companion.core.LinkMsg
 import app.companion.core.LinkPair
 import app.companion.core.LinkSession
 import app.companion.link.bulk.Bulk
+import app.companion.link.powers.Powers
 import app.companion.ui.has
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +39,8 @@ class LinkHub(private val app: Application, sl: Services) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
     private val gatt = LinkGatt(app, scope, ::up, ::down, ::got)
     private val events = LinkEvents(app, sl, { LinkStore.shares(app) }, ::push)
-    private val cmds = LinkCmds(app, sl, { LinkStore.shares(app) }, { okm })
+    private val powers = Powers(app, ::push)
+    private val cmds = LinkCmds(app, sl, { LinkStore.shares(app) }, { okm }, powers)
     private var session: LinkSession? = null
     @Volatile private var authed = false
     private var conn: CoroutineScope? = null
@@ -158,6 +160,7 @@ class LinkHub(private val app: Application, sl: Services) {
         wait?.cancel()
         events.stop()
         Bulk.closeAll()
+        powers.track(false)
         LinkFeatures.all.forEach(LinkFeature::stop)
         session = null
         authed = false
@@ -212,6 +215,8 @@ class LinkHub(private val app: Application, sl: Services) {
             val on = LinkStore.shares(app)
             LinkFeatures.all.forEach { if (it.key in on) runCatching { it.start(c, ::push) } }
         }
+        powers.onLinked()
+        powers.track(true)
         gatt.calmDown()
         reconcile()
     }

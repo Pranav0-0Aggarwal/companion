@@ -90,4 +90,19 @@ class ContinuityTest {
             assertFailsWith<IllegalArgumentException>(it) { BulkAddr.check(it) }
         }
     }
+
+    @Test
+    fun `bridge wire round trips and rejects oversize`() {
+        val out = java.io.ByteArrayOutputStream()
+        BridgeWire.write(out, BridgeWire.JSON, "{\"t\":\"caps\",\"id\":1}".toByteArray())
+        BridgeWire.write(out, BridgeWire.AUDIO, ByteArray(640))
+        val inp = java.io.DataInputStream(out.toByteArray().inputStream())
+        assertEquals(BridgeWire.JSON, BridgeWire.read(inp).first)
+        assertEquals(640, BridgeWire.read(inp).second.size)
+        val bad = java.io.DataInputStream(byteArrayOf(0x7f, 0, 0, 0, 0).inputStream())
+        assertFailsWith<java.io.IOException> { BridgeWire.read(bad) }
+        val neg = java.io.DataInputStream(byteArrayOf(-1, -1, -1, -1, 0).inputStream())
+        assertFailsWith<java.io.IOException> { BridgeWire.read(neg) }
+        assertFailsWith<java.io.IOException> { BridgeWire.write(out, BridgeWire.VIDEO, ByteArray(BridgeWire.MAX + 1)) }
+    }
 }

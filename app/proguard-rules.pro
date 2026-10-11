@@ -3,3 +3,4 @@
 -dontwarn com.google.ai.edge.litert.**
 -keep class app.companion.ai.NuxJni { native <methods>; }
 -keep class app.companion.ai.ChatJni { native <methods>; }
+-keep class app.companion.bridge.Main { public static void main(java.lang.String[]); }

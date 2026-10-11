@@ -34,6 +34,7 @@ import app.companion.link.LinkHub
 import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
+import app.companion.link.feature.Files
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -96,6 +97,7 @@ class CompanionApp : Application() {
         Meetings.watch(this)
         LinkFeatures.all += Messages
         LinkFeatures.all += LiveFeed(this)
+        Files.register(this)
         if (LinkStore.on(this)) sl.link.start()
     }
 

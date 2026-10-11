@@ -81,6 +81,22 @@
             android:taskAffinity="app.companion.cover"
             android:theme="@style/Theme.Cover" />
 
+        <activity
+            android:name=".link.feature.SendToMacActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="Send to Mac"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
         <activity-alias
             android:name=".HealthRationale"
             android:exported="true"

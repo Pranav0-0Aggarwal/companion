@@ -29,7 +29,9 @@ import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
+import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
+import app.companion.link.feature.Calls
 import app.companion.link.LinkStore
 import app.companion.system.Alarms
 import app.companion.system.Export
@@ -91,6 +93,7 @@ class CompanionApp : Application() {
         Upgrade.boot(this)
         Thread { Models.purge(this) }.start()
         Meetings.watch(this)
+        LinkFeatures.all += Calls(this, sl.link.powers)
         if (LinkStore.on(this)) sl.link.start()
     }
 

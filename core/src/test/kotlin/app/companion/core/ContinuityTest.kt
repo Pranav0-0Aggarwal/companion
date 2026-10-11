@@ -105,4 +105,10 @@ class ContinuityTest {
         assertFailsWith<java.io.IOException> { BridgeWire.read(neg) }
         assertFailsWith<java.io.IOException> { BridgeWire.write(out, BridgeWire.VIDEO, ByteArray(BridgeWire.MAX + 1)) }
     }
+
+    @Test
+    fun `call info pulls a dialable number from notification text`() {
+        assertEquals("+919812345678", CallInfo.number("Incoming call · +91 98123 45678"))
+        assertEquals(null, CallInfo.number("Incoming call"))
+    }
 }

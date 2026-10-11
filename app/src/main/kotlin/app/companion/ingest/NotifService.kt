@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import app.companion.core.Chats
 import app.companion.core.Raw
 import app.companion.core.Source
+import app.companion.link.feature.Calls
 import app.companion.sl
 import app.companion.system.Notes
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ class NotifService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
+        Calls.live?.fromNotification(sbn)
         take(sbn, true)
         if (sbn.packageName != packageName) sl.link.notif(sbn) { Ranking().also { currentRanking.getRanking(sbn.key, it) }.importance }
     }

@@ -17,14 +17,14 @@ import javax.crypto.spec.SecretKeySpec
 
 class LinkError(why: String) : Exception(why)
 
-class LinkSession(private val out: ByteArray, private val inn: ByteArray, private val outDir: Int, private val inDir: Int, val okm: ByteArray = ByteArray(0)) {
+class LinkSession(private val out: ByteArray, private val inn: ByteArray, private val outDir: Int, private val inDir: Int, val okm: ByteArray = ByteArray(0), private val aad: ByteArray = AAD) {
     private var sent = 0L
     private var seen = -1L
 
     fun seal(plain: ByteArray, counter: Long = sent++): ByteArray {
         val c = Cipher.getInstance(GCM).apply {
             init(Cipher.ENCRYPT_MODE, SecretKeySpec(out, AES), GCMParameterSpec(TAG, nonce(outDir, counter)))
-            updateAAD(AAD)
+            updateAAD(aad)
         }
         return byteArrayOf(SEALED) + ByteBuffer.allocate(8).putLong(counter).array() + c.doFinal(plain)
     }
@@ -35,7 +35,7 @@ class LinkSession(private val out: ByteArray, private val inn: ByteArray, privat
         if (counter < 0 || counter <= seen) throw LinkError("replay")
         val c = Cipher.getInstance(GCM).apply {
             init(Cipher.DECRYPT_MODE, SecretKeySpec(inn, AES), GCMParameterSpec(TAG, nonce(inDir, counter)))
-            updateAAD(AAD)
+            updateAAD(aad)
         }
         val plain = try {
             c.doFinal(msg, 9, msg.size - 9)

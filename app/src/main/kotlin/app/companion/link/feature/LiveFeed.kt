@@ -93,11 +93,7 @@ class LiveFeed(private val app: Application) : LinkFeature {
         cur = null
         pending.keys.forEach(main::removeCallbacksAndMessages)
         pending.clear()
-        send?.let { s ->
-            val now = System.currentTimeMillis()
-            sent.forEach { s(LinkMsg.liveGone(it)) }
-            mark?.takeIf { it.playing }?.let { s(frame(it.copy(playing = false), pos + now - at, now)) }
-        }
+        send?.let { s -> sent.forEach { s(LinkMsg.liveGone(it)) } }
         mark = null
         artKey = ""
         sent.forEach(throttle::forget)

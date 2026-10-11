@@ -36,6 +36,7 @@ import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
 import app.companion.link.feature.Files
+import app.companion.link.feature.MacMirror
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -99,6 +100,7 @@ class CompanionApp : Application() {
         LinkFeatures.all += Messages
         LinkFeatures.all += LiveFeed(this)
         Files.register(this)
+        MacMirror.register { sl.link.powers.bridge }
         LinkFeatures.all += Calls(this) { sl.link.powers }
         if (LinkStore.on(this)) sl.link.start()
     }

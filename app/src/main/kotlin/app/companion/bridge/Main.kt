@@ -71,26 +71,30 @@ object Main {
     }
 
     private fun serve(c: LocalSocket) {
+        val tx = { t: Int, b: ByteArray -> synchronized(c) { BridgeWire.write(c.outputStream, t, b) } }
         try {
             val input = DataInputStream(c.inputStream.buffered())
             while (true) {
                 val (t, body) = BridgeWire.read(input)
                 when (t) {
-                    BridgeWire.JSON -> BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()))).encodeToByteArray())
+                    BridgeWire.JSON -> tx(BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), tx)).encodeToByteArray())
+                    BridgeWire.INPUT -> Input.handle(ctx, body)
                     else -> Unit
                 }
             }
         } catch (_: Exception) {
         } finally {
+            Screen.release(tx)
             drop(c)
         }
     }
 
-    private fun run(q: Map<String, Any?>): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
             "grant" -> res(id, grant())
+            "mirror" -> Screen.run(ctx, q, tx).let { if (it == null) res(id, true) else res(id, false, "err" to it) }
             else -> res(id, false, "err" to "unknown")
         }
     }

@@ -37,7 +37,7 @@ class LinkHub(private val app: Application, sl: Services) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
     private val gatt = LinkGatt(app, scope, ::up, ::down, ::got)
     private val events = LinkEvents(app, sl, { LinkStore.shares(app) }, ::push)
-    private val cmds = LinkCmds(app, sl) { LinkStore.shares(app) }
+    private val cmds = LinkCmds(app, sl, { LinkStore.shares(app) }, { okm })
     private var session: LinkSession? = null
     @Volatile private var authed = false
     private var conn: CoroutineScope? = null

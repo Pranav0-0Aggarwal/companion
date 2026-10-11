@@ -10,6 +10,7 @@ import app.companion.core.Query
 import app.companion.data.Task
 import app.companion.data.bill
 import app.companion.data.money
+import app.companion.link.bulk.Bulk
 import app.companion.system.Cals
 import app.companion.system.Live
 import app.companion.system.Plan
@@ -25,7 +26,7 @@ class LinkOff : Exception()
 
 class LinkBad(why: String) : Exception(why)
 
-class LinkCmds(private val c: Context, private val sl: Services, private val shares: () -> Set<String>) {
+class LinkCmds(private val c: Context, private val sl: Services, private val shares: () -> Set<String>, private val okm: () -> ByteArray?) {
     private val repo get() = sl.repo
 
     suspend fun run(t: String, q: Obj): Obj = when (t) {
@@ -41,6 +42,7 @@ class LinkCmds(private val c: Context, private val sl: Services, private val sha
         "task_add" -> need("tasks") { mapOf("id" to add(q)) }
         "task_done" -> need("tasks") { Plan.finish(c, repo.task(LinkArgs.item(q))?.takeUnless { it.gone }?.id ?: throw LinkBad("gone")) }
         "clip" -> need("clipIn") { clip(LinkArgs.text(q, "text", CLIP)) }
+        "bulk" -> need(Bulk.share(q)) { Bulk.open(okm() ?: throw LinkOff(), q) }
         "ring" -> LinkRing.start(c)
         "ping" -> Unit
         else -> LinkFeatures.of(t)?.let { f -> need(f.key) { f.run(t, q) } } ?: throw LinkBad("unknown")

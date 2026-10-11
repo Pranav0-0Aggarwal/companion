@@ -41,4 +41,45 @@ class ContinuityTest {
         val f = BulkFrame(BulkCrypto.phone(hex(v.getValue("okm") as String), hex(b.getValue("token")), b.getValue("purpose")))
         assertEquals(f.seal(BulkFrame.JSON, "x".toByteArray(), counter = 0).size, f.seal(BulkFrame.JSON, "x".toByteArray()).size)
     }
+
+    @Test
+    fun `pipe talks to a mac stand-in over loopback`() {
+        val okm = ByteArray(64) { 7 }
+        val token = ByteArray(16) { it.toByte() }
+        java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { srv ->
+            val t = Thread {
+                srv.accept().use { s ->
+                    val inp = java.io.DataInputStream(s.getInputStream())
+                    val tok = ByteArray(16).also(inp::readFully)
+                    kotlin.test.assertContentEquals(token, tok)
+                    val k = BulkCrypto.keys(okm, token, "files_in")
+                    val mac = BulkFrame(LinkSession(k.copyOfRange(0, 32), k.copyOfRange(32, 64), 1, 2, aad = BulkCrypto.AAD))
+                    s.getOutputStream().write(mac.seal(BulkFrame.DATA, "hi".toByteArray()))
+                    val (ty, body) = mac.read(inp)
+                    assertEquals(BulkFrame.JSON, ty)
+                    assertEquals("{\"t\":\"done\"}", body.decodeToString())
+                }
+            }.apply { start() }
+            val sock = java.net.Socket("127.0.0.1", srv.localPort).apply { getOutputStream().write(token) }
+            BulkPipe(sock, BulkFrame(BulkCrypto.phone(okm, token, "files_in")), "files_in", null).use { p ->
+                assertEquals("hi", p.read().second.decodeToString())
+                p.sendJson(mapOf("t" to "done"))
+            }
+            t.join(2000)
+        }
+    }
+
+    @Test
+    fun `public ip is refused`() {
+        assertFailsWith<IllegalArgumentException> { BulkAddr.check("8.8.8.8") }
+        BulkAddr.check("192.168.1.20")
+    }
+
+    @Test
+    fun `only rfc1918 literals pass`() {
+        listOf("10.0.0.1", "172.16.0.1", "172.31.255.254", "192.168.0.1").forEach(BulkAddr::check)
+        listOf("172.15.0.1", "172.32.0.1", "192.169.0.1", "11.0.0.1", "127.0.0.1", "010.0.0.1", "10.0.0", "10.0.0.256", "10.0.0.1.1", "localhost", "", "::1", "+10.0.0.1").forEach {
+            assertFailsWith<IllegalArgumentException>(it) { BulkAddr.check(it) }
+        }
+    }
 }

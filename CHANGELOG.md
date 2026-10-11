@@ -11,9 +11,9 @@ Works with Notchy 1.1.0. Every switch is off until you turn it on in Settings, M
 - Live activities: deliveries, rides, timers and media show on the Mac, with play, pause and skip for what is playing.
 - Files: Send to Mac from the share sheet, and receive files from the Mac in Downloads, Notchy.
 - Screenshots and copied images: new screenshots appear on the Mac, and an image copied on one device can be pasted on the other.
-- Handoff: send a page to your Mac, and open pages from the Mac on the phone.
+- Handoff: send a page to your Mac, and open pages from the Mac on the phone (⌃⌥H on the Mac sends the front browser page).
 - Do Not Disturb follows between the two devices.
-- Phone mirroring: see and control this screen in a Mac window, opened from the Mirror button in Notchy's Phone tab. Needs Phone powers.
+- Phone mirroring: see and control this screen in a Mac window, opened from the Mirror button in Notchy's Phone tab or with ⌃⌥M. Needs Phone powers.
 - Files, screenshots, call audio and mirroring use your Wi-Fi straight to the Mac, only while you use them. Both devices must be on the same Wi-Fi. Everything stays end to end encrypted and nothing goes through the internet.
 
 ### Phone powers

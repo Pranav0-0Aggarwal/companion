@@ -176,10 +176,10 @@ object Files : LinkFeature {
 class SendToMacActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
-        val url = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.trim()?.takeIf {
-            intent.action == Intent.ACTION_SEND && !intent.hasExtra(Intent.EXTRA_STREAM) && HandoffUrl.openable(it)
+        val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.let(HandoffUrl::text)?.takeIf {
+            intent.action == Intent.ACTION_SEND && !intent.hasExtra(Intent.EXTRA_STREAM)
         }
-        if (url != null) Handoff.send(this, url, intent.getStringExtra(Intent.EXTRA_SUBJECT)) else Files.send(this, intent)
+        if (text != null) Handoff.send(this, text, intent.getStringExtra(Intent.EXTRA_SUBJECT)) else Files.send(this, intent)
         finish()
     }
 }

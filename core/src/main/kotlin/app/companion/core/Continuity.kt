@@ -28,6 +28,8 @@ object SendGuard {
 }
 
 object HandoffUrl {
+    fun text(s: String) = s.trim().takeIf { it.isNotEmpty() && it.toByteArray().size <= 2048 }
+
     fun openable(url: String) = runCatching { java.net.URI(url) }.getOrNull()?.let { it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrEmpty() } == true
 }
 

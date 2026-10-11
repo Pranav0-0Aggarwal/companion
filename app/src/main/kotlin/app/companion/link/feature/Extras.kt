@@ -38,7 +38,7 @@ class Handoff(private val app: Application) : LinkFeature {
                 .setSmallIcon(R.drawable.ic_tile)
                 .setContentTitle("Open on phone: $title")
                 .setAutoCancel(true)
-                .setContentIntent(PendingIntent.getActivity(app, 0, Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE))
+                .setContentIntent(PendingIntent.getActivity(app, 0, Intent(Intent.ACTION_VIEW, Uri.parse(url).normalizeScheme()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE))
                 .build(),
         )
         return emptyMap()

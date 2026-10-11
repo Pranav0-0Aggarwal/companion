@@ -78,10 +78,10 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
         var why: String? = null
         var job: Job? = null
         var dog: Job? = null
-        val cb: (Int, ByteArray) -> Unit = { t, body -> if (t == BulkFrame.AUDIO) q.trySend(body) }
+        val cb: (ByteArray) -> Unit = { q.trySend(it) }
         try {
             airborne({ b.cmd("call_audio", mapOf("on" to it)) }, CallRestore(am.getStreamVolume(VOICE), am.isMicrophoneMute), { v, m -> restore(am, v, m) }) {
-                synchronized(b) { b.onFrame = cb }
+                b.on[BulkFrame.AUDIO] = cb
                 job = scope.launch {
                     try {
                         for (f in q) p.send(BulkFrame.AUDIO, f)
@@ -112,7 +112,7 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
             dog?.cancel()
             job?.cancel()
             q.close()
-            synchronized(b) { if (b.onFrame === cb) b.onFrame = null }
+            b.on.remove(BulkFrame.AUDIO, cb)
             synchronized(this) { if (cur === s) cur = null }
             out?.invoke(LinkMsg.callAudio("phone", why))
         }

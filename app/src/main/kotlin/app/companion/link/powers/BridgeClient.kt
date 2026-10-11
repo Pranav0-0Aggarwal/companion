@@ -19,13 +19,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-class BridgeClient(private val scope: CoroutineScope) {
+open class BridgeClient(private val scope: CoroutineScope) {
     private val state = MutableStateFlow(false)
     private val pend = ConcurrentHashMap<Long, CompletableDeferred<Obj>>()
     private val ids = AtomicLong()
     private var sock: LocalSocket? = null
-    val up: StateFlow<Boolean> = state
-    @Volatile var onFrame: ((Int, ByteArray) -> Unit)? = null
+    open val up: StateFlow<Boolean> = state
+    val on = ConcurrentHashMap<Int, (ByteArray) -> Unit>()
 
     suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
         close()
@@ -44,7 +44,7 @@ class BridgeClient(private val scope: CoroutineScope) {
         true
     }
 
-    suspend fun cmd(t: String, p: Obj = emptyMap()): Obj {
+    open suspend fun cmd(t: String, p: Obj = emptyMap()): Obj {
         val id = ids.incrementAndGet()
         val d = CompletableDeferred<Obj>().also { pend[id] = it }
         try {
@@ -55,7 +55,7 @@ class BridgeClient(private val scope: CoroutineScope) {
         }
     }
 
-    fun stream(type: Int, body: ByteArray) = send(type, body)
+    open fun stream(type: Int, body: ByteArray) = send(type, body)
 
     fun close() = end(sock)
 
@@ -76,7 +76,7 @@ class BridgeClient(private val scope: CoroutineScope) {
                 val (t, body) = BridgeWire.read(input)
                 val j = if (t == BridgeWire.JSON) runCatching { Json.obj(body.decodeToString()) }.getOrNull() else null
                 val d = (j?.get("id") as? Number)?.let { pend[it.toLong()] }
-                if (d != null) d.complete(j) else onFrame?.invoke(t, body)
+                if (d != null) d.complete(j) else on[t]?.let { runCatching { it(body) } }
             }
         } catch (_: IOException) {
         } finally {

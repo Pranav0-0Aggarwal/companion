@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.ConnectivityManager
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+    private val prefs = app.getSharedPreferences("powers", Context.MODE_PRIVATE)
     private val main = Handler(Looper.getMainLooper())
     private val cm = app.getSystemService(ConnectivityManager::class.java)
     private val wifi = object : ConnectivityManager.NetworkCallback() {
@@ -39,11 +41,16 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private val unwatch = Runnable { unwatch() }
     private var timer: Job? = null
     private var link: Job? = null
+    @Volatile private var gen = 0
     private var obs: ContentObserver? = null
     val bridge = BridgeClient(scope)
 
     init {
-        if (granted() && Settings.Global.getInt(app.contentResolver, ADB, 0) == 1) adbWifi(false)
+        release()
+    }
+
+    private fun release() {
+        if (prefs.getBoolean(ON, false)) adbWifi(false)
     }
 
     fun granted() = app.checkSelfPermission(PERM) == PackageManager.PERMISSION_GRANTED
@@ -61,9 +68,11 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     @Synchronized
     fun unlinked() {
+        gen++
         link?.cancel()
         track(false)
-        if (disarm()) adbWifi(false)
+        disarm()
+        release()
     }
 
     @Synchronized
@@ -89,19 +98,25 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     }
 
     private suspend fun relink() {
+        val g = gen
         if (pending()) return
         if (bridge.up.value || bridge.connect()) return push(LinkMsg.bridge(true))
         if (!granted()) return push(LinkMsg.bridge(false, "setup"))
-        val ip = wifiIp() ?: return
+        launch(wifiIp() ?: return, g)
+    }
+
+    @Synchronized
+    private fun launch(ip: String, g: Int) {
+        if (g != gen) return
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip))
         arm()
     }
 
-    private fun wifiIp(): String? {
-        val n = cm.activeNetwork ?: return null
-        if (cm.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return null
-        return cm.getLinkProperties(n)?.linkAddresses?.firstOrNull { it.address is Inet4Address }?.address?.hostAddress
+    @Suppress("DEPRECATION")
+    private fun wifiIp() = cm.allNetworks.firstNotNullOfOrNull { n ->
+        if (cm.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) null
+        else cm.getLinkProperties(n)?.linkAddresses?.firstOrNull { it.address is Inet4Address }?.address?.hostAddress
     }
 
     suspend fun started(): Obj {
@@ -126,6 +141,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
             main.postDelayed(unwatch, WATCH)
         }
         Settings.Global.putInt(app.contentResolver, ADB, if (on) 1 else 0)
+        prefs.edit().putBoolean(ON, on).apply()
     }
 
     @Synchronized
@@ -136,6 +152,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     private fun untrusted() {
         disarm()
+        prefs.edit().putBoolean(ON, false).apply()
         main.removeCallbacks(unwatch)
         unwatch()
         push(LinkMsg.bridge(false, "network"))
@@ -156,6 +173,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private companion object {
         const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
         const val ADB = "adb_wifi_enabled"
+        const val ON = "wifiOn"
         const val CHAN = "powers"
         const val ID = 0x50575253
         const val LAUNCH = 30_000L

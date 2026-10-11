@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class Powers(private val app: Application, private val push: (Obj) -> Unit) {
@@ -139,7 +140,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     suspend fun started(): Obj {
         disarm()
-        val up = bridge.connect() && runCatching { bridge.cmd("caps") }.isSuccess
+        val up = withTimeoutOrNull(WAIT) { while (!bridge.connect()) delay(250); true } == true && runCatching { bridge.cmd("caps") }.isSuccess
         adbWifi(false)
         Diag.add(if (up) "bridge_up" else "bridge_fail")
         if (up) tell(true) else {
@@ -209,5 +210,6 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         const val ID = 0x50575253
         const val LAUNCH = 30_000L
         const val WATCH = 2_000L
+        const val WAIT = 5_000L
     }
 }

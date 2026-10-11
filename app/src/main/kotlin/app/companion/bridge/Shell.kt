@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.media.AudioManager
 import android.os.Process
+import java.lang.reflect.InvocationTargetException
 
 object Shell {
     private const val PKG = "com.android.shell"
@@ -31,4 +32,11 @@ object Shell {
     }
 
     fun audio(ctx: Context): AudioManager = AudioManager::class.java.getDeclaredConstructor(Context::class.java).apply { isAccessible = true }.newInstance(ctx)
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> sys(am: AudioManager, name: String, vararg a: Any): T = try {
+        am.javaClass.getMethod(name, *a.map { it.javaClass }.toTypedArray()).invoke(am, *a) as T
+    } catch (e: InvocationTargetException) {
+        throw e.cause ?: e
+    }
 }

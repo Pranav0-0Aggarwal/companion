@@ -7,7 +7,6 @@ import android.hardware.display.VirtualDisplay
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
-import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
@@ -38,19 +37,28 @@ object Screen {
         Input.release()
     }
 
+    fun available() = Hw.info() != null
+
     @Synchronized
     fun release(tx: (Int, ByteArray) -> Unit) {
         if (cur?.tx === tx) stop()
     }
 
     @Synchronized
-    internal fun redo(s: Session) {
-        if (cur === s && !s.rebuild()) stop()
+    internal fun redo(s: Session, force: Boolean = false) {
+        if (cur === s) s.rebuild(force)?.let { fail(s, it) }
+    }
+
+    @Synchronized
+    internal fun fail(s: Session, why: String) {
+        if (cur !== s) return
+        stop()
+        runCatching { s.tx(BridgeWire.JSON, Json.write(mapOf("t" to "mirror", "ok" to false, "why" to why)).encodeToByteArray()) }
     }
 
     @Synchronized
     fun idr() {
-        cur?.idr()
+        cur?.let { redo(it, true) }
     }
 
     private fun arg(q: Map<String, Any?>, k: String, d: Int, r: IntRange) = (q[k] as? Number)?.toInt()?.coerceIn(r) ?: d
@@ -74,7 +82,7 @@ object Screen {
             override fun onInputBufferAvailable(c: MediaCodec, i: Int) = Unit
             override fun onOutputFormatChanged(c: MediaCodec, f: MediaFormat) = Unit
             override fun onError(c: MediaCodec, e: MediaCodec.CodecException) {
-                h.post { stopMe() }
+                h.post { Screen.fail(this@Session, "encoder") }
             }
 
             override fun onOutputBufferAvailable(c: MediaCodec, i: Int, b: MediaCodec.BufferInfo) {
@@ -87,27 +95,21 @@ object Screen {
                     }
                     c.releaseOutputBuffer(i, false)
                 } catch (_: Exception) {
-                    h.post { stopMe() }
+                    h.post { Screen.fail(this@Session, "stream") }
                 }
             }
         }
-
-        private fun stopMe() = Screen.release(tx)
 
         fun open(): String? {
             runCatching { dm?.registerDisplayListener(watch, h) }
             return build()
         }
 
-        fun rebuild(): Boolean {
-            val i = Hw.info() ?: return false
-            if (i.w == info.w && i.h == info.h && i.rot == info.rot) return true
+        fun rebuild(force: Boolean): String? {
+            val i = Hw.info() ?: return "display"
+            if (!force && i.w == info.w && i.h == info.h && i.rot == info.rot) return null
             teardown()
-            return build() == null
-        }
-
-        fun idr() {
-            runCatching { codec?.setParameters(Bundle().apply { putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0) }) }
+            return build()
         }
 
         fun close() {

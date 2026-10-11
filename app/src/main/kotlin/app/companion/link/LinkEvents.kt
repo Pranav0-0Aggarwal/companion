@@ -13,10 +13,12 @@ import android.service.notification.StatusBarNotification
 import app.companion.Services
 import app.companion.core.LinkMsg
 import app.companion.data.dueDate
+import app.companion.link.feature.ClipImage
 import app.companion.link.feature.Messages
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -61,7 +63,7 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
             alerts.clear()
             seeded = false
         }
-        clip(focused && "clipOut" in on)
+        clip(focused && ("clipOut" in on || "clipImage" in on))
         scope?.launch {
             scanOtps()
             watch("battery" in on)
@@ -71,7 +73,7 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
 
     fun focus(on: Boolean) {
         focused = on
-        clip(scope != null && on && "clipOut" in shares())
+        clip(scope != null && on && shares().let { "clipOut" in it || "clipImage" in it })
     }
 
     fun notif(sbn: StatusBarNotification, importance: () -> Int) {
@@ -148,7 +150,14 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
     private val copied = ClipboardManager.OnPrimaryClipChangedListener {
         val d = cm.primaryClipDescription
         if (d == null || d.label == "code" || d.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return@OnPrimaryClipChangedListener
-        val text = cm.primaryClip?.getItemAt(0)?.coerceToText(c)?.toString()?.take(CLIP)?.takeIf { it.isNotBlank() && it != echo } ?: return@OnPrimaryClipChangedListener
+        val item = cm.primaryClip?.getItemAt(0)
+        val uri = item?.uri
+        if (d.hasMimeType("image/*") && uri != null) {
+            if ("clipImage" in shares()) scope?.launch(Dispatchers.IO) { ClipImage.event(uri)?.let { out(it) } }
+            return@OnPrimaryClipChangedListener
+        }
+        if ("clipOut" !in shares()) return@OnPrimaryClipChangedListener
+        val text = item?.coerceToText(c)?.toString()?.take(CLIP)?.takeIf { it.isNotBlank() && it != echo } ?: return@OnPrimaryClipChangedListener
         send(LinkMsg.clip(text))
     }
 

@@ -2,6 +2,7 @@ package app.companion.core
 
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 object ConvKey {
     fun of(pkg: String, shortcutId: String?, convTitle: String?, title: String) = "$pkg|${shortcutId ?: convTitle ?: title}"
@@ -25,6 +26,16 @@ object SafeName {
 object SendGuard {
     fun ok(scheme: String?, authority: String?, self: String, owner: (String) -> String?) =
         scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfterLast('@')) != self
+}
+
+object ShotFilter {
+    fun isShot(relPath: String?, name: String?) = relPath?.contains("Screenshots/", true) == true || name?.startsWith("Screenshot_") == true
+}
+
+object HandoffUrl {
+    fun text(s: String) = s.trim().takeIf { it.isNotEmpty() && it.toByteArray().size <= 2048 }
+
+    fun openable(url: String) = runCatching { java.net.URI(url) }.getOrNull()?.let { it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrEmpty() } == true
 }
 
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {
@@ -51,4 +62,10 @@ class Expiring<T>(private val ttl: Long, private val now: () -> Long, private va
         m.values.forEach { drop(it.second) }
         m.clear()
     }
+}
+
+class CallRestore(private val volume: Int, private val micMuted: Boolean) {
+    private val spent = AtomicBoolean()
+
+    fun take(): Pair<Int, Boolean>? = if (spent.compareAndSet(false, true)) volume to micMuted else null
 }

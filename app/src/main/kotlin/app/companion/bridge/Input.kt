@@ -1,10 +1,12 @@
 package app.companion.bridge
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.InputEvent
@@ -15,14 +17,18 @@ import app.companion.core.Json
 
 object Input {
     private const val PASTE = 279
+    private const val RESTORE = 300L
     private var down = 0L
     private var touch: Pair<Int, Int>? = null
-    private val inject by lazy {
-        val c = Class.forName("android.hardware.input.InputManager")
+    private val inject by lazy { runCatching { bind("InputManagerGlobal") }.getOrElse { bind("InputManager") } }
+
+    fun available() = runCatching { inject }.isSuccess
+
+    private fun bind(name: String): (InputEvent) -> Unit {
+        val c = Class.forName("android.hardware.input.$name")
         val im = c.getMethod("getInstance").invoke(null)
         val m = c.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType)
-        val f: (InputEvent) -> Unit = { e -> m.invoke(im, e, 0) }
-        f
+        return { e -> m.invoke(im, e, 0) }
     }
 
     fun handle(ctx: Context, body: ByteArray) {
@@ -90,9 +96,16 @@ object Input {
     private fun text(ctx: Context, s: String) {
         val e = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(s.toCharArray())
         if (e != null) return e.forEach(::put)
-        ClipboardManager::class.java.getDeclaredConstructor(Context::class.java, Handler::class.java).apply { isAccessible = true }
-            .newInstance(ctx, Handler(Looper.getMainLooper())).setPrimaryClip(ClipData.newPlainText("", s))
+        paste(ctx, s)
+    }
+
+    private fun paste(ctx: Context, s: String) {
+        val cm = ClipboardManager::class.java.getDeclaredConstructor(Context::class.java, Handler::class.java).apply { isAccessible = true }
+            .newInstance(ctx, Handler(Looper.getMainLooper()))
+        val saved = cm.primaryClip
+        cm.setPrimaryClip(ClipData.newPlainText("", s).apply { description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) } })
         key(PASTE)
+        Handler(Looper.getMainLooper()).postDelayed({ runCatching { if (saved != null) cm.setPrimaryClip(saved) else cm.clearPrimaryClip() } }, RESTORE)
     }
 
     private fun put(e: InputEvent) {

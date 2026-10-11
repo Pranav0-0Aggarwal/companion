@@ -1,5 +1,6 @@
 package app.companion.core
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -351,5 +352,36 @@ class ContinuityTest {
         assertEquals(false, CallInfo.mine("cB", 100, "cA", 50))
         assertEquals(true, CallInfo.mine(null, 100, "cA", 50))
         assertEquals(false, CallInfo.mine(null, 40, "cA", 50))
+    }
+
+    @Test
+    fun `handoff opens only web urls`() {
+        assertTrue(HandoffUrl.openable("https://example.com"))
+        assertTrue(HandoffUrl.openable("HTTP://example.com/a?b=c"))
+        listOf("intent://scan#Intent;scheme=zxing;end", "file:///sdcard/x", "javascript:alert(1)", "tel:123", "https://", "https:///x", "ftp://x", "https://a.com b", "two\nhttps://a.com", "").forEach { assertFalse(HandoffUrl.openable(it), it) }
+    }
+
+    @Test
+    fun `handoff text is trimmed and capped at 2 KB`() {
+        assertEquals("a b", HandoffUrl.text("  a b\n"))
+        assertNull(HandoffUrl.text("  \n"))
+        assertEquals(2048, HandoffUrl.text("x".repeat(2048))?.length)
+        assertNull(HandoffUrl.text("x".repeat(2049)))
+        assertNull(HandoffUrl.text("é".repeat(1025)))
+    }
+
+    @Test
+    fun `call restore returns volume and mic exactly once`() {
+        val r = CallRestore(volume = 5, micMuted = false)
+        assertEquals(5 to false, r.take())
+        assertEquals(null, r.take())
+    }
+
+    @Test
+    fun `call restore hands out one winner under a race`() {
+        val r = CallRestore(volume = 3, micMuted = true)
+        val got = ConcurrentLinkedQueue<Pair<Int, Boolean>>()
+        List(8) { Thread { r.take()?.let(got::add) } }.onEach(Thread::start).forEach(Thread::join)
+        assertEquals(listOf(3 to true), got.toList())
     }
 }

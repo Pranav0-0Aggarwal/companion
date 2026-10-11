@@ -1,6 +1,5 @@
 package app.companion.link.feature
 
-import android.os.SystemClock
 import app.companion.core.BridgeWire
 import app.companion.core.BulkFrame
 import app.companion.core.BulkPipe
@@ -24,6 +23,7 @@ object MacMirror : LinkFeature {
     override val cmds = emptySet<String>()
     private const val BEAT = 5_000L
     private const val DEAD = 15_000L
+    private val BEAT_MSG = mapOf("t" to "ka")
     private val args = setOf("on", "maxH", "fps", "bps")
     private var bridge: () -> BridgeClient = { error("unset") }
     @Volatile private var pipe: BulkPipe? = null
@@ -43,30 +43,34 @@ object MacMirror : LinkFeature {
         val old = pipe
         pipe = p
         old?.close()
-        val prev = b.onFrame
-        val mine: (Int, ByteArray) -> Unit = { t, body ->
+        val video: (ByteArray) -> Unit = { body ->
+            runCatching { VideoFrame.split(body).forEach { p.send(BulkFrame.VIDEO, it) } }.onFailure { p.close() }
+        }
+        val meta: (ByteArray) -> Unit = { body ->
             runCatching {
-                when {
-                    t == BridgeWire.VIDEO -> VideoFrame.split(body).forEach { p.send(BulkFrame.VIDEO, it) }
-                    t == BridgeWire.JSON && Json.obj(body.decodeToString())["t"] == "size" -> p.send(BulkFrame.JSON, body)
-                    else -> prev?.invoke(t, body)
-                }
+                val t = Json.obj(body.decodeToString())["t"]
+                if (t == "size" || t == "mirror") p.send(BulkFrame.JSON, body)
+                if (t == "mirror") p.close()
             }.onFailure { p.close() }
         }
-        b.onFrame = mine
-        val seen = AtomicLong(SystemClock.elapsedRealtime())
+        b.on[BridgeWire.VIDEO] = video
+        b.on[BridgeWire.JSON] = meta
+        val seen = AtomicLong(now())
         val gone = launch {
             b.up.first { !it }
             p.close()
         }
         val dog = launch {
-            while (SystemClock.elapsedRealtime() - seen.get() < DEAD) delay(BEAT)
+            while (now() - seen.get() < DEAD) {
+                delay(BEAT)
+                runCatching { p.sendJson(BEAT_MSG) }.onFailure { p.close() }
+            }
             p.close()
         }
         try {
             while (true) {
                 val (t, body) = p.read()
-                seen.set(SystemClock.elapsedRealtime())
+                seen.set(now())
                 when (t) {
                     BulkFrame.INPUT -> b.stream(BridgeWire.INPUT, body)
                     BulkFrame.JSON -> json(p, b, Json.obj(body.decodeToString()))
@@ -75,7 +79,8 @@ object MacMirror : LinkFeature {
         } finally {
             gone.cancel()
             dog.cancel()
-            if (b.onFrame === mine) b.onFrame = prev
+            b.on.remove(BridgeWire.VIDEO, video)
+            b.on.remove(BridgeWire.JSON, meta)
             if (pipe === p) {
                 pipe = null
                 withContext(NonCancellable) { runCatching { b.cmd("mirror", mapOf("on" to false)) } }
@@ -90,6 +95,8 @@ object MacMirror : LinkFeature {
         p.sendJson(why(r?.get("err") as? String ?: "powers"))
         p.close()
     }
+
+    private fun now() = System.nanoTime() / 1_000_000
 
     private fun why(w: String) = mapOf("t" to "mirror", "ok" to false, "why" to w)
 }

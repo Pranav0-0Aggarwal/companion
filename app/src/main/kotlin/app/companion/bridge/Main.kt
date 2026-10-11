@@ -21,12 +21,14 @@ object Main {
     private const val PKG = "app.companion"
     private const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
     private lateinit var ctx: Context
-    private var cur: LocalSocket? = null
+    @Volatile private var cur: LocalSocket? = null
+    private lateinit var pcm: CallAudio
 
     @JvmStatic
     fun main(args: Array<String>) {
         Looper.prepareMainLooper()
         ctx = Shell.context()
+        pcm = CallAudio(ctx) { t, b -> cur?.let { s -> synchronized(s) { BridgeWire.write(s.outputStream, t, b) } } }
         val uid = ctx.packageManager.getPackageUid(PKG, 0)
         val srv = try {
             LocalServerSocket(NAME)
@@ -59,6 +61,7 @@ object Main {
 
     @Synchronized
     private fun adopt(c: LocalSocket) {
+        pcm.stop()
         cur?.close()
         cur = c
         thread { serve(c) }
@@ -66,7 +69,10 @@ object Main {
 
     @Synchronized
     private fun drop(c: LocalSocket) {
-        if (cur === c) cur = null
+        if (cur === c) {
+            cur = null
+            pcm.stop()
+        }
         c.close()
     }
 
@@ -77,7 +83,8 @@ object Main {
             while (true) {
                 val (t, body) = BridgeWire.read(input)
                 when (t) {
-                    BridgeWire.JSON -> tx(BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), tx)).encodeToByteArray())
+                    BridgeWire.JSON -> tx(BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), c, tx)).encodeToByteArray())
+                    BridgeWire.AUDIO -> pcm.play(body)
                     BridgeWire.INPUT -> Input.handle(ctx, body)
                     else -> Unit
                 }
@@ -89,21 +96,34 @@ object Main {
         }
     }
 
-    private fun run(q: Map<String, Any?>, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>, c: LocalSocket, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
             "grant" -> res(id, grant())
+            "call_audio" -> call(id, q["on"] == true, c)
             "mirror" -> Screen.run(ctx, q, tx).let { if (it == null) res(id, true) else res(id, false, "err" to it) }
             else -> res(id, false, "err" to "unknown")
         }
     }
 
+    @Synchronized
+    private fun call(id: Any?, on: Boolean, c: LocalSocket): Map<String, Any?> {
+        if (cur !== c) return res(id, false, "err" to "busy")
+        if (!on) return res(id, true).also { pcm.stop() }
+        return try {
+            pcm.start()
+            res(id, true)
+        } catch (e: Exception) {
+            res(id, false, "err" to (e.message ?: "fail"))
+        }
+    }
+
     private fun res(id: Any?, ok: Boolean, vararg more: Pair<String, Any?>) = mapOf("t" to "res", "id" to id, "ok" to ok) + more
 
-    private fun caps() = mapOf("audio" to audio(), "mirror" to true, "input" to true, "sdk" to Build.VERSION.SDK_INT)
+    private fun caps() = mapOf("audio" to audio(), "mirror" to Screen.available(), "input" to Input.available(), "sdk" to Build.VERSION.SDK_INT)
 
-    private fun audio() = runCatching { Shell.audio(ctx).let { it.javaClass.getMethod("isPstnCallAudioInterceptable").invoke(it) as Boolean } }.getOrDefault(false)
+    private fun audio() = runCatching { Shell.sys<Boolean>(Shell.audio(ctx), "isPstnCallAudioInterceptable") }.getOrDefault(false)
 
     private fun grant() = runCatching { Runtime.getRuntime().exec(arrayOf("/system/bin/pm", "grant", PKG, PERM)).waitFor() == 0 }.getOrDefault(false)
 }

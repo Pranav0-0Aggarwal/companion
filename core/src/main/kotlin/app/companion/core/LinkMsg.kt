@@ -42,7 +42,7 @@ object LinkMsg {
     fun call(id: String, state: String, number: String?, name: String?, photo: String?, started: Long?, ctl: String) =
         compact("t" to "call", "id" to id, "state" to state, "number" to number, "name" to name, "photo" to photo, "started" to started, "ctl" to ctl)
 
-    fun callAudio(where: String) = mapOf("t" to "call_audio", "where" to where)
+    fun callAudio(where: String, why: String? = null) = compact("t" to "call_audio", "where" to where, "why" to why)
 
     fun notif(id: String, app: String, appName: String, title: String, text: String, at: Long, key: String, conv: String, canReply: Boolean, actions: List<Map<String, String>>, person: Map<String, String>?) =
         compact("t" to "notif", "id" to id, "app" to app, "appName" to appName, "title" to title, "text" to text, "at" to at, "key" to key, "conv" to conv, "canReply" to canReply, "actions" to actions, "person" to person)
@@ -55,7 +55,7 @@ object LinkMsg {
     fun media(pkg: String, title: String, artist: String, art: String?, playing: Boolean, pos: Long, dur: Long, at: Long) =
         compact("t" to "media", "pkg" to pkg, "title" to title, "artist" to artist, "art" to art, "playing" to playing, "pos" to pos, "dur" to dur, "at" to at)
 
-    fun shot(id: Long, w: Int, h: Int, thumb: String) = mapOf("t" to "shot", "id" to id, "w" to w, "h" to h, "thumb" to thumb)
+    fun shot(id: Long, w: Int, h: Int, thumb: String, mime: String) = mapOf("t" to "shot", "id" to id, "w" to w, "h" to h, "thumb" to thumb, "mime" to mime)
 
     fun clipImg(ref: String, w: Int, h: Int, thumb: String) = mapOf("t" to "clip_img", "ref" to ref, "w" to w, "h" to h, "thumb" to thumb)
 

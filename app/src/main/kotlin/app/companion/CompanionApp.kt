@@ -31,12 +31,17 @@ import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
 import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
+import app.companion.link.bulk.Bulk
+import app.companion.link.feature.CallRelay
 import app.companion.link.feature.Calls
+import app.companion.link.feature.Dnd
 import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
 import app.companion.link.feature.Files
 import app.companion.link.feature.MacMirror
+import app.companion.link.feature.Shots
+import app.companion.link.feature.Handoff
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -102,6 +107,14 @@ class CompanionApp : Application() {
         Files.register(this)
         MacMirror.register { sl.link.powers.bridge }
         LinkFeatures.all += Calls(this) { sl.link.powers }
+        Shots.register(this)
+        LinkFeatures.all += Handoff(this)
+        LinkFeatures.all += Dnd(this)
+        CallRelay(this) { sl.link.powers }.also {
+            LinkFeatures.all += it
+            it.register()
+            Bulk.handlers["call"] = it::serve
+        }
         if (LinkStore.on(this)) sl.link.start()
     }
 

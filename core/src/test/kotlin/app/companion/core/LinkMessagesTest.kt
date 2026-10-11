@@ -58,7 +58,7 @@ class LinkMessagesTest {
         assertEquals(ev["live"], norm(LinkMsg.live("0|in.swiggy.android|7|null|10200", "in.swiggy.android", "Swiggy", "Order on the way", "Arriving in 12 min", 60, 100, 1_760_000_720_000, null, null)))
         assertEquals(ev["live_gone"], norm(LinkMsg.liveGone("0|in.swiggy.android|7|null|10200")))
         assertEquals(ev["media"], norm(LinkMsg.media("com.spotify.music", "Song", "Artist", null, true, 61_000, 200_000, 1_760_000_000_000)))
-        assertEquals(ev["shot"], norm(LinkMsg.shot(1_760_000_000_123, 1080, 2340, "/9j/4AAQSkZJRg==")))
+        assertEquals(ev["shot"], norm(LinkMsg.shot(1_760_000_000_123, 1080, 2340, "/9j/4AAQSkZJRg==", "image/png")))
         assertEquals(ev["clip_img"], norm(LinkMsg.clipImg("k1", 1080, 720, "/9j/4AAQSkZJRg==")))
         assertEquals(ev["handoff"], norm(LinkMsg.handoff("https://example.com/page", "Example page")))
         assertEquals(ev["dnd"], norm(LinkMsg.dnd(true)))

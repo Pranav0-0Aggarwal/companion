@@ -36,6 +36,7 @@ import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
 import app.companion.link.feature.Files
+import app.companion.link.feature.Shots
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -100,6 +101,7 @@ class CompanionApp : Application() {
         LinkFeatures.all += LiveFeed(this)
         Files.register(this)
         LinkFeatures.all += Calls(this) { sl.link.powers }
+        Shots.register(this)
         if (LinkStore.on(this)) sl.link.start()
     }
 

@@ -103,7 +103,7 @@ object Files : LinkFeature {
         if (i.action == Intent.ACTION_SEND_MULTIPLE) i.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
         else listOfNotNull(i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
 
-    private fun open(c: Context, u: Uri): FileFrames.Item? {
+    fun open(c: Context, u: Uri): FileFrames.Item? {
         if (!SendGuard.ok(u.scheme, u.authority, c.packageName) { c.packageManager.resolveContentProvider(it, 0)?.packageName }) return null
         val r = c.contentResolver
         val pfd = runCatching { r.openFileDescriptor(u, "r") }.getOrNull() ?: return null

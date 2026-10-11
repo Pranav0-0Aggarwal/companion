@@ -27,6 +27,10 @@ object SendGuard {
         scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfterLast('@')) != self
 }
 
+object ShotFilter {
+    fun isShot(relPath: String?, name: String?) = relPath?.contains("Screenshots/", true) == true || name?.startsWith("Screenshot_") == true
+}
+
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {
     private val m = ConcurrentHashMap<String, Pair<Long, T>>()
 

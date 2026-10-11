@@ -15,7 +15,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.service.notification.StatusBarNotification
-import app.companion.core.LinkCrypto
 import app.companion.core.LinkMsg
 import app.companion.core.LiveRule
 import app.companion.core.LiveThrottle
@@ -23,10 +22,8 @@ import app.companion.ingest.NotifService
 import app.companion.link.LinkBad
 import app.companion.link.LinkFeature
 import app.companion.link.Obj
-import java.io.ByteArrayOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 
 class LiveFeed(private val app: Application) : LinkFeature {
@@ -182,22 +179,10 @@ class LiveFeed(private val app: Application) : LinkFeature {
         d.draw(Canvas(it))
     }
 
-    private fun jpeg(src: Bitmap): String? {
-        var b = if (src.config == Bitmap.Config.HARDWARE) src.copy(Bitmap.Config.ARGB_8888, false) ?: return null else src
-        val k = EDGE.toFloat() / maxOf(b.width, b.height)
-        if (k < 1) b = Bitmap.createScaledBitmap(b, (b.width * k).roundToInt().coerceAtLeast(1), (b.height * k).roundToInt().coerceAtLeast(1), true)
-        var q = 80
-        while (true) {
-            val o = ByteArrayOutputStream()
-            b.compress(Bitmap.CompressFormat.JPEG, q, o)
-            if (o.size() <= MAX) return LinkCrypto.b64(o.toByteArray())
-            if (q > 30) q -= 20 else if (b.width > 8) b = Bitmap.createScaledBitmap(b, b.width * 3 / 4, b.height * 3 / 4, true) else return null
-        }
-    }
+    private fun jpeg(src: Bitmap) = Jpeg.b64(src, EDGE, 80)
 
     companion object {
         private const val EDGE = 96
-        private const val MAX = 16 * 1024
         @Volatile private var on: LiveFeed? = null
 
         fun posted(sbn: StatusBarNotification) {

@@ -88,6 +88,7 @@ class LinkHub(private val app: Application, sl: Services) {
                 send(LinkMsg.shareEvent(LinkStore.shares(app)))
                 events.sync()
                 revive(k, on)
+                if (on) powers.onLinked()
             }
             reconcile()
         }
@@ -255,7 +256,7 @@ class LinkHub(private val app: Application, sl: Services) {
     }
 
     private fun send(o: Obj) {
-        val s = session ?: return
+        val s = session?.takeIf { authed } ?: return
         gatt.send(s.seal(Json.write(o).encodeToByteArray()))
     }
 

@@ -17,6 +17,7 @@ import android.os.Looper
 import android.provider.Settings
 import app.companion.R
 import app.companion.core.LinkMsg
+import app.companion.link.LinkStore
 import app.companion.link.Obj
 import app.companion.system.Notices
 import app.companion.ui.has
@@ -104,7 +105,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     private suspend fun relink() {
         val g = gen
-        if (pending()) return
+        if (pending() || !LinkStore.shares(app).any { it == "calls" || it == "mirror" }) return
         if (bridge.up.value || bridge.connect()) return tell(true)
         if (!granted()) return tell(false, "setup")
         launch(wifiIp() ?: return, g)

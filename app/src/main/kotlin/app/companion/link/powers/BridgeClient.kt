@@ -32,6 +32,7 @@ open class BridgeClient(private val scope: CoroutineScope) {
         val s = LocalSocket()
         try {
             s.connect(LocalSocketAddress(NAME, LocalSocketAddress.Namespace.ABSTRACT))
+            if (s.peerCredentials.uid != SHELL) throw IOException()
         } catch (_: IOException) {
             s.close()
             return@withContext false
@@ -98,5 +99,6 @@ open class BridgeClient(private val scope: CoroutineScope) {
     private companion object {
         const val NAME = "companion.bridge"
         const val TIMEOUT = 5_000L
+        const val SHELL = 2000
     }
 }

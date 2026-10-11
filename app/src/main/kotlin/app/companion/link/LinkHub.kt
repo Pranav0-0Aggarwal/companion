@@ -197,9 +197,8 @@ class LinkHub(private val app: Application, sl: Services) {
         val nm = runCatching { LinkCrypto.unb64(j["nm"] as String) }.getOrNull()
         val pair = LinkStore.pair(app)
         if (j["t"] != "hello" || (j["v"] as? Number)?.toInt() != 1 || nm?.size != 16 || pair == null) return gatt.disconnect()
-        val keys = LinkStore.keys(app)
         val np = LinkCrypto.random(16)
-        session = LinkCrypto.session(keys.priv, pair.mac, pair.secret, nm, np)
+        val keys = runCatching { LinkStore.keys(app).also { session = LinkCrypto.session(it.priv, pair.mac, pair.secret, nm, np) } }.getOrNull() ?: return gatt.disconnect()
         gatt.send(LinkMsg.plain(Json.write(LinkMsg.hello(np, keys.pub))))
         timeout()
     }

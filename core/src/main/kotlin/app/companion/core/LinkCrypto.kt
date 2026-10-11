@@ -1,12 +1,10 @@
 package app.companion.core
 
-import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.KeyFactory
 import java.security.SecureRandom
-import java.security.spec.NamedParameterSpec
-import java.security.spec.XECPrivateKeySpec
-import java.security.spec.XECPublicKeySpec
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -62,7 +60,8 @@ class LinkSession(private val out: ByteArray, private val inn: ByteArray, privat
 class LinkKeys(val priv: ByteArray, val pub: ByteArray)
 
 object LinkCrypto {
-    private val curve = NamedParameterSpec.X25519
+    private val p8 = byteArrayOf(0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x04, 0x22, 0x04, 0x20)
+    private val x509 = byteArrayOf(0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00)
     private val base = ByteArray(32).also { it[0] = 9 }
     private val info = "companion-link v1".toByteArray()
     private val rng = SecureRandom()
@@ -77,8 +76,8 @@ object LinkCrypto {
         val f = KeyFactory.getInstance("XDH")
         val u = peer.copyOf().also { it[31] = (it[31].toInt() and 0x7f).toByte() }
         return KeyAgreement.getInstance("XDH").run {
-            init(f.generatePrivate(XECPrivateKeySpec(curve, priv)))
-            doPhase(f.generatePublic(XECPublicKeySpec(curve, BigInteger(1, u.reversedArray()))), true)
+            init(f.generatePrivate(PKCS8EncodedKeySpec(p8 + priv)))
+            doPhase(f.generatePublic(X509EncodedKeySpec(x509 + u)), true)
             generateSecret()
         }
     }

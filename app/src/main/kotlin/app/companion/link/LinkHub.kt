@@ -82,11 +82,11 @@ class LinkHub(private val app: Application, sl: Services) {
         LinkStore.setShare(app, k, on)
         scope.launch {
             if (authed) {
-                push(LinkMsg.shareEvent(LinkStore.shares(app)))
+                send(LinkMsg.shareEvent(LinkStore.shares(app)))
                 events.sync()
                 LinkFeatures.all.filter { it.key == k }.forEach { f ->
                     f.stop()
-                    if (on) conn?.let { f.start(it, ::push) }
+                    if (on) conn?.let { c -> runCatching { f.start(c, ::push) } }
                 }
             }
             reconcile()
@@ -204,11 +204,11 @@ class LinkHub(private val app: Application, sl: Services) {
     private fun accept() {
         authed = true
         wait?.cancel()
-        push(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
+        send(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
         conn?.let { c ->
             events.start(c)
             val on = LinkStore.shares(app)
-            LinkFeatures.all.forEach { if (it.key in on) it.start(c, ::push) }
+            LinkFeatures.all.forEach { if (it.key in on) runCatching { it.start(c, ::push) } }
         }
         gatt.calmDown()
         reconcile()
@@ -229,13 +229,17 @@ class LinkHub(private val app: Application, sl: Services) {
             } catch (e: Exception) {
                 fail(id, "failed")
             }
-            push(res)
+            send(res)
         }
     }
 
     private fun fail(id: Long, why: String) = mapOf("t" to "res", "id" to id, "ok" to false, "err" to why)
 
     fun push(o: Obj) {
+        scope.launch { send(o) }
+    }
+
+    private fun send(o: Obj) {
         val s = session ?: return
         gatt.send(s.seal(Json.write(o).encodeToByteArray()))
     }

@@ -12,6 +12,7 @@ class LinkFeatureTest {
     fun `commands route to the feature that owns them`() {
         val a = Probe("a", setOf("x", "y"))
         val b = Probe("b", setOf("z"))
+        val n = LinkFeatures.all.size
         LinkFeatures.all += listOf(a, b)
         try {
             assertSame(a, LinkFeatures.of("y"))
@@ -20,6 +21,6 @@ class LinkFeatureTest {
         } finally {
             LinkFeatures.all -= setOf(a, b)
         }
-        assertEquals(0, LinkFeatures.all.size)
+        assertEquals(n, LinkFeatures.all.size)
     }
 }

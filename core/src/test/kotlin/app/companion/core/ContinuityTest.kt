@@ -352,4 +352,20 @@ class ContinuityTest {
         assertEquals(true, CallInfo.mine(null, 100, "cA", 50))
         assertEquals(false, CallInfo.mine(null, 40, "cA", 50))
     }
+
+    @Test
+    fun `handoff opens only web urls`() {
+        assertTrue(HandoffUrl.openable("https://example.com"))
+        assertTrue(HandoffUrl.openable("HTTP://example.com/a?b=c"))
+        listOf("intent://scan#Intent;scheme=zxing;end", "file:///sdcard/x", "javascript:alert(1)", "tel:123", "https://", "https:///x", "ftp://x", "https://a.com b", "two\nhttps://a.com", "").forEach { assertFalse(HandoffUrl.openable(it), it) }
+    }
+
+    @Test
+    fun `handoff text is trimmed and capped at 2 KB`() {
+        assertEquals("a b", HandoffUrl.text("  a b\n"))
+        assertNull(HandoffUrl.text("  \n"))
+        assertEquals(2048, HandoffUrl.text("x".repeat(2048))?.length)
+        assertNull(HandoffUrl.text("x".repeat(2049)))
+        assertNull(HandoffUrl.text("é".repeat(1025)))
+    }
 }

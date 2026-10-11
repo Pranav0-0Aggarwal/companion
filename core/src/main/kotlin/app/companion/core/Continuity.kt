@@ -31,6 +31,12 @@ object ShotFilter {
     fun isShot(relPath: String?, name: String?) = relPath?.contains("Screenshots/", true) == true || name?.startsWith("Screenshot_") == true
 }
 
+object HandoffUrl {
+    fun text(s: String) = s.trim().takeIf { it.isNotEmpty() && it.toByteArray().size <= 2048 }
+
+    fun openable(url: String) = runCatching { java.net.URI(url) }.getOrNull()?.let { it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrEmpty() } == true
+}
+
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {
     private val m = ConcurrentHashMap<String, Pair<Long, T>>()
 

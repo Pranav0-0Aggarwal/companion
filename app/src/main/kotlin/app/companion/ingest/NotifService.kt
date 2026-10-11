@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import app.companion.core.Chats
 import app.companion.core.Raw
 import app.companion.core.Source
+import app.companion.link.feature.LiveFeed
 import app.companion.sl
 import app.companion.system.Notes
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ class NotifService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
+        LiveFeed.posted(sbn)
         take(sbn, true)
         if (sbn.packageName != packageName) sl.link.notif(sbn) { Ranking().also { currentRanking.getRanking(sbn.key, it) }.importance }
     }
@@ -42,7 +44,10 @@ class NotifService : NotificationListenerService() {
         scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}", live = live) } }
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification) = count()
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        count()
+        LiveFeed.removed(sbn)
+    }
 
     override fun onListenerConnected() {
         up.value = true
@@ -90,6 +95,8 @@ class NotifService : NotificationListenerService() {
         val up = MutableStateFlow<Boolean?>(null)
         val shade = MutableStateFlow(0)
         @Volatile private var live: NotifService? = null
+
+        fun active() = live?.let { s -> runCatching { s.activeNotifications.toList() }.getOrNull() }.orEmpty()
 
         fun clearApps() {
             val s = live ?: return

@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ContinuityTest {
     private val v = Json.obj(checkNotNull(javaClass.getResourceAsStream("/link-vectors.json")).use { it.readBytes().decodeToString() })
@@ -89,5 +90,27 @@ class ContinuityTest {
         listOf("172.15.0.1", "172.32.0.1", "192.169.0.1", "11.0.0.1", "127.0.0.1", "010.0.0.1", "10.0.0", "10.0.0.256", "10.0.0.1.1", "localhost", "", "::1", "+10.0.0.1", "\u0661\u0660.0.0.1", "10.0.0.\u0661").forEach {
             assertFailsWith<IllegalArgumentException>(it) { BulkAddr.check(it) }
         }
+    }
+
+    @Test
+    fun `live throttle passes new keys and state changes, holds repeats for 5s`() {
+        val t = LiveThrottle()
+        assertTrue(t.pass("k", "a", 0))
+        assertFalse(t.pass("k", "a", 1_000))
+        assertTrue(t.pass("k", "b", 1_500))
+        assertFalse(t.pass("k", "b", 6_000))
+        assertTrue(t.pass("k", "b", 6_500))
+        t.forget("k")
+        assertTrue(t.pass("k", "b", 6_600))
+    }
+
+    @Test
+    fun `live rule needs ongoing plus progress, chronometer or a live category, never calls`() {
+        assertTrue(LiveRule.ok(true, 100, false, null))
+        assertTrue(LiveRule.ok(true, 0, true, null))
+        listOf("progress", "transport", "navigation", "stopwatch").forEach { assertTrue(LiveRule.ok(true, 0, false, it)) }
+        assertFalse(LiveRule.ok(false, 100, true, "progress"))
+        assertFalse(LiveRule.ok(true, 0, false, "email"))
+        assertFalse(LiveRule.ok(true, 100, true, "call"))
     }
 }

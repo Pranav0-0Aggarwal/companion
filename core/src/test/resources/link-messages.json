@@ -191,6 +191,7 @@
   "clip_img_req": {
    "t": "clip_img",
    "id": 34,
+   "ref": "k1",
    "w": 1080,
    "h": 720,
    "thumb": "/9j/4AAQSkZJRg=="
@@ -581,7 +582,7 @@
   },
   "clip_img": {
    "t": "clip_img",
-   "id": "k1",
+   "ref": "k1",
    "w": 1080,
    "h": 720,
    "thumb": "/9j/4AAQSkZJRg=="

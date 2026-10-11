@@ -57,7 +57,7 @@ object LinkMsg {
 
     fun shot(id: Long, w: Int, h: Int, thumb: String) = mapOf("t" to "shot", "id" to id, "w" to w, "h" to h, "thumb" to thumb)
 
-    fun clipImg(id: String, w: Int, h: Int, thumb: String) = mapOf("t" to "clip_img", "id" to id, "w" to w, "h" to h, "thumb" to thumb)
+    fun clipImg(ref: String, w: Int, h: Int, thumb: String) = mapOf("t" to "clip_img", "ref" to ref, "w" to w, "h" to h, "thumb" to thumb)
 
     fun handoff(url: String, title: String) = mapOf("t" to "handoff", "url" to url, "title" to title)
 

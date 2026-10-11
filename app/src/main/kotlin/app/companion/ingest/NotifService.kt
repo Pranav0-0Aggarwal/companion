@@ -9,6 +9,8 @@ import android.service.notification.StatusBarNotification
 import app.companion.core.Chats
 import app.companion.core.Raw
 import app.companion.core.Source
+import app.companion.link.feature.LiveFeed
+import app.companion.link.feature.Calls
 import app.companion.sl
 import app.companion.system.Notes
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +25,11 @@ class NotifService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         count()
+        LiveFeed.posted(sbn)
+        Calls.live?.fromNotification(sbn)
+        Calls.live?.voipPosted(sbn)
         take(sbn, true)
+        if (sbn.packageName != packageName) sl.link.notif(sbn) { Ranking().also { currentRanking.getRanking(sbn.key, it) }.importance }
     }
 
     private fun take(sbn: StatusBarNotification, live: Boolean) {
@@ -41,7 +47,11 @@ class NotifService : NotificationListenerService() {
         scope.launch { items.forEach { ingest.handle(it, "${sbn.key}|${if (chat) it.at else it.title + it.body}", live = live) } }
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification) = count()
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        count()
+        LiveFeed.removed(sbn)
+        Calls.live?.voipRemoved(sbn)
+    }
 
     override fun onListenerConnected() {
         up.value = true
@@ -72,6 +82,7 @@ class NotifService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        if (live === this) live = null
         scope.cancel()
         super.onDestroy()
     }
@@ -88,7 +99,10 @@ class NotifService : NotificationListenerService() {
     companion object {
         val up = MutableStateFlow<Boolean?>(null)
         val shade = MutableStateFlow(0)
-        @Volatile private var live: NotifService? = null
+        @Volatile var live: NotifService? = null
+            private set
+
+        fun active() = live?.let { s -> runCatching { s.activeNotifications.toList() }.getOrNull() }.orEmpty()
 
         fun clearApps() {
             val s = live ?: return

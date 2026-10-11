@@ -27,6 +27,10 @@ class Snack(val host: SnackbarHostState, private val scope: CoroutineScope) {
 
     fun say(text: String) = go { host.showSnackbar(text) }
 
+    fun act(text: String, label: String, f: () -> Unit) = go {
+        if (host.showSnackbar(text, label, duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) f()
+    }
+
     fun <T : Any> offer(value: T, text: String, undo: suspend (T) -> Unit) = go {
         if (host.showSnackbar(text, "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) undo(value)
     }

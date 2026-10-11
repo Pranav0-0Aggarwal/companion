@@ -20,7 +20,7 @@ Companion reads SMS, app notifications (CRED, INDmoney, Amazon Pay, banks, UPI a
 
 ## Positioning
 
-Fully on device and private: no network permission, nothing leaves the phone. It merges the same event seen through several channels (a bank SMS, a CRED notification and an Amazon Pay notification for one payment) into one entry. A calibrated decision model files what it is sure about and asks the owner about the rest, so its confidence is honest.
+Fully on device and private: your messages are never sent to a server, and nothing leaves the phone except, when you turn the Mac link on, to the one Mac you paired, over Bluetooth, end-to-end encrypted. It merges the same event seen through several channels (a bank SMS, a CRED notification and an Amazon Pay notification for one payment) into one entry. A calibrated decision model files what it is sure about and asks the owner about the rest, so its confidence is honest.
 
 ## Operating Context
 
@@ -37,7 +37,8 @@ Fully on device and private: no network permission, nothing leaves the phone. It
 - Pipeline: collect, extract with rules (amount, account or card ending, merchant, due date, OTP and expiry), classify with the model only when rules cannot decide, de-duplicate across sources, store with links back to sources.
 - OTPs expire and are deleted after their validity (default 10 minutes when not stated).
 - Cards: the owner adds each credit card with bank, optional name, last 4 digits, statement day, due day and optional limit. Never the full card number or CVV. Transactions from SMS, notifications and statement emails are matched to a card by bank and last 4 digits and shown per statement cycle, with limit used and the due date.
-- Low RAM and battery: no resident model, no polling, event driven, inference only on new items.
+- Mac link (optional, off until paired): Bluetooth LE only, BLUETOOTH_CONNECT and BLUETOOTH_ADVERTISE, no camera permission (the pairing code is scanned with the system camera). Codes, spending, needs-you items, battery, tasks, chosen app notifications and clipboard each have their own share switch, all off by default. Message bodies, full card numbers and CVVs never go over the link.
+- Low RAM and battery: no resident model, no polling, event driven, inference only on new items. The link advertises at low power only while enabled, paired and not connected, and holds no wakelock and no foreground service.
 - Undecided: exact budget features; widget designs beyond the cover screen.
 
 ## Brand Commitments
@@ -54,7 +55,7 @@ Name: Companion (working name). Voice: calm, plain, brief. Look: One UI native, 
 
 1. Glance first: the most important thing is readable in one second, folded or open.
 2. Honest confidence: file automatically only when sure; ask once otherwise and learn.
-3. Nothing leaves the phone.
+3. Nothing leaves the phone except to the one Mac you pair, over Bluetooth, end-to-end encrypted, and only the categories you turn on.
 4. Quiet by default: notify only for what needs action.
 5. One event, one entry: never show the same payment twice.
 

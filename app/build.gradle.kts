@@ -90,6 +90,8 @@ android {
     compileSdk = 37
     ndkVersion = "28.2.13676358"
 
+    sourceSets.getByName("test").resources.directories += "../core/src/test/resources"
+
     defaultConfig {
         applicationId = "app.companion"
         minSdk = 34
@@ -181,3 +183,5 @@ dependencies {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach { dependsOn(":core:test") }

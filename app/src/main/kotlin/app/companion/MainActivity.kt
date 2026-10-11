@@ -54,12 +54,15 @@ import androidx.compose.foundation.background
 import androidx.navigation.NavBackStackEntry
 import app.companion.ui.screens.FoodScreen
 import app.companion.ui.screens.LearnScreen
+import app.companion.ui.screens.LinkPairHost
+import app.companion.ui.screens.LinkScreen
 import app.companion.ui.screens.MoneyScreen
 import app.companion.ui.screens.MoneySeg
 import app.companion.ui.screens.VaultScreen
 import app.companion.ui.screens.YouScreen
 import app.companion.ui.cover.CoverPager
 import app.companion.core.Fit
+import app.companion.core.LinkMsg
 import app.companion.core.Reveal
 import androidx.compose.ui.platform.LocalConfiguration
 import app.companion.ui.screens.CaptureSheet
@@ -101,6 +104,7 @@ class MainActivity : FragmentActivity() {
             NEW -> ""
             else -> capture
         }
+        if (i?.action == Intent.ACTION_VIEW) i.dataString?.let(LinkMsg::parse)?.let { sl.link.pending.value = it }
         if (i?.action == OPEN) {
             val route = i.getStringExtra(ROUTE)?.takeIf { it in tabs || it in MoneySeg.routes }
             if (route != null) dest = Dest(route, i.getLongExtra(ITEM, 0), System.nanoTime())
@@ -110,6 +114,12 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         app.companion.system.Meetings.watch(application)
+        sl.link.focus(true)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sl.link.focus(false)
     }
 
     override fun onStop() {
@@ -212,7 +222,8 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
                             composable("vault/{id}", listOf(navArgument("id") { type = NavType.LongType })) { e -> VaultDocScreen(e.arguments?.getLong("id") ?: 0L) { nav.popBackStack() } }
                             composable("trip/{id}", listOf(navArgument("id") { type = NavType.LongType })) { e -> TripScreen(e.arguments?.getLong("id") ?: 0L) { nav.popBackStack() } }
                             composable("learn") { LearnScreen { nav.popBackStack() } }
-                            composable("settings") { SettingsScreen { nav.popBackStack() } }
+                            composable("settings") { SettingsScreen({ nav.popBackStack() }, { nav.navigate("link") }) }
+                            composable("link") { LinkScreen { nav.popBackStack() } }
                             composable("plan") { PlanScreen({ nav.popBackStack() }) }
                         }
                         if (top) FloatNav(route, Modifier.align(Alignment.BottomCenter), go) { ask = AskReq(it) }
@@ -222,6 +233,7 @@ private fun Shell(a: FragmentActivity, capture: String?, setCapture: (String?) -
             SnackLane(snack, Modifier.align(Alignment.BottomCenter), top && fold == null)
             AskHost(ask, { ask = null }, go)
             capture?.let { CaptureSheet(it) { setCapture(null) } }
+            LinkPairHost()
         }
     }
 }

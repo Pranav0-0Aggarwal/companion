@@ -29,6 +29,20 @@ import app.companion.data.Vault
 import app.companion.ingest.Gmail
 import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
+import app.companion.link.Diag
+import app.companion.link.LinkFeatures
+import app.companion.link.LinkHub
+import app.companion.link.bulk.Bulk
+import app.companion.link.feature.CallRelay
+import app.companion.link.feature.Calls
+import app.companion.link.feature.Dnd
+import app.companion.link.LinkStore
+import app.companion.link.feature.Messages
+import app.companion.link.feature.LiveFeed
+import app.companion.link.feature.Files
+import app.companion.link.feature.MacMirror
+import app.companion.link.feature.Shots
+import app.companion.link.feature.Handoff
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -55,8 +69,11 @@ class Services(val app: Application) {
     val ingest by lazy { Ingest(app, repo, rules, pending, hooks) }
     val gmail by lazy { Gmail(repo, ingest) }
     val gtasks by lazy { GTasks(app, repo) }
+    val link by lazy { LinkHub(app, this) }
 
     fun wipe() {
+        link.stop()
+        LinkStore.wipe(app)
         runBlocking(Dispatchers.IO) {
             repo.allTasks().forEach { Alarms.cancel(app, it.id) }
             Meetings.stop(app)
@@ -76,6 +93,7 @@ class CompanionApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Diag.init(this)
         Merchant.source { assets.open("brands.json").use { it.readBytes().decodeToString() } }
         if (Process.isIsolated()) return
         Dl.load(this)
@@ -86,6 +104,20 @@ class CompanionApp : Application() {
         Upgrade.boot(this)
         Thread { Models.purge(this) }.start()
         Meetings.watch(this)
+        LinkFeatures.all += Messages
+        LinkFeatures.all += LiveFeed(this)
+        Files.register(this)
+        MacMirror.register { sl.link.powers.bridge }
+        LinkFeatures.all += Calls(this) { sl.link.powers }
+        Shots.register(this)
+        LinkFeatures.all += Handoff(this)
+        LinkFeatures.all += Dnd(this)
+        CallRelay(this) { sl.link.powers }.also {
+            LinkFeatures.all += it
+            it.register()
+            Bulk.handlers["call"] = it::serve
+        }
+        if (LinkStore.on(this)) sl.link.start()
     }
 
     override fun onTrimMemory(level: Int) {

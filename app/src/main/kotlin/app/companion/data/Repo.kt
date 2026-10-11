@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -103,6 +104,8 @@ class Repo(private val db: Db, c: android.content.Context) {
 
     suspend fun deleteCard(id: Long) = d.deleteCard(id).also { own = null }
 
+    fun changes(vararg tables: String) = db.invalidationTracker.createFlow(*tables, emitInitialState = false)
+
     fun otps(now: Long = System.currentTimeMillis()) = d.otps(now)
 
     suspend fun dropOtp(id: Long) = d.expire(id, System.currentTimeMillis())
@@ -139,6 +142,8 @@ class Repo(private val db: Db, c: android.content.Context) {
         d.spentSince(Alerts.dayStart(now, ZoneId.systemDefault())).filter { !it.cardPay && it.flow == null && it.currency == "INR" }.let { l -> l.sumOf { it.paise } to l.size }
 
     suspend fun item(id: Long) = d.item(id)
+
+    suspend fun paidNow(n: Int) = Cycles.of(d.paid().first(), Item::slip).map { it.first() }.take(n)
 
     fun suggested(now: Long = System.currentTimeMillis()) = d.suggested(now, now - 3 * 24 * 3600 * 1000L)
 

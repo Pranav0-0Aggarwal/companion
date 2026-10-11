@@ -1,0 +1,138 @@
+package app.companion.bridge
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Looper
+import android.os.PatternMatcher
+import app.companion.core.BridgeAuth
+import app.companion.core.BridgeWire
+import app.companion.core.Json
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.security.SecureRandom
+import kotlin.concurrent.thread
+import kotlin.system.exitProcess
+
+object Main {
+    private const val PKG = "app.companion"
+    private const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
+    private lateinit var ctx: Context
+    @Volatile private var cur: Socket? = null
+    private lateinit var pcm: CallAudio
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val key = BridgeAuth.key(args.getOrNull(0) ?: "") ?: exitProcess(0)
+        val rnd = SecureRandom()
+        Looper.prepareMainLooper()
+        ctx = Shell.context()
+        pcm = CallAudio(ctx) { t, b -> cur?.let { s -> synchronized(s) { BridgeWire.write(s.outputStream, t, b) } } }
+        val srv = try {
+            ServerSocket(BridgeAuth.PORT, 1, InetAddress.getLoopbackAddress())
+        } catch (_: IOException) {
+            exitProcess(0)
+        }
+        val gone = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
+            addDataScheme("package")
+            addDataSchemeSpecificPart(PKG, PatternMatcher.PATTERN_LITERAL)
+        }
+        ctx.registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) = exitProcess(0)
+        }, gone, Context.RECEIVER_NOT_EXPORTED)
+        thread {
+            while (true) {
+                val c = try {
+                    srv.accept()
+                } catch (_: IOException) {
+                    exitProcess(0)
+                }
+                try {
+                    c.soTimeout = 3000
+                    c.tcpNoDelay = true
+                    if (BridgeAuth.server(DataInputStream(c.inputStream), DataOutputStream(c.outputStream), key) { n -> ByteArray(n).also(rnd::nextBytes) }) {
+                        c.soTimeout = 0
+                        adopt(c)
+                    } else c.close()
+                } catch (_: Exception) {
+                    runCatching(c::close)
+                }
+            }
+        }
+        Looper.loop()
+    }
+
+    @Synchronized
+    private fun adopt(c: Socket) {
+        pcm.stop()
+        cur?.close()
+        cur = c
+        thread { serve(c) }
+    }
+
+    @Synchronized
+    private fun drop(c: Socket) {
+        if (cur === c) {
+            cur = null
+            pcm.stop()
+        }
+        c.close()
+    }
+
+    private fun serve(c: Socket) {
+        val tx = { t: Int, b: ByteArray -> synchronized(c) { BridgeWire.write(c.outputStream, t, b) } }
+        try {
+            val input = DataInputStream(c.inputStream.buffered())
+            while (true) {
+                val (t, body) = BridgeWire.read(input)
+                when (t) {
+                    BridgeWire.JSON -> tx(BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), c, tx)).encodeToByteArray())
+                    BridgeWire.AUDIO -> pcm.play(body)
+                    BridgeWire.INPUT -> Input.handle(ctx, body)
+                    else -> Unit
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            Screen.release(tx)
+            drop(c)
+        }
+    }
+
+    private fun run(q: Map<String, Any?>, c: Socket, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
+        val id = q["id"]
+        return when (q["t"]) {
+            "caps" -> res(id, true, "data" to caps())
+            "grant" -> res(id, grant())
+            "call_audio" -> call(id, q["on"] == true, c)
+            "mirror" -> Screen.run(ctx, q, tx).let { if (it == null) res(id, true) else res(id, false, "err" to it) }
+            else -> res(id, false, "err" to "unknown")
+        }
+    }
+
+    @Synchronized
+    private fun call(id: Any?, on: Boolean, c: Socket): Map<String, Any?> {
+        if (cur !== c) return res(id, false, "err" to "busy")
+        if (!on) return res(id, true).also { pcm.stop() }
+        return try {
+            pcm.start()
+            res(id, true)
+        } catch (e: Exception) {
+            res(id, false, "err" to (e.message ?: "fail"))
+        }
+    }
+
+    private fun res(id: Any?, ok: Boolean, vararg more: Pair<String, Any?>) = mapOf("t" to "res", "id" to id, "ok" to ok) + more
+
+    private fun caps() = mapOf("audio" to audio(), "mirror" to Screen.available(), "input" to Input.available(), "sdk" to Build.VERSION.SDK_INT)
+
+    private fun audio() = runCatching { Shell.sys<Boolean>(Shell.audio(ctx), "isPstnCallAudioInterceptable") }.getOrDefault(false)
+
+    private fun grant() = runCatching { Runtime.getRuntime().exec(arrayOf("/system/bin/pm", "grant", PKG, PERM)).waitFor() == 0 }.getOrDefault(false)
+}

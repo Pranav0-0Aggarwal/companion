@@ -2,6 +2,37 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.8.0 (2026-10-11)
+
+### Continuity with your Mac
+Works with Notchy 1.1.0. Every switch is off until you turn it on in Settings, Mac link, and a switch that needs an Android permission asks for it. If you say no, the switch stays off and tells you why.
+- Calls: answer, decline (with a message if you like), place and end calls from the notch. Hold, mute, keypad tones and moving call audio to the Mac to talk through it need Phone powers.
+- Messages: reply to and act on notifications from the apps you chose.
+- Live activities: deliveries, rides, timers and media show on the Mac, with play, pause and skip for what is playing.
+- Files: Send to Mac from the share sheet, and receive files from the Mac in Downloads, Notchy.
+- Screenshots and copied images: new screenshots appear on the Mac, and an image copied on one device can be pasted on the other.
+- Handoff: send a page to your Mac, and open pages from the Mac on the phone (⌃⌥H on the Mac sends the front browser page).
+- Do Not Disturb follows between the two devices.
+- Phone mirroring: see and control this screen in a Mac window, opened from the Mirror button in Notchy's Phone tab or with ⌃⌥M. Needs Phone powers.
+- Files, screenshots, call audio and mirroring use your Wi-Fi straight to the Mac, only while you use them. Both devices must be on the same Wi-Fi. Everything stays end to end encrypted and nothing goes through the internet.
+
+### Phone powers
+- Call audio on the Mac, hold, mute, keypad tones and mirroring use a small helper called Bridge and the in-call permission that setup grants. Pair once from Notchy, Settings, Phone, Phone powers, then Companion starts Bridge by itself. Settings, Mac link shows whether Bridge is up, down, blocked on this network or needs pairing, with one line on what to do.
+- Wireless debugging is on only for the few seconds it takes to start Bridge. Bridge answers only Companion and never stores audio or video.
+
+### Light on the battery
+- No wake locks, no alarms and no polling for any of it. The Wi-Fi channel closes after 20 seconds idle, except during a call or mirroring.
+
+## 0.7.0 (2026-10-11)
+
+### Mac link
+- Link Companion to Notchy on your Mac over Bluetooth. Scan the code Notchy shows with your phone camera, check the 6 digit code on both screens and tap Link. Settings, Mac link shows the status, pairs and unpairs.
+- Everything is end to end encrypted between your phone and that one Mac, with keys that never leave the two devices. Companion adds no internet access for it.
+- Choose what your Mac sees, each switch off until you turn it on: codes, spending and bills, things that need you, battery, tasks and meetings, notifications from apps you pick, and your clipboard in either direction.
+- From the Mac you can add a task or reminder, mark a task done, mark a bill paid, dismiss an item, search your ledger, ask Companion a question and set your clipboard.
+- Ring my phone: your Mac can play the alarm sound for up to 15 seconds, even on silent, with a Stop button in the notification.
+- Light on the battery: low power advertising only while the link is on, paired and no Mac is connected, no polling, no wake locks and no foreground service. Allow notification access so Android keeps Companion running in the background.
+
 ## 0.6.3 (2026-10-06)
 
 - Delete a transaction from its details, together with any copies of it, with Undo.

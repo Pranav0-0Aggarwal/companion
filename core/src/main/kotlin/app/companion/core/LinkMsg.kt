@@ -55,7 +55,7 @@ object LinkMsg {
     fun media(pkg: String, title: String, artist: String, art: String?, playing: Boolean, pos: Long, dur: Long, at: Long) =
         compact("t" to "media", "pkg" to pkg, "title" to title, "artist" to artist, "art" to art, "playing" to playing, "pos" to pos, "dur" to dur, "at" to at)
 
-    fun shot(id: Long, w: Int, h: Int, thumb: String) = mapOf("t" to "shot", "id" to id, "w" to w, "h" to h, "thumb" to thumb)
+    fun shot(id: Long, w: Int, h: Int, thumb: String, mime: String) = mapOf("t" to "shot", "id" to id, "w" to w, "h" to h, "thumb" to thumb, "mime" to mime)
 
     fun clipImg(ref: String, w: Int, h: Int, thumb: String) = mapOf("t" to "clip_img", "ref" to ref, "w" to w, "h" to h, "thumb" to thumb)
 

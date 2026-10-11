@@ -579,7 +579,8 @@
    "id": 1760000000123,
    "w": 1080,
    "h": 2340,
-   "thumb": "/9j/4AAQSkZJRg=="
+   "thumb": "/9j/4AAQSkZJRg==",
+   "mime": "image/png"
   },
   "clip_img": {
    "t": "clip_img",

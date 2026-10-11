@@ -22,6 +22,7 @@ import android.provider.MediaStore
 import android.provider.MediaStore.MediaColumns.DATE_ADDED
 import android.provider.MediaStore.MediaColumns.DISPLAY_NAME
 import android.provider.MediaStore.MediaColumns.HEIGHT
+import android.provider.MediaStore.MediaColumns.MIME_TYPE
 import android.provider.MediaStore.MediaColumns.RELATIVE_PATH
 import android.provider.MediaStore.MediaColumns.WIDTH
 import android.provider.MediaStore.MediaColumns._ID
@@ -111,7 +112,12 @@ object Photos : LinkFeature {
                 job?.cancel()
                 job = sc.launch(Dispatchers.IO) {
                     delay(SETTLE)
-                    scan().forEach { if (isActive) out(it) }
+                    scan().forEach { (id, o) ->
+                        if (isActive) {
+                            sent[id] = Unit
+                            out(o)
+                        }
+                    }
                 }
             }
         }
@@ -127,16 +133,15 @@ object Photos : LinkFeature {
         obs = null
     }
 
-    private fun scan(): List<Obj> {
-        val found = ArrayList<Obj>()
+    private fun scan(): List<Pair<Long, Obj>> {
+        val found = ArrayList<Pair<Long, Obj>>()
         val since = System.currentTimeMillis() / 1000 - WINDOW
-        ctx.contentResolver.query(images, arrayOf(_ID, RELATIVE_PATH, DISPLAY_NAME, WIDTH, HEIGHT), "$DATE_ADDED >= ?", arrayOf("$since"), "$DATE_ADDED DESC")?.use { c ->
+        ctx.contentResolver.query(images, arrayOf(_ID, RELATIVE_PATH, DISPLAY_NAME, WIDTH, HEIGHT, MIME_TYPE), "$DATE_ADDED >= ?", arrayOf("$since"), "$DATE_ADDED DESC")?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
                 if (id in sent || !ShotFilter.isShot(c.getString(1), c.getString(2))) continue
                 val (_, t) = thumb(ContentUris.withAppendedId(images, id)) ?: continue
-                sent[id] = Unit
-                found += LinkMsg.shot(id, c.getInt(3), c.getInt(4), t)
+                found += id to LinkMsg.shot(id, c.getInt(3), c.getInt(4), t, c.getString(5) ?: "image/png")
             }
         }
         return found.asReversed()
@@ -215,7 +220,10 @@ object ClipImage : LinkFeature {
         } catch (e: Exception) {
             throw FileNotFoundException()
         } finally {
-            if (mine) waits.remove(ref)
+            if (mine) {
+                waits.remove(ref)
+                f.completeExceptionally(FileNotFoundException())
+            }
         }
     }
 

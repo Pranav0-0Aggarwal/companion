@@ -5,7 +5,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -13,20 +15,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.companion.core.PowersStatus
 import app.companion.link.LinkState
+import app.companion.link.LinkStore
 import app.companion.link.Stage
+import app.companion.link.feature.Calls
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.kit.Btn
@@ -76,6 +83,8 @@ private val more = listOf(
     Row("mirror", "Phone mirroring", "See and control this screen in a Mac window, needs Phone powers", Ic.Eye),
 )
 
+private val all = rows + more
+
 private fun Row.ok(c: Context) = if (key == "dnd") c.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted else perms.all(c::has)
 
 private fun Stage.sub(name: String?) = when (this) {
@@ -103,15 +112,18 @@ fun LinkScreen(back: () -> Unit) {
     var unpair by remember { mutableStateOf(false) }
     var apps by remember { mutableStateOf(false) }
     var listener by remember { mutableStateOf(c.listenerOn()) }
-    var held by remember { mutableStateOf((rows + more).filter { it.ok(c) }.map { it.key }.toSet()) }
+    var held by remember { mutableStateOf(all.filter { it.ok(c) }.map { it.key }.toSet()) }
     var granted by remember { mutableStateOf(hub.powers.granted()) }
-    var want by remember { mutableStateOf<Row?>(null) }
+    var want by rememberSaveable { mutableStateOf<String?>(null) }
     val up by hub.powers.bridge.up.collectAsStateWithLifecycle()
     val why by hub.powers.why.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
     val result = { r: Row, ok: Boolean ->
         if (ok) {
             held += r.key
             hub.share(r.key, true)
+        } else if (activity != null && r.perms.any { !c.has(it) && !ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }) {
+            snack.act(r.why, "Open settings") { c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", c.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         } else {
             snack.say(r.why)
         }
@@ -119,20 +131,27 @@ fun LinkScreen(back: () -> Unit) {
     LifecycleResumeEffect(Unit) {
         listener = c.listenerOn()
         granted = hub.powers.granted()
-        val now = (rows + more).filter { it.ok(c) }.map { it.key }.toSet()
-        (now - held).filter { it in hub.state.value.shares }.forEach(hub::restart)
-        held = now
-        want?.takeIf { it.key == "dnd" }?.let { want = null; result(it, it.ok(c)) }
+        val on = LinkStore.shares(c)
+        val now = all.filter { it.ok(c) }.map { it.key }.toSet()
+        all.filter { it.key in on && it.key !in now }.forEach {
+            hub.share(it.key, false)
+            snack.say(it.why)
+        }
+        val calling = Calls.live?.busy() == true
+        (now - held).filter { it in on && !(it == "calls" && calling) }.forEach(hub::restart)
+        held = if (calling) now - "calls" else now
+        all.firstOrNull { it.key == want && it.key == "dnd" }?.let { want = null; result(it, it.ok(c)) }
         hub.refresh()
         onPauseOrDispose {}
     }
+    LaunchedEffect(s, up, why) { granted = hub.powers.granted() }
     val grant = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
-        want?.takeIf { it.key != "dnd" }?.let { want = null; result(it, r.values.all { v -> v }) }
+        all.firstOrNull { it.key == want && it.key != "dnd" }?.let { want = null; result(it, r.values.all { v -> v }) }
     }
     val pick = { r: Row, on: Boolean ->
         if (!on || r.key in held) hub.share(r.key, on)
         else {
-            want = r
+            want = r.key
             if (r.key == "dnd") c.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             else grant.launch(r.perms.toTypedArray())
         }
@@ -159,7 +178,7 @@ fun LinkScreen(back: () -> Unit) {
             item(key = "share") { Section("Share with your Mac") }
             item(key = "share-list") {
                 Group {
-                    ShareRows(rows, s, held, pick)
+                    ShareRows(rows, s, pick)
                     if ("notifs" in s.shares) {
                         Rule(72.dp)
                         PassLine("Apps", if (s.apps.isEmpty()) "None chosen" else "${s.apps.size} chosen", lead = Ic.Inbox, onClick = { apps = true })
@@ -167,7 +186,7 @@ fun LinkScreen(back: () -> Unit) {
                 }
             }
             item(key = "more") { Section("Continuity") }
-            item(key = "more-list") { Group { ShareRows(more, s, held, pick) } }
+            item(key = "more-list") { Group { ShareRows(more, s, pick) } }
             item(key = "powers") { Section("Phone powers") }
             item(key = "powers-line") {
                 val (head, fix) = PowersStatus.of(up, s.stage == Stage.Connected, granted, why)
@@ -199,11 +218,10 @@ fun LinkScreen(back: () -> Unit) {
 }
 
 @Composable
-private fun ShareRows(list: List<Row>, s: LinkState, held: Set<String>, pick: (Row, Boolean) -> Unit) {
+private fun ShareRows(list: List<Row>, s: LinkState, pick: (Row, Boolean) -> Unit) {
     list.forEachIndexed { n, r ->
         if (n > 0) Rule(72.dp)
-        val on = r.key in s.shares
-        Toggle(r.label, if (on && r.key !in held) r.why else r.sub, on, icon = r.icon) { pick(r, it) }
+        Toggle(r.label, r.sub, r.key in s.shares, icon = r.icon) { pick(r, it) }
     }
 }
 

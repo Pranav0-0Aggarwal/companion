@@ -21,7 +21,7 @@ A private Android companion that reads your SMS, app notifications, WhatsApp and
 - **Cover screen.** Widgets and a full Today view for the Galaxy Z Flip outer screen, plus Quick Settings tiles.
 - **Mac link.** Optional. Pair with Notchy on your Mac over Bluetooth to see codes, spending and what needs you, add tasks, ring your phone, answer calls and talk through the Mac, reply to messages, see live activities, move files, screenshots and copied images, hand off pages, share Do Not Disturb and mirror the screen. Every category is off until you turn it on, and each one asks for the Android permission it needs.
 
-  What it needs: Bluetooth for the link, the same Wi-Fi for files, screenshots, call audio and mirroring, and, for call audio and mirroring only, a one time Phone powers pairing in Notchy, Settings, Phone, Phone powers. Without it, calls are still controlled from the Mac and the audio stays on the phone. It adds no internet access, runs without wake locks, alarms or polling, and the Wi-Fi channel closes after 20 seconds idle, except during a call or mirroring.
+  What it needs: Bluetooth for the link, the same Wi-Fi for files, screenshots, call audio and mirroring, and a one time Phone powers pairing in Notchy, Settings, Phone, Phone powers for call audio, mirroring, and hold, mute and keypad tones. Without it, answering, declining, placing and ending calls from the Mac still work and the audio stays on the phone. It adds no internet access, runs without wake locks, alarms or polling, and the Wi-Fi channel closes after 20 seconds idle, except during a call or mirroring.
 
 ## Private by design
 

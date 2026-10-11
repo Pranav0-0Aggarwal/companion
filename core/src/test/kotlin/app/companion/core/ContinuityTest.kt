@@ -222,6 +222,7 @@ class ContinuityTest {
         assertEquals("Starts when your Mac connects" to null, PowersStatus.of(false, false, true, null))
         assertEquals("Needs pairing", PowersStatus.of(false, true, false, "setup").first)
         assertEquals("Network not trusted", PowersStatus.of(false, true, true, "network").first)
+        assertEquals("Bridge is down", PowersStatus.of(false, true, true, "setup").first)
         assertEquals("Bridge is down" to "Join the same Wi-Fi as your Mac", PowersStatus.of(false, true, true, "launch"))
     }
 

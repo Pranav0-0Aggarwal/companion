@@ -28,7 +28,6 @@ import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 
-@SuppressLint("MissingPermission")
 class Calls(private val app: Application, private val powers: () -> Powers) : LinkFeature {
     override val key = "calls"
     override val cmds = setOf("call_answer", "call_end", "call_reject", "call_dial", "call_mute", "call_hold", "call_dtmf", "call_move")
@@ -69,6 +68,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         }
     }
 
+    @SuppressLint("MissingPermission")
     override suspend fun run(t: String, q: Obj): Obj {
         val full = MacInCall.live != null
         val c = MacInCall.current()
@@ -101,6 +101,9 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         }
         report()
     }
+
+    @Synchronized
+    fun busy() = sent != null
 
     @Synchronized
     fun report(drop: Call? = null) {
@@ -179,6 +182,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         tm.f()
     }
 
+    @SuppressLint("MissingPermission")
     private fun reject(full: Boolean, c: Call?, text: String?) {
         if (full) return (c ?: gone()).reject(text != null, text)
         val to = synchronized(this) { note?.number }
@@ -189,6 +193,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         app.getSystemService(SmsManager::class.java).sendTextMessage(to, null, text, null, null)
     }
 
+    @SuppressLint("MissingPermission")
     private fun dial(n: String) {
         val t = n.trim()
         if (!CallInfo.dialable(t)) throw LinkBad("number")

@@ -15,6 +15,7 @@ import android.net.NetworkRequest
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import app.companion.R
 import app.companion.core.LinkMsg
 import app.companion.link.LinkStore
@@ -105,21 +106,23 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
 
     private suspend fun relink() {
         val g = gen
-        if (pending() || !LinkStore.shares(app).any { it == "calls" || it == "mirror" }) return
+        if (pending() || !LinkStore.shares(app).any { it == "calls" || it == "mirror" }) return log("powers: idle, shares=${LinkStore.shares(app)}")
         if (bridge.up.value || bridge.connect()) return tell(true)
         if (!granted()) return tell(false, "setup")
-        launch(wifiIp() ?: return, g)
+        launch(wifiIp() ?: return log("powers: no wifi ip"), g)
     }
 
     @Synchronized
     private fun launch(ip: String, g: Int) {
         if (g != gen) return
+        log("powers: want")
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip))
         arm()
     }
 
     private fun tell(up: Boolean, why: String? = null) {
+        log("powers: up=$up why=$why")
         reason.value = why
         push(LinkMsg.bridge(up, why))
     }
@@ -179,6 +182,10 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
                 .setContentIntent(Notices.open(app))
                 .build(),
         )
+    }
+
+    private fun log(s: String) {
+        Log.w("CompanionLink", s)
     }
 
     private companion object {

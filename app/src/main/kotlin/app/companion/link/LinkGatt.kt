@@ -100,7 +100,7 @@ class LinkGatt(
 
     fun send(msg: ByteArray) {
         if (dev == null) return
-        LinkFrames.split(msg, seq++ and 63, mtu - 4).forEach(out::add)
+        LinkFrames.split(msg, seq++ and 63, minOf(mtu, ATT) - 4).forEach(out::add)
         pump()
         if (msg.size > BULK) bulk()
     }
@@ -133,7 +133,7 @@ class LinkGatt(
         if (busy || !subscribed) return
         val f = out.removeFirstOrNull() ?: return
         busy = true
-        if (server?.notifyCharacteristicChanged(d, t, false, f) != BluetoothStatusCodes.SUCCESS) {
+        if (runCatching { server?.notifyCharacteristicChanged(d, t, false, f) }.getOrNull() != BluetoothStatusCodes.SUCCESS) {
             busy = false
             out.clear()
         }
@@ -237,6 +237,7 @@ class LinkGatt(
             .build()
         val DATA: AdvertiseData = AdvertiseData.Builder().setIncludeDeviceName(false).setIncludeTxPowerLevel(false).addServiceUuid(ParcelUuid(SERVICE)).build()
         const val MTU = 23
+        const val ATT = 515
         const val BULK = 1024
         const val CALM = 5_000L
     }

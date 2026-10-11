@@ -13,6 +13,7 @@ import android.service.notification.StatusBarNotification
 import app.companion.Services
 import app.companion.core.LinkMsg
 import app.companion.data.dueDate
+import app.companion.link.feature.Messages
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -83,7 +84,7 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
         val text = (x.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: x.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(TEXT)
         if (title.isEmpty() && text.isEmpty()) return
         val name = runCatching { c.packageManager.getApplicationInfo(pkg, 0).loadLabel(c.packageManager).toString() }.getOrDefault(pkg)
-        send(LinkMsg.notif(sbn.key, pkg, name, title, text, sbn.postTime))
+        Messages.msg(sbn, name, title, text)?.let(::send)
     }
 
     private fun send(o: Obj) {

@@ -73,6 +73,7 @@ class NotifService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        if (live === this) live = null
         scope.cancel()
         super.onDestroy()
     }
@@ -89,7 +90,8 @@ class NotifService : NotificationListenerService() {
     companion object {
         val up = MutableStateFlow<Boolean?>(null)
         val shade = MutableStateFlow(0)
-        @Volatile private var live: NotifService? = null
+        @Volatile var live: NotifService? = null
+            private set
 
         fun clearApps() {
             val s = live ?: return

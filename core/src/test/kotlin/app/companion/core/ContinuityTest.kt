@@ -105,4 +105,11 @@ class ContinuityTest {
         assertFailsWith<java.io.IOException> { BridgeWire.read(neg) }
         assertFailsWith<java.io.IOException> { BridgeWire.write(out, BridgeWire.VIDEO, ByteArray(BridgeWire.MAX + 1)) }
     }
+
+    @Test
+    fun `conversation key prefers shortcut then conversation title then title`() {
+        assertEquals("com.whatsapp|s1", ConvKey.of("com.whatsapp", "s1", "Team", "Riya"))
+        assertEquals("com.whatsapp|Team", ConvKey.of("com.whatsapp", null, "Team", "Riya"))
+        assertEquals("com.whatsapp|Riya", ConvKey.of("com.whatsapp", null, null, "Riya"))
+    }
 }

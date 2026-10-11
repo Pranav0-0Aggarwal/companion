@@ -19,14 +19,16 @@ A private Android companion that reads your SMS, app notifications, WhatsApp and
 - **Food.** Log meals by chat or reply to a nudge, see calories and macros by meal, get meal ideas and track weight. Syncs with Health Connect.
 - **Vault.** Keep documents with expiry reminders.
 - **Cover screen.** Widgets and a full Today view for the Galaxy Z Flip outer screen, plus Quick Settings tiles.
-- **Mac link.** Optional. Pair with Notchy on your Mac over Bluetooth to see codes, spending and what needs you, and to add tasks or ring your phone, end-to-end encrypted, with every category off until you turn it on.
+- **Mac link.** Optional. Pair with Notchy on your Mac over Bluetooth to see codes, spending and what needs you, add tasks, ring your phone, answer calls and talk through the Mac, reply to messages, see live activities, move files, screenshots and copied images, hand off pages, share Do Not Disturb and mirror the screen. Every category is off until you turn it on, and each one asks for the Android permission it needs.
+
+  What it needs: Bluetooth for the link, the same Wi-Fi for files, screenshots, call audio and mirroring, and, for call audio and mirroring only, a one time Phone powers pairing in Notchy, Settings, Phone, Phone powers. Without it, calls are still controlled from the Mac and the audio stays on the phone. It adds no internet access, runs without wake locks, alarms or polling, and the Wi-Fi channel closes after 20 seconds idle, except during a call or mirroring.
 
 ## Private by design
 
 - All data lives in an encrypted database (SQLCipher with an Android Keystore key). No accounts, no analytics, no content logging, backups off.
 - The models run on the phone in isolated processes with no network and no permissions.
 - The only network use is the model download you start from GitHub Releases, and Gmail if you connect it.
-- Nothing leaves your phone except to your paired Mac, end-to-end encrypted over Bluetooth, and only if you turn the link on.
+- Nothing leaves your phone except to your paired Mac, end-to-end encrypted over Bluetooth and your local Wi-Fi, and only if you turn the link on. Call audio and mirror video are streamed and never stored.
 - One small model at a time, only when needed. Heavy work waits for the charger and backs off when the phone is warm.
 
 ## Install

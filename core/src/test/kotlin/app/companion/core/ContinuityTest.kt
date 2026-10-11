@@ -215,6 +215,16 @@ class ContinuityTest {
         assertEquals(listOf("a"), dropped)
     }
 
+    @Test
+    fun `powers status gives one reason and one fix`() {
+        assertEquals("Bridge is up" to null, PowersStatus.of(true, true, true, null))
+        assertEquals("Bridge is up", PowersStatus.of(true, false, false, "setup").first)
+        assertEquals("Starts when your Mac connects" to null, PowersStatus.of(false, false, true, null))
+        assertEquals("Needs pairing", PowersStatus.of(false, true, false, "setup").first)
+        assertEquals("Network not trusted", PowersStatus.of(false, true, true, "network").first)
+        assertEquals("Bridge is down" to "Join the same Wi-Fi as your Mac", PowersStatus.of(false, true, true, "launch"))
+    }
+
     private class Mem : FileFrames.Sink {
         val files = mutableListOf<Pair<String, java.io.ByteArrayOutputStream>>()
         val log = mutableListOf<String>()

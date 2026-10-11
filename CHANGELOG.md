@@ -2,6 +2,27 @@
 
 All notable changes to Companion. Everything runs on your phone; nothing about your messages leaves it.
 
+## 0.8.0 (2026-10-11)
+
+### Continuity with your Mac
+Works with Notchy 1.1.0. Every switch is off until you turn it on in Settings, Mac link, and a switch that needs an Android permission asks for it. If you say no, the switch stays off and tells you why.
+- Calls: answer, decline with a message, place, hold, mute and end calls from the notch, send keypad tones, and talk through your Mac with call audio moved over.
+- Messages: reply to and act on notifications from the apps you chose.
+- Live activities: deliveries, rides, timers and media show on the Mac, with play, pause and skip for what is playing.
+- Files: Send to Mac from the share sheet, and receive files from the Mac in Downloads, Notchy.
+- Screenshots and copied images: new screenshots appear on the Mac, and an image copied on one device can be pasted on the other.
+- Handoff: send a page to your Mac, and open pages from the Mac on the phone.
+- Do Not Disturb follows between the two devices.
+- Phone mirroring: see and control this screen in a Mac window.
+- Files, screenshots, call audio and mirroring use your Wi-Fi straight to the Mac, only while you use them. Both devices must be on the same Wi-Fi. Everything stays end to end encrypted and nothing goes through the internet.
+
+### Phone powers
+- Call audio on the Mac and mirroring use a small helper called Bridge. Pair once from Notchy, Settings, Phone, Phone powers, then Companion starts Bridge by itself. Settings, Mac link shows whether Bridge is up, down, blocked on this network or needs pairing, with one line on what to do.
+- Wireless debugging is on only for the few seconds it takes to start Bridge. Bridge answers only Companion and never stores audio or video.
+
+### Light on the battery
+- No wake locks, no alarms and no polling for any of it. The Wi-Fi channel closes after 20 seconds idle, except during a call or mirroring.
+
 ## 0.7.0 (2026-10-11)
 
 ### Mac link

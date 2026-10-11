@@ -1,6 +1,7 @@
 package app.companion.link.feature
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Application
 import android.app.Notification
 import android.graphics.Bitmap
@@ -27,6 +28,7 @@ import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 
+@SuppressLint("MissingPermission")
 class Calls(private val app: Application, private val powers: () -> Powers) : LinkFeature {
     override val key = "calls"
     override val cmds = setOf("call_answer", "call_end", "call_reject", "call_dial", "call_mute", "call_hold", "call_dtmf", "call_move")

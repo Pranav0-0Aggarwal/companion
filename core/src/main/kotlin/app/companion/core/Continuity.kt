@@ -69,3 +69,13 @@ class CallRestore(private val volume: Int, private val micMuted: Boolean) {
 
     fun take(): Pair<Int, Boolean>? = if (spent.compareAndSet(false, true)) volume to micMuted else null
 }
+
+object PowersStatus {
+    fun of(up: Boolean, linked: Boolean, granted: Boolean, why: String?): Pair<String, String?> = when {
+        up -> "Bridge is up" to null
+        !linked -> "Starts when your Mac connects" to null
+        !granted -> "Needs pairing" to "Pair in Notchy: Settings, Phone, Phone powers"
+        why == "network" -> "Network not trusted" to "Allow wireless debugging on this Wi-Fi once and choose Always allow"
+        else -> "Bridge is down" to "Join the same Wi-Fi as your Mac"
+    }
+}

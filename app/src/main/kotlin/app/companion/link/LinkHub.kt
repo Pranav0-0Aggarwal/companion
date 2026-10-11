@@ -87,12 +87,20 @@ class LinkHub(private val app: Application, sl: Services) {
             if (authed) {
                 send(LinkMsg.shareEvent(LinkStore.shares(app)))
                 events.sync()
-                LinkFeatures.all.filter { it.key == k }.forEach { f ->
-                    f.stop()
-                    if (on) conn?.let { c -> runCatching { f.start(c, ::push) } }
-                }
+                revive(k, on)
             }
             reconcile()
+        }
+    }
+
+    fun restart(k: String) {
+        scope.launch { if (authed && k in LinkStore.shares(app)) revive(k, true) }
+    }
+
+    private fun revive(k: String, on: Boolean) {
+        LinkFeatures.all.filter { it.key == k }.forEach { f ->
+            f.stop()
+            if (on) conn?.let { c -> runCatching { f.start(c, ::push) } }
         }
     }
 

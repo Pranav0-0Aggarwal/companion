@@ -3,6 +3,7 @@ package app.companion.link.feature
 import android.Manifest
 import android.app.Application
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.ContentProvider
 import android.content.ContentUris
@@ -14,6 +15,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.MediaStore
@@ -75,7 +77,7 @@ object Shots {
             try {
                 val m = ClipImage.Mem()
                 FileFrames.receive(p, m)
-                f.complete(m.bytes().takeIf { it.isNotEmpty() } ?: throw LinkError("size"))
+                ClipImage.deliver(p.ref, f, m.bytes().takeIf { it.isNotEmpty() } ?: throw LinkError("size"))
             } catch (e: Throwable) {
                 f.completeExceptionally(e)
                 throw e
@@ -109,7 +111,7 @@ object Photos : LinkFeature {
                 job?.cancel()
                 job = sc.launch(Dispatchers.IO) {
                     delay(SETTLE)
-                    scan()?.let { if (isActive) out(it) }
+                    scan().forEach { if (isActive) out(it) }
                 }
             }
         }
@@ -123,10 +125,10 @@ object Photos : LinkFeature {
         job = null
         obs?.let { runCatching { ctx.contentResolver.unregisterContentObserver(it) } }
         obs = null
-        sent.clear()
     }
 
-    private fun scan(): Obj? {
+    private fun scan(): List<Obj> {
+        val found = ArrayList<Obj>()
         val since = System.currentTimeMillis() / 1000 - WINDOW
         ctx.contentResolver.query(images, arrayOf(_ID, RELATIVE_PATH, DISPLAY_NAME, WIDTH, HEIGHT), "$DATE_ADDED >= ?", arrayOf("$since"), "$DATE_ADDED DESC")?.use { c ->
             while (c.moveToNext()) {
@@ -134,10 +136,10 @@ object Photos : LinkFeature {
                 if (id in sent || !ShotFilter.isShot(c.getString(1), c.getString(2))) continue
                 val (_, t) = thumb(ContentUris.withAppendedId(images, id)) ?: continue
                 sent[id] = Unit
-                return LinkMsg.shot(id, c.getInt(3), c.getInt(4), t)
+                found += LinkMsg.shot(id, c.getInt(3), c.getInt(4), t)
             }
         }
-        return null
+        return found.asReversed()
     }
 }
 
@@ -148,8 +150,13 @@ object ClipImage : LinkFeature {
     private const val CAP = 16 shl 20
     internal val outbox = Expiring<Uri>(TTL, SystemClock::elapsedRealtime)
     internal val waits = ConcurrentHashMap<String, CompletableFuture<ByteArray>>()
-    @Volatile private var offer: Pair<String, Long>? = null
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile private var offer: Offer? = null
     @Volatile private var push: ((Obj) -> Unit)? = null
+
+    private class Offer(val ref: String, val until: Long) {
+        @Volatile var bytes: ByteArray? = null
+    }
 
     internal class Mem : FileFrames.Sink {
         private val buf = ByteArrayOutputStream()
@@ -168,8 +175,13 @@ object ClipImage : LinkFeature {
 
     override suspend fun run(t: String, q: Obj): Obj {
         val ref = LinkArgs.text(q, "ref", 64)
-        offer = ref to SystemClock.elapsedRealtime() + TTL
-        ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newUri(ctx.contentResolver, "Mac image", ClipProvider.uri(ref)))
+        val o = Offer(ref, SystemClock.elapsedRealtime() + TTL)
+        offer = o
+        main.removeCallbacksAndMessages(this)
+        main.postDelayed({ if (offer === o) offer = null }, this, TTL)
+        val clip = ClipData.newUri(ctx.contentResolver, "Mac image", ClipProvider.uri(ref))
+        clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_REMOTE_DEVICE, true) }
+        ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
         return emptyMap()
     }
 
@@ -178,25 +190,32 @@ object ClipImage : LinkFeature {
     }
 
     override fun stop() {
+        main.removeCallbacksAndMessages(this)
         push = null
         offer = null
         outbox.clear()
         waits.values.forEach { it.cancel(true) }
     }
 
-    @Synchronized
+    fun deliver(ref: String?, f: CompletableFuture<ByteArray>, b: ByteArray) {
+        offer?.takeIf { it.ref == ref }?.bytes = b
+        f.complete(b)
+    }
+
     fun fetch(ref: String): ByteArray {
         val o = offer
         val send = push
-        if (send == null || o == null || o.first != ref || SystemClock.elapsedRealtime() > o.second) throw FileNotFoundException()
-        val f = CompletableFuture<ByteArray>().also { waits[ref] = it }
+        if (send == null || o == null || o.ref != ref || SystemClock.elapsedRealtime() > o.until) throw FileNotFoundException()
+        o.bytes?.let { return it }
+        var mine = false
+        val f = waits.computeIfAbsent(ref) { CompletableFuture<ByteArray>().also { mine = true } }
         try {
-            send(LinkMsg.bulkWant("clip_in", ref))
+            if (mine) send(LinkMsg.bulkWant("clip_in", ref))
             return f.get(WAIT, TimeUnit.SECONDS)
         } catch (e: Exception) {
             throw FileNotFoundException()
         } finally {
-            waits.remove(ref)
+            if (mine) waits.remove(ref)
         }
     }
 

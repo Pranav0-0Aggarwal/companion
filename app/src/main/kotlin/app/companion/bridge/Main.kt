@@ -77,28 +77,32 @@ object Main {
     }
 
     private fun serve(c: LocalSocket) {
+        val tx = { t: Int, b: ByteArray -> synchronized(c) { BridgeWire.write(c.outputStream, t, b) } }
         try {
             val input = DataInputStream(c.inputStream.buffered())
             while (true) {
                 val (t, body) = BridgeWire.read(input)
                 when (t) {
-                    BridgeWire.JSON -> synchronized(c) { BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), c)).encodeToByteArray()) }
+                    BridgeWire.JSON -> tx(BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), c, tx)).encodeToByteArray())
                     BridgeWire.AUDIO -> pcm.play(body)
+                    BridgeWire.INPUT -> Input.handle(ctx, body)
                     else -> Unit
                 }
             }
         } catch (_: Exception) {
         } finally {
+            Screen.release(tx)
             drop(c)
         }
     }
 
-    private fun run(q: Map<String, Any?>, c: LocalSocket): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>, c: LocalSocket, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
             "grant" -> res(id, grant())
             "call_audio" -> call(id, q["on"] == true, c)
+            "mirror" -> Screen.run(ctx, q, tx).let { if (it == null) res(id, true) else res(id, false, "err" to it) }
             else -> res(id, false, "err" to "unknown")
         }
     }
@@ -117,7 +121,7 @@ object Main {
 
     private fun res(id: Any?, ok: Boolean, vararg more: Pair<String, Any?>) = mapOf("t" to "res", "id" to id, "ok" to ok) + more
 
-    private fun caps() = mapOf("audio" to audio(), "mirror" to true, "input" to true, "sdk" to Build.VERSION.SDK_INT)
+    private fun caps() = mapOf("audio" to audio(), "mirror" to Screen.available(), "input" to Input.available(), "sdk" to Build.VERSION.SDK_INT)
 
     private fun audio() = runCatching { Shell.sys<Boolean>(Shell.audio(ctx), "isPstnCallAudioInterceptable") }.getOrDefault(false)
 

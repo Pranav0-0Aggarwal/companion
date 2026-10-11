@@ -27,6 +27,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,6 +46,8 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     @Volatile private var gen = 0
     private var obs: ContentObserver? = null
     val bridge = BridgeClient(scope)
+    private val reason = MutableStateFlow<String?>(null)
+    val why: StateFlow<String?> = reason
 
     init {
         release()
@@ -73,6 +77,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         track(false)
         disarm()
         release()
+        reason.value = null
     }
 
     @Synchronized
@@ -92,7 +97,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
             delay(LAUNCH)
             if (disarm()) {
                 adbWifi(false)
-                push(LinkMsg.bridge(false, "launch"))
+                tell(false, "launch")
             }
         }
     }
@@ -100,8 +105,8 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private suspend fun relink() {
         val g = gen
         if (pending()) return
-        if (bridge.up.value || bridge.connect()) return push(LinkMsg.bridge(true))
-        if (!granted()) return push(LinkMsg.bridge(false, "setup"))
+        if (bridge.up.value || bridge.connect()) return tell(true)
+        if (!granted()) return tell(false, "setup")
         launch(wifiIp() ?: return, g)
     }
 
@@ -111,6 +116,11 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip))
         arm()
+    }
+
+    private fun tell(up: Boolean, why: String? = null) {
+        reason.value = why
+        push(LinkMsg.bridge(up, why))
     }
 
     @Suppress("DEPRECATION")
@@ -123,7 +133,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         disarm()
         val up = bridge.connect() && runCatching { bridge.cmd("caps") }.isSuccess
         adbWifi(false)
-        if (up) push(LinkMsg.bridge(true)) else bridge.close()
+        if (up) tell(true) else bridge.close()
         return mapOf("up" to up)
     }
 
@@ -155,7 +165,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         prefs.edit().putBoolean(ON, false).apply()
         main.removeCallbacks(unwatch)
         unwatch()
-        push(LinkMsg.bridge(false, "network"))
+        tell(false, "network")
         if (!app.has(Manifest.permission.POST_NOTIFICATIONS)) return
         val nm = app.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHAN, "Phone powers", NotificationManager.IMPORTANCE_DEFAULT))

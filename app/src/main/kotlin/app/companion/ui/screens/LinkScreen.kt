@@ -1,25 +1,39 @@
 package app.companion.ui.screens
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.companion.core.PowersStatus
+import app.companion.link.LinkState
+import app.companion.link.LinkStore
 import app.companion.link.Stage
+import app.companion.link.feature.Calls
 import app.companion.sl
 import app.companion.ui.Ty
 import app.companion.ui.kit.Btn
@@ -44,7 +58,7 @@ import kotlinx.coroutines.withContext
 
 private val perms = arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE)
 
-private class Row(val key: String, val label: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private class Row(val key: String, val label: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val perms: List<String> = emptyList(), val why: String = "")
 
 private val rows = listOf(
     Row("otp", "Codes", "One time codes, as they arrive", Ic.Lock),
@@ -57,6 +71,21 @@ private val rows = listOf(
     Row("clipIn", "Clipboard from Mac", "Lets your Mac set what is on your clipboard", Ic.Copy),
     Row("ask", "Ask Companion", "Your Mac can ask questions, answered on this phone", Ic.Sparkle),
 )
+
+private val more = listOf(
+    Row("calls", "Calls", "Answer, place and talk through calls on your Mac", Ic.Mic, listOf(Manifest.permission.READ_PHONE_STATE, Manifest.permission.ANSWER_PHONE_CALLS, Manifest.permission.CALL_PHONE, Manifest.permission.SEND_SMS), "Allow Phone and SMS access to turn on calls"),
+    Row("live", "Live activities", "Deliveries, rides, timers and media on your Mac", Ic.Clock),
+    Row("files", "Files", "Send files between this phone and your Mac", Ic.Download),
+    Row("photos", "Screenshots", "New screenshots appear on your Mac", Ic.Image, listOf(Manifest.permission.READ_MEDIA_IMAGES), "Allow access to photos to turn on screenshots"),
+    Row("clipImage", "Copied images", "Images you copy move between the two devices", Ic.Copy),
+    Row("handoff", "Handoff", "Open pages from your Mac here, and send pages to it", Ic.Send, listOf(Manifest.permission.POST_NOTIFICATIONS), "Allow notifications to turn on Handoff"),
+    Row("dnd", "Do Not Disturb", "Do Not Disturb follows between the two devices", Ic.Bell, why = "Allow Do Not Disturb access to turn this on"),
+    Row("mirror", "Phone mirroring", "See and control this screen in a Mac window, needs Phone powers", Ic.Eye),
+)
+
+private val all = rows + more
+
+private fun Row.ok(c: Context) = if (key == "dnd") c.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted else perms.all(c::has)
 
 private fun Stage.sub(name: String?) = when (this) {
     Stage.Off -> "Off"
@@ -83,10 +112,49 @@ fun LinkScreen(back: () -> Unit) {
     var unpair by remember { mutableStateOf(false) }
     var apps by remember { mutableStateOf(false) }
     var listener by remember { mutableStateOf(c.listenerOn()) }
+    var held by remember { mutableStateOf(all.filter { it.ok(c) }.map { it.key }.toSet()) }
+    var granted by remember { mutableStateOf(hub.powers.granted()) }
+    var want by rememberSaveable { mutableStateOf<String?>(null) }
+    val up by hub.powers.bridge.up.collectAsStateWithLifecycle()
+    val why by hub.powers.why.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
+    val result = { r: Row, ok: Boolean ->
+        if (ok) {
+            held += r.key
+            hub.share(r.key, true)
+        } else if (activity != null && r.perms.any { !c.has(it) && !ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }) {
+            snack.act(r.why, "Open settings") { c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", c.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        } else {
+            snack.say(r.why)
+        }
+    }
     LifecycleResumeEffect(Unit) {
         listener = c.listenerOn()
+        granted = hub.powers.granted()
+        val on = LinkStore.shares(c)
+        val now = all.filter { it.ok(c) }.map { it.key }.toSet()
+        all.filter { it.key in on && it.key !in now }.forEach {
+            hub.share(it.key, false)
+            snack.say(it.why)
+        }
+        val calling = Calls.live?.busy() == true
+        (now - held).filter { it in on && !(it == "calls" && calling) }.forEach(hub::restart)
+        held = if (calling) now - "calls" else now
+        all.firstOrNull { it.key == want && it.key == "dnd" }?.let { want = null; result(it, it.ok(c)) }
         hub.refresh()
         onPauseOrDispose {}
+    }
+    LaunchedEffect(s, up, why) { granted = hub.powers.granted() }
+    val grant = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        all.firstOrNull { it.key == want && it.key != "dnd" }?.let { want = null; result(it, r.values.all { v -> v }) }
+    }
+    val pick = { r: Row, on: Boolean ->
+        if (!on || r.key in held) hub.share(r.key, on)
+        else {
+            want = r.key
+            if (r.key == "dnd") c.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            else grant.launch(r.perms.toTypedArray())
+        }
     }
     val ask = rememberPerms(*perms) { ok -> if (ok) hub.enable(true) else snack.say("Companion needs Bluetooth permission for the link") }
     Screen("Mac link", "Nothing leaves your phone except to your paired Mac, end-to-end encrypted", back = back, nav = false, tall = false) {
@@ -110,24 +178,29 @@ fun LinkScreen(back: () -> Unit) {
             item(key = "share") { Section("Share with your Mac") }
             item(key = "share-list") {
                 Group {
-                    rows.forEachIndexed { n, r ->
-                        if (n > 0) Rule(72.dp)
-                        Toggle(r.label, r.sub, r.key in s.shares, icon = r.icon) { hub.share(r.key, it) }
-                    }
+                    ShareRows(rows, s, pick)
                     if ("notifs" in s.shares) {
                         Rule(72.dp)
                         PassLine("Apps", if (s.apps.isEmpty()) "None chosen" else "${s.apps.size} chosen", lead = Ic.Inbox, onClick = { apps = true })
                     }
                 }
             }
+            item(key = "more") { Section("Continuity") }
+            item(key = "more-list") { Group { ShareRows(more, s, pick) } }
+            item(key = "powers") { Section("Phone powers") }
+            item(key = "powers-line") {
+                val (head, fix) = PowersStatus.of(up, s.stage == Stage.Connected, granted, why)
+                Group { PassLine(head, fix ?: "Lets your Mac take calls and mirror this screen", lead = Ic.Shield, tone = if (up) Tone.Green else Tone.Accent) }
+            }
             item(key = "privacy") { Section("Privacy") }
             item(key = "privacy-text") {
                 Group {
                     Column(Modifier.padding(18.dp)) {
                         listOf(
-                            "Bluetooth only. Companion adds no internet access for the link.",
+                            "Bluetooth carries the link. Files, screenshots, call audio and mirroring go over your Wi-Fi straight to your Mac, only while you use them. Companion adds no internet access for the link.",
                             "Everything is encrypted between this phone and your Mac. Keys never leave the two devices.",
                             "Everything above is off until you turn it on. Ringing this phone from your Mac is always allowed.",
+                            "Phone powers turns wireless debugging on for a few seconds to start Bridge, then off. Bridge answers only Companion and never stores audio or video.",
                         ).forEachIndexed { i, line ->
                             Text(line, Modifier.padding(top = if (i == 0) 0.dp else 8.dp), style = Ty.ui(14, FontWeight.Normal).copy(color = pal.ink2))
                         }
@@ -142,6 +215,14 @@ fun LinkScreen(back: () -> Unit) {
     }
     if (unpair) PassConfirm("Unpair ${s.name}?", "Your Mac will stop receiving anything from this phone. Pair again from Notchy any time.", "Unpair", { hub.unpair(); unpair = false }, { unpair = false })
     if (apps) AppsSheet(s.apps, hub::allow) { apps = false }
+}
+
+@Composable
+private fun ShareRows(list: List<Row>, s: LinkState, pick: (Row, Boolean) -> Unit) {
+    list.forEachIndexed { n, r ->
+        if (n > 0) Rule(72.dp)
+        Toggle(r.label, r.sub, r.key in s.shares, icon = r.icon) { pick(r, it) }
+    }
 }
 
 @Composable

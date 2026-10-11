@@ -31,15 +31,15 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
     override val key = "calls"
     override val cmds = setOf("call_answer", "call_end", "call_reject", "call_dial", "call_mute", "call_hold", "call_dtmf", "call_move")
 
-    private data class Fb(val id: String, val state: String, val started: Long?)
-    private data class Note(val name: String?, val number: String?, val photo: String?, val at: Long)
+    private data class Fb(val id: String, val state: String, val started: Long?, val since: Long)
+    private data class Note(val id: String?, val name: String?, val number: String?, val photo: String?, val at: Long)
 
     private val tm = app.getSystemService(TelecomManager::class.java)
     private val tel = app.getSystemService(TelephonyManager::class.java)
     private val listener = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
         override fun onCallStateChanged(state: Int) = phone(state)
     }
-    private var out: ((Obj) -> Unit)? = null
+    @Volatile private var out: ((Obj) -> Unit)? = null
     private var fb: Fb? = null
     private var note: Note? = null
     private var sent: Obj? = null
@@ -91,9 +91,10 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = x.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val num = CallInfo.number(text) ?: CallInfo.number(title)
+        val id = if (MacInCall.live != null) MacInCall.current()?.let { "c${it.details.creationTimeMillis}" } else synchronized(this) { fb?.id }
         val photo = n.getLargeIcon()?.let { icon -> runCatching { jpeg(icon.loadDrawable(app)) }.getOrNull() }
         synchronized(this) {
-            note = Note(title.takeIf { it.isNotBlank() && CallInfo.number(it) == null }, num, photo, System.currentTimeMillis())
+            note = Note(id, title.takeIf { it.isNotBlank() && CallInfo.number(it) == null }, num, photo, System.currentTimeMillis())
             if (fb?.state == "dialing" && x.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)) fb = fb?.copy(state = "active", started = System.currentTimeMillis())
         }
         report()
@@ -134,16 +135,18 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
     }
 
     private fun fresh(now: Long, state: String): Fb {
-        note = note?.takeIf { it.at > now - GRACE }
-        return Fb("c$now", state, null)
+        return Fb("c$now", state, null, now)
     }
 
     private fun cur(drop: Call?): Obj? {
         val full = MacInCall.live != null
-        if (!full) return fb?.let { LinkMsg.call(it.id, it.state, note?.number, note?.name, note?.photo, it.started, ctl()) }
+        if (!full) return fb?.let { f ->
+            val n = note?.takeIf { CallInfo.mine(it.id, it.at, f.id, f.since - GRACE) }
+            LinkMsg.call(f.id, f.state, n?.number, n?.name, n?.photo, f.started, ctl())
+        }
         val c = MacInCall.current(drop) ?: return null
         val d = c.details
-        val n = note?.takeIf { it.at >= d.creationTimeMillis }
+        val n = note?.takeIf { CallInfo.mine(it.id, it.at, "c${d.creationTimeMillis}", d.creationTimeMillis) }
         val st = MacInCall.name(c.state)
         val at = if (st == "active" || st == "held") d.connectTimeMillis.takeIf { it > 0 } ?: System.currentTimeMillis() else null
         return LinkMsg.call("c${d.creationTimeMillis}", st, d.handle?.schemeSpecificPart ?: n?.number, d.contactDisplayName?.toString() ?: n?.name, n?.photo, at, ctl())
@@ -176,7 +179,7 @@ class Calls(private val app: Application, private val powers: () -> Powers) : Li
 
     private fun reject(full: Boolean, c: Call?, text: String?) {
         if (full) return (c ?: gone()).reject(text != null, text)
-        val to = note?.number
+        val to = synchronized(this) { note?.number }
         ans { endCall() }
         if (text == null) return
         if (to == null) throw LinkBad("number")

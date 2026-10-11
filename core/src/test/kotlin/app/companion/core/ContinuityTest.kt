@@ -1,5 +1,6 @@
 package app.companion.core
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -351,5 +352,20 @@ class ContinuityTest {
         assertEquals(false, CallInfo.mine("cB", 100, "cA", 50))
         assertEquals(true, CallInfo.mine(null, 100, "cA", 50))
         assertEquals(false, CallInfo.mine(null, 40, "cA", 50))
+    }
+
+    @Test
+    fun `call restore returns volume and mic exactly once`() {
+        val r = CallRestore(volume = 5, micMuted = false)
+        assertEquals(5 to false, r.take())
+        assertEquals(null, r.take())
+    }
+
+    @Test
+    fun `call restore hands out one winner under a race`() {
+        val r = CallRestore(volume = 3, micMuted = true)
+        val got = ConcurrentLinkedQueue<Pair<Int, Boolean>>()
+        List(8) { Thread { r.take()?.let(got::add) } }.onEach(Thread::start).forEach(Thread::join)
+        assertEquals(listOf(3 to true), got.toList())
     }
 }

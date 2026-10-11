@@ -82,7 +82,7 @@ object Main {
             while (true) {
                 val (t, body) = BridgeWire.read(input)
                 when (t) {
-                    BridgeWire.JSON -> synchronized(c) { BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()))).encodeToByteArray()) }
+                    BridgeWire.JSON -> synchronized(c) { BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), c)).encodeToByteArray()) }
                     BridgeWire.AUDIO -> pcm.play(body)
                     else -> Unit
                 }
@@ -93,17 +93,19 @@ object Main {
         }
     }
 
-    private fun run(q: Map<String, Any?>): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>, c: LocalSocket): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
             "grant" -> res(id, grant())
-            "call_audio" -> call(id, q["on"] == true)
+            "call_audio" -> call(id, q["on"] == true, c)
             else -> res(id, false, "err" to "unknown")
         }
     }
 
-    private fun call(id: Any?, on: Boolean): Map<String, Any?> {
+    @Synchronized
+    private fun call(id: Any?, on: Boolean, c: LocalSocket): Map<String, Any?> {
+        if (cur !== c) return res(id, false, "err" to "busy")
         if (!on) return res(id, true).also { pcm.stop() }
         return try {
             pcm.start()

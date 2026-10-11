@@ -78,9 +78,10 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
         var why: String? = null
         var job: Job? = null
         var dog: Job? = null
+        val cb: (Int, ByteArray) -> Unit = { t, body -> if (t == BulkFrame.AUDIO) q.trySend(body) }
         try {
             airborne({ b.cmd("call_audio", mapOf("on" to it)) }, CallRestore(am.getStreamVolume(VOICE), am.isMicrophoneMute), { v, m -> restore(am, v, m) }) {
-                b.onFrame = { t, body -> if (t == BulkFrame.AUDIO) q.trySend(body) }
+                synchronized(b) { b.onFrame = cb }
                 job = scope.launch {
                     try {
                         for (f in q) p.send(BulkFrame.AUDIO, f)
@@ -105,13 +106,13 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
                 }
             }
         } catch (e: LinkBad) {
-            why = e.message?.let { if (it == "bridge") "powers" else it.takeIf { w -> w in WHY } } ?: "audio"
+            why = whyOf(e.message, b.up.value)
         } catch (_: Exception) {
         } finally {
             dog?.cancel()
             job?.cancel()
             q.close()
-            b.onFrame = null
+            synchronized(b) { if (b.onFrame === cb) b.onFrame = null }
             synchronized(this) { if (cur === s) cur = null }
             out?.invoke(LinkMsg.callAudio("phone", why))
         }
@@ -127,12 +128,14 @@ class CallRelay(private val app: Application, private val powers: () -> Powers) 
         runCatching { am.isMicrophoneMute = m }
     }
 
-    private companion object {
-        const val WAIT = 12_000L
-        const val LIVE = 5_000L
-        const val QUEUE = 8
-        const val VOICE = AudioManager.STREAM_VOICE_CALL
-        val WHY = setOf("powers", "nowifi", "nointercept", "busy")
+    companion object {
+        private const val WAIT = 12_000L
+        private const val LIVE = 5_000L
+        private const val QUEUE = 8
+        private const val VOICE = AudioManager.STREAM_VOICE_CALL
+        private val WHY = setOf("nowifi", "nointercept", "busy")
+
+        internal fun whyOf(e: String?, up: Boolean) = if (e == "bridge") (if (up) "audio" else "powers") else e?.takeIf { it in WHY } ?: "audio"
     }
 }
 

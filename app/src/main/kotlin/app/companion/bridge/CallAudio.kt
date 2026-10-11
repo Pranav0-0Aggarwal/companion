@@ -16,7 +16,6 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
     private var rec: AudioRecord? = null
     @Volatile private var trk: AudioTrack? = null
     private var hold: CallRestore? = null
-    private var pump: Thread? = null
     private var cb: TelephonyCallback? = null
 
     @Synchronized
@@ -33,7 +32,7 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
             am.isMicrophoneMute = true
             t.play()
             r.startRecording()
-            pump = thread(isDaemon = true) { pump(r) }
+            thread(isDaemon = true) { pump(r) }
             val c = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
                 override fun onCallStateChanged(state: Int) {
                     if (state == TelephonyManager.CALL_STATE_IDLE) stop()
@@ -52,8 +51,6 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
         cb?.let { c -> runCatching { ctx.getSystemService(TelephonyManager::class.java).unregisterTelephonyCallback(c) } }
         cb = null
         rec?.let { runCatching(it::stop) }
-        pump?.join(JOIN)
-        pump = null
         rec?.let { runCatching(it::release) }
         rec = null
         trk?.let { runCatching(it::stop); runCatching(it::release) }
@@ -89,6 +86,5 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
         const val VOICE = AudioManager.STREAM_VOICE_CALL
         const val RATE = 16_000
         const val FRAME = 640
-        const val JOIN = 300L
     }
 }

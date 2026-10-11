@@ -1,6 +1,7 @@
 package app.companion.link
 
 import app.companion.core.CallRestore
+import app.companion.link.feature.CallRelay
 import app.companion.link.feature.airborne
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,5 +46,14 @@ class CallRelayTest {
         }
         assertEquals("nointercept", e.message)
         assertEquals(listOf(true, false), sent)
+    }
+
+    @Test
+    fun `a bridge timeout while up is not blamed on powers`() {
+        assertEquals("powers", CallRelay.whyOf("bridge", false))
+        assertEquals("audio", CallRelay.whyOf("bridge", true))
+        assertEquals("nointercept", CallRelay.whyOf("nointercept", true))
+        assertEquals("audio", CallRelay.whyOf("Permission denial: x", true))
+        assertEquals("audio", CallRelay.whyOf(null, true))
     }
 }

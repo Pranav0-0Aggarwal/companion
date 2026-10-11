@@ -27,6 +27,10 @@ object SendGuard {
         scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfterLast('@')) != self
 }
 
+object HandoffUrl {
+    fun openable(url: String) = runCatching { java.net.URI(url) }.getOrNull()?.let { it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrEmpty() } == true
+}
+
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {
     private val m = ConcurrentHashMap<String, Pair<Long, T>>()
 

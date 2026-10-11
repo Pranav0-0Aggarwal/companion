@@ -352,4 +352,11 @@ class ContinuityTest {
         assertEquals(true, CallInfo.mine(null, 100, "cA", 50))
         assertEquals(false, CallInfo.mine(null, 40, "cA", 50))
     }
+
+    @Test
+    fun `handoff opens only web urls`() {
+        assertTrue(HandoffUrl.openable("https://example.com"))
+        assertTrue(HandoffUrl.openable("HTTP://example.com/a?b=c"))
+        listOf("intent://scan#Intent;scheme=zxing;end", "file:///sdcard/x", "javascript:alert(1)", "tel:123", "https://", "https:///x", "ftp://x", "https://a.com b", "two\nhttps://a.com", "").forEach { assertFalse(HandoffUrl.openable(it), it) }
+    }
 }

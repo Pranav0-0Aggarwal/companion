@@ -32,10 +32,12 @@ import app.companion.ingest.Ingest
 import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
 import app.companion.link.feature.Calls
+import app.companion.link.feature.Dnd
 import app.companion.link.LinkStore
 import app.companion.link.feature.Messages
 import app.companion.link.feature.LiveFeed
 import app.companion.link.feature.Files
+import app.companion.link.feature.Handoff
 import app.companion.system.Alarms
 import app.companion.system.Export
 import app.companion.system.GTasks
@@ -100,6 +102,8 @@ class CompanionApp : Application() {
         LinkFeatures.all += LiveFeed(this)
         Files.register(this)
         LinkFeatures.all += Calls(this) { sl.link.powers }
+        LinkFeatures.all += Handoff(this)
+        LinkFeatures.all += Dnd(this)
         if (LinkStore.on(this)) sl.link.start()
     }
 

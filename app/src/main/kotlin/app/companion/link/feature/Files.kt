@@ -23,6 +23,7 @@ import android.widget.Toast
 import app.companion.R
 import app.companion.core.Expiring
 import app.companion.core.FileFrames
+import app.companion.core.HandoffUrl
 import app.companion.core.LinkError
 import app.companion.core.LinkMsg
 import app.companion.core.SafeName
@@ -83,20 +84,24 @@ object Files : LinkFeature {
         })
     }
 
-    fun send(c: Context, i: Intent) {
-        val link = c.sl.link
-        val st = link.state.value
-        when {
-            st.stage != Stage.Connected -> toast(c, "Mac not connected")
-            key !in st.shares -> toast(c, "Turn on Files in Companion")
-            else -> {
-                val items = uris(i).mapNotNull { open(c, it) }
-                if (items.isEmpty()) return toast(c, "Nothing to send")
-                val ref = pending.put(items)
-                Handler(Looper.getMainLooper()).postDelayed({ pending.expire(ref) }, TTL)
-                link.push(LinkMsg.bulkWant("files_out", ref))
-            }
+    fun ready(c: Context, k: String): Boolean {
+        val st = c.sl.link.state.value
+        val why = when {
+            st.stage != Stage.Connected -> "Mac not connected"
+            k !in st.shares -> "Turn on ${k.replaceFirstChar(Char::uppercase)} in Companion"
+            else -> return true
         }
+        toast(c, why)
+        return false
+    }
+
+    fun send(c: Context, i: Intent) {
+        if (!ready(c, key)) return
+        val items = uris(i).mapNotNull { open(c, it) }
+        if (items.isEmpty()) return toast(c, "Nothing to send")
+        val ref = pending.put(items)
+        Handler(Looper.getMainLooper()).postDelayed({ pending.expire(ref) }, TTL)
+        c.sl.link.push(LinkMsg.bulkWant("files_out", ref))
     }
 
     private fun uris(i: Intent): List<Uri> =
@@ -171,7 +176,10 @@ object Files : LinkFeature {
 class SendToMacActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
-        Files.send(this, intent)
+        val url = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.trim()?.takeIf {
+            intent.action == Intent.ACTION_SEND && !intent.hasExtra(Intent.EXTRA_STREAM) && HandoffUrl.openable(it)
+        }
+        if (url != null) Handoff.send(this, url, intent.getStringExtra(Intent.EXTRA_SUBJECT)) else Files.send(this, intent)
         finish()
     }
 }

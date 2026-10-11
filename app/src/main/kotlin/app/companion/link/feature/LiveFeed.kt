@@ -48,6 +48,10 @@ class LiveFeed(private val app: Application) : LinkFeature {
     private var at = 0L
     private var artKey = ""
     private var art: String? = null
+    private var fresh = false
+    private val pending = ConcurrentHashMap<String, StatusBarNotification>()
+
+    private fun PlaybackState?.live() = this?.state.let { it == PlaybackState.STATE_PLAYING || it == PlaybackState.STATE_BUFFERING }
 
     private val cb = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) = sync()
@@ -81,12 +85,21 @@ class LiveFeed(private val app: Application) : LinkFeature {
     @Synchronized
     override fun stop() {
         if (on === this) on = null
+        val send = out
         out = null
         runCatching { mgr.removeOnActiveSessionsChangedListener(sessions) }
         ctls.forEach { runCatching { it.unregisterCallback(cb) } }
         ctls = emptyList()
         cur = null
+        pending.keys.forEach(main::removeCallbacksAndMessages)
+        pending.clear()
+        send?.let { s ->
+            val now = System.currentTimeMillis()
+            sent.forEach { s(LinkMsg.liveGone(it)) }
+            mark?.takeIf { it.playing }?.let { s(frame(it.copy(playing = false), pos + now - at, now)) }
+        }
         mark = null
+        artKey = ""
         sent.forEach(throttle::forget)
         sent.clear()
     }
@@ -102,14 +115,23 @@ class LiveFeed(private val app: Application) : LinkFeature {
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = x.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val prog = if (max > 0 && !x.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE)) x.getInt(Notification.EXTRA_PROGRESS) else null
-        if (!throttle.pass(sbn.key, "$title|$text|${prog != null}", System.currentTimeMillis())) return
+        val now = System.currentTimeMillis()
+        if (!throttle.pass(sbn.key, "${n.category}|${prog != null}|$chrono", now)) return hold(sbn, now)
+        pending.remove(sbn.key)
+        main.removeCallbacksAndMessages(sbn.key)
         val icon = if (sent.add(sbn.key)) n.getLargeIcon()?.loadDrawable(app)?.let { jpeg(bitmap(it)) } else null
         val down = x.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN)
         val name = runCatching { app.packageManager.getApplicationInfo(sbn.packageName, 0).loadLabel(app.packageManager).toString() }.getOrDefault(sbn.packageName)
         send(LinkMsg.live(sbn.key, sbn.packageName, name, title, text, prog, prog?.let { max }, n.`when`.takeIf { chrono && down }, n.`when`.takeIf { chrono && !down }, icon))
     }
 
+    private fun hold(sbn: StatusBarNotification, now: Long) {
+        if (pending.put(sbn.key, sbn) == null) main.postDelayed({ pending.remove(sbn.key)?.let { runCatching { post(it) } } }, sbn.key, throttle.delay(sbn.key, now).coerceAtLeast(1))
+    }
+
     private fun gone(k: String) {
+        pending.remove(k)
+        main.removeCallbacksAndMessages(k)
         if (!sent.remove(k)) return
         throttle.forget(k)
         out?.invoke(LinkMsg.liveGone(k))
@@ -126,18 +148,18 @@ class LiveFeed(private val app: Application) : LinkFeature {
     @Synchronized
     private fun sync() {
         val send = out ?: return
-        val c = ctls.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: ctls.firstOrNull { it.sessionToken == cur?.sessionToken }
+        val c = ctls.firstOrNull { it.playbackState.live() } ?: ctls.firstOrNull { it.sessionToken == cur?.sessionToken }
         cur = c
         val prev = mark
         val now = System.currentTimeMillis()
         if (c == null) {
             mark = null
-            if (prev?.playing == true) send(frame(prev.copy(playing = false), pos, now))
+            if (prev?.playing == true) send(frame(prev.copy(playing = false), pos + now - at, now))
             return
         }
         val s = c.playbackState
         val md = c.metadata
-        val playing = s?.state == PlaybackState.STATE_PLAYING
+        val playing = s.live()
         if (!playing && prev?.pkg != c.packageName) return
         val title = (md?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)).orEmpty()
         val artist = (md?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST) ?: md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)).orEmpty()
@@ -148,6 +170,7 @@ class LiveFeed(private val app: Application) : LinkFeature {
         val k = "${m.pkg}|$title|$artist"
         if (k != artKey) {
             artKey = k
+            fresh = true
             art = (md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ART) ?: md?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON))?.let(::jpeg)
         }
         mark = m
@@ -156,7 +179,7 @@ class LiveFeed(private val app: Application) : LinkFeature {
         send(frame(m, p, now))
     }
 
-    private fun frame(m: Mark, p: Long, now: Long) = LinkMsg.media(m.pkg, m.title, m.artist, art, m.playing, p, m.dur, now)
+    private fun frame(m: Mark, p: Long, now: Long) = LinkMsg.media(m.pkg, m.title, m.artist, art.takeIf { fresh }, m.playing, p, m.dur, now).also { fresh = false }
 
     private fun bitmap(d: Drawable) = (d as? BitmapDrawable)?.bitmap ?: Bitmap.createBitmap(EDGE, EDGE, Bitmap.Config.ARGB_8888).also {
         d.setBounds(0, 0, EDGE, EDGE)

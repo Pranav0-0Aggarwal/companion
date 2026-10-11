@@ -105,6 +105,18 @@ class ContinuityTest {
     }
 
     @Test
+    fun `live throttle says how long a held update must wait`() {
+        val t = LiveThrottle()
+        assertEquals(0, t.delay("k", 0))
+        t.pass("k", "a", 1_000)
+        assertEquals(5_000, t.delay("k", 1_000))
+        assertEquals(1_500, t.delay("k", 4_500))
+        assertEquals(0, t.delay("k", 6_000))
+        t.forget("k")
+        assertEquals(0, t.delay("k", 1_100))
+    }
+
+    @Test
     fun `live rule needs ongoing plus progress, chronometer or a live category, never calls`() {
         assertTrue(LiveRule.ok(true, 100, false, null))
         assertTrue(LiveRule.ok(true, 0, true, null))

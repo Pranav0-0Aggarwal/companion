@@ -12,6 +12,9 @@ class LiveThrottle(private val gapMs: Long = 5_000) {
     }
 
     @Synchronized
+    fun delay(key: String, now: Long) = seen[key]?.let { (gapMs - (now - it.second)).coerceAtLeast(0) } ?: 0L
+
+    @Synchronized
     fun forget(key: String) {
         seen.remove(key)
     }

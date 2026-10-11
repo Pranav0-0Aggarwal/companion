@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec
 
 class LinkError(why: String) : Exception(why)
 
-class LinkSession(private val out: ByteArray, private val inn: ByteArray, private val outDir: Int, private val inDir: Int) {
+class LinkSession(private val out: ByteArray, private val inn: ByteArray, private val outDir: Int, private val inDir: Int, val okm: ByteArray = ByteArray(0)) {
     private var sent = 0L
     private var seen = -1L
 
@@ -87,7 +87,7 @@ object LinkCrypto {
 
     fun session(priv: ByteArray, macPub: ByteArray, salt: ByteArray, nm: ByteArray, np: ByteArray): LinkSession {
         val k = okm(shared(priv, macPub), salt, nm, np)
-        return LinkSession(k.copyOfRange(32, 64), k.copyOfRange(0, 32), LinkSession.PHONE_TO_MAC, LinkSession.MAC_TO_PHONE)
+        return LinkSession(k.copyOfRange(32, 64), k.copyOfRange(0, 32), LinkSession.PHONE_TO_MAC, LinkSession.MAC_TO_PHONE, k)
     }
 
     fun hkdf(ikm: ByteArray, salt: ByteArray, info: ByteArray, len: Int): ByteArray {

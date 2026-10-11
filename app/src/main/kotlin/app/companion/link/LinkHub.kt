@@ -44,6 +44,8 @@ class LinkHub(private val app: Application, sl: Services) {
     private var wait: Job? = null
     private var radio: BroadcastReceiver? = null
 
+    val okm: ByteArray? get() = if (authed) session?.okm else null
+
     val state = MutableStateFlow(LinkState())
     val pending = MutableStateFlow<LinkPair?>(null)
 
@@ -82,6 +84,10 @@ class LinkHub(private val app: Application, sl: Services) {
             if (authed) {
                 push(LinkMsg.shareEvent(LinkStore.shares(app)))
                 events.sync()
+                LinkFeatures.all.filter { it.key == k }.forEach { f ->
+                    f.stop()
+                    if (on) conn?.let { f.start(it, ::push) }
+                }
             }
             reconcile()
         }
@@ -150,6 +156,7 @@ class LinkHub(private val app: Application, sl: Services) {
         conn = null
         wait?.cancel()
         events.stop()
+        LinkFeatures.all.forEach(LinkFeature::stop)
         session = null
         authed = false
     }
@@ -198,7 +205,11 @@ class LinkHub(private val app: Application, sl: Services) {
         authed = true
         wait?.cancel()
         push(LinkMsg.ok(Settings.Global.getString(app.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL, LinkStore.shares(app)))
-        conn?.let(events::start)
+        conn?.let { c ->
+            events.start(c)
+            val on = LinkStore.shares(app)
+            LinkFeatures.all.forEach { if (it.key in on) it.start(c, ::push) }
+        }
         gatt.calmDown()
         reconcile()
     }
@@ -224,7 +235,7 @@ class LinkHub(private val app: Application, sl: Services) {
 
     private fun fail(id: Long, why: String) = mapOf("t" to "res", "id" to id, "ok" to false, "err" to why)
 
-    private fun push(o: Obj) {
+    fun push(o: Obj) {
         val s = session ?: return
         gatt.send(s.seal(Json.write(o).encodeToByteArray()))
     }

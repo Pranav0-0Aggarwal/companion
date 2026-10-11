@@ -43,7 +43,7 @@ class LinkCmds(private val c: Context, private val sl: Services, private val sha
         "clip" -> need("clipIn") { clip(LinkArgs.text(q, "text", CLIP)) }
         "ring" -> LinkRing.start(c)
         "ping" -> Unit
-        else -> throw LinkBad("unknown")
+        else -> LinkFeatures.of(t)?.let { f -> need(f.key) { f.run(t, q) } } ?: throw LinkBad("unknown")
     }.let { if (it is Map<*, *>) @Suppress("UNCHECKED_CAST") (it as Obj) else emptyMap() }
 
     private suspend fun <T> need(k: String, f: suspend () -> T): T {

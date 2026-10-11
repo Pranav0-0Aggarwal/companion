@@ -25,6 +25,12 @@ class LinkTest {
     }
 
     @Test
+    fun `session keeps the okm`() {
+        assertEquals(s("okm"), str(phone().okm))
+        assertEquals(0, mac().okm.size)
+    }
+
+    @Test
     fun `both sides derive the same shared secret`() {
         assertEquals(s("shared"), str(LinkCrypto.shared(key("phonePrivate"), key("macPublic"))))
         assertEquals(s("shared"), str(LinkCrypto.shared(key("macPrivate"), key("phonePublic"))))

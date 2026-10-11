@@ -25,7 +25,7 @@ class BridgeClient(private val scope: CoroutineScope) {
     private val ids = AtomicLong()
     private var sock: LocalSocket? = null
     val up: StateFlow<Boolean> = state
-    var onFrame: ((Int, ByteArray) -> Unit)? = null
+    @Volatile var onFrame: ((Int, ByteArray) -> Unit)? = null
 
     suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
         close()

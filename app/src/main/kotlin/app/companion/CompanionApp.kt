@@ -31,6 +31,8 @@ import app.companion.ingest.Hooks
 import app.companion.ingest.Ingest
 import app.companion.link.LinkFeatures
 import app.companion.link.LinkHub
+import app.companion.link.bulk.Bulk
+import app.companion.link.feature.CallRelay
 import app.companion.link.feature.Calls
 import app.companion.link.feature.Dnd
 import app.companion.link.LinkStore
@@ -106,6 +108,11 @@ class CompanionApp : Application() {
         Shots.register(this)
         LinkFeatures.all += Handoff(this)
         LinkFeatures.all += Dnd(this)
+        CallRelay(this) { sl.link.powers }.also {
+            LinkFeatures.all += it
+            it.register()
+            Bulk.handlers["call"] = it::serve
+        }
         if (LinkStore.on(this)) sl.link.start()
     }
 

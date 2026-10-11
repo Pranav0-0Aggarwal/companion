@@ -2,6 +2,7 @@ package app.companion.core
 
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 object ConvKey {
     fun of(pkg: String, shortcutId: String?, convTitle: String?, title: String) = "$pkg|${shortcutId ?: convTitle ?: title}"
@@ -61,4 +62,10 @@ class Expiring<T>(private val ttl: Long, private val now: () -> Long, private va
         m.values.forEach { drop(it.second) }
         m.clear()
     }
+}
+
+class CallRestore(private val volume: Int, private val micMuted: Boolean) {
+    private val spent = AtomicBoolean()
+
+    fun take(): Pair<Int, Boolean>? = if (spent.compareAndSet(false, true)) volume to micMuted else null
 }

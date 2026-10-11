@@ -21,12 +21,14 @@ object Main {
     private const val PKG = "app.companion"
     private const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
     private lateinit var ctx: Context
-    private var cur: LocalSocket? = null
+    @Volatile private var cur: LocalSocket? = null
+    private lateinit var pcm: CallAudio
 
     @JvmStatic
     fun main(args: Array<String>) {
         Looper.prepareMainLooper()
         ctx = Shell.context()
+        pcm = CallAudio(ctx) { t, b -> cur?.let { s -> synchronized(s) { BridgeWire.write(s.outputStream, t, b) } } }
         val uid = ctx.packageManager.getPackageUid(PKG, 0)
         val srv = try {
             LocalServerSocket(NAME)
@@ -59,6 +61,7 @@ object Main {
 
     @Synchronized
     private fun adopt(c: LocalSocket) {
+        pcm.stop()
         cur?.close()
         cur = c
         thread { serve(c) }
@@ -66,44 +69,45 @@ object Main {
 
     @Synchronized
     private fun drop(c: LocalSocket) {
-        if (cur === c) cur = null
+        if (cur === c) {
+            cur = null
+            pcm.stop()
+        }
         c.close()
     }
 
     private fun serve(c: LocalSocket) {
-        val audio = CallAudio(ctx) { t, b -> synchronized(c) { BridgeWire.write(c.outputStream, t, b) } }
         try {
             val input = DataInputStream(c.inputStream.buffered())
             while (true) {
                 val (t, body) = BridgeWire.read(input)
                 when (t) {
-                    BridgeWire.JSON -> synchronized(c) { BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()), audio)).encodeToByteArray()) }
-                    BridgeWire.AUDIO -> audio.play(body)
+                    BridgeWire.JSON -> synchronized(c) { BridgeWire.write(c.outputStream, BridgeWire.JSON, Json.write(run(Json.obj(body.decodeToString()))).encodeToByteArray()) }
+                    BridgeWire.AUDIO -> pcm.play(body)
                     else -> Unit
                 }
             }
         } catch (_: Exception) {
         } finally {
-            audio.stop()
             drop(c)
         }
     }
 
-    private fun run(q: Map<String, Any?>, audio: CallAudio): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
             "grant" -> res(id, grant())
-            "call_audio" -> call(id, q["on"] == true, audio)
+            "call_audio" -> call(id, q["on"] == true)
             else -> res(id, false, "err" to "unknown")
         }
     }
 
-    private fun call(id: Any?, on: Boolean, audio: CallAudio): Map<String, Any?> {
-        if (!on) return res(id, true).also { audio.stop() }
+    private fun call(id: Any?, on: Boolean): Map<String, Any?> {
+        if (!on) return res(id, true).also { pcm.stop() }
         return try {
-            val (v, m) = audio.start()
-            res(id, true, "data" to mapOf("vol" to v, "mic" to m))
+            pcm.start()
+            res(id, true)
         } catch (e: Exception) {
             res(id, false, "err" to (e.message ?: "fail"))
         }

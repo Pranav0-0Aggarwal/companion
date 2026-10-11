@@ -20,7 +20,7 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
     private var cb: TelephonyCallback? = null
 
     @Synchronized
-    fun start(): Pair<Int, Boolean> {
+    fun start() {
         check(hold == null) { "busy" }
         check(Shell.sys<Boolean>(am, "isPstnCallAudioInterceptable")) { "nointercept" }
         try {
@@ -28,8 +28,7 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
             rec = r
             val t = Shell.sys<AudioTrack>(am, "getCallUplinkInjectionAudioTrack", fmt(AudioFormat.CHANNEL_OUT_MONO))
             trk = t
-            val saved = am.getStreamVolume(VOICE) to am.isMicrophoneMute
-            hold = CallRestore(saved.first, saved.second)
+            hold = CallRestore(am.getStreamVolume(VOICE), am.isMicrophoneMute)
             am.setStreamVolume(VOICE, am.getStreamMinVolume(VOICE), 0)
             am.isMicrophoneMute = true
             t.play()
@@ -42,7 +41,6 @@ class CallAudio(private val ctx: Context, private val out: (Int, ByteArray) -> U
             }
             cb = c
             runCatching { ctx.getSystemService(TelephonyManager::class.java).registerTelephonyCallback(ctx.mainExecutor, c) }
-            return saved
         } catch (e: Throwable) {
             stop()
             throw e

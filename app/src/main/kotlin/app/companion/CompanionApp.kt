@@ -93,7 +93,7 @@ class CompanionApp : Application() {
         Upgrade.boot(this)
         Thread { Models.purge(this) }.start()
         Meetings.watch(this)
-        LinkFeatures.all += Calls(this, sl.link.powers)
+        LinkFeatures.all += Calls(this) { sl.link.powers }
         if (LinkStore.on(this)) sl.link.start()
     }
 

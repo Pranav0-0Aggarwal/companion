@@ -111,4 +111,10 @@ class ContinuityTest {
         assertEquals("+919812345678", CallInfo.number("Incoming call · +91 98123 45678"))
         assertEquals(null, CallInfo.number("Incoming call"))
     }
+
+    @Test
+    fun `dial accepts only plain numbers and never truncates`() {
+        listOf("+919812345678", "(080) 2345 6789", "98123 45678").forEach { assertEquals(true, CallInfo.dialable(it), it) }
+        listOf("*#06#", "*21*123456789#", "12345", "9812345678;ATD", "+".repeat(2) + "1".repeat(31), "1".repeat(33), "").forEach { assertEquals(false, CallInfo.dialable(it), it) }
+    }
 }

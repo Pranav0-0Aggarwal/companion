@@ -38,9 +38,23 @@ class MacInCall : InCallService() {
     companion object {
         @Volatile var live: MacInCall? = null
 
-        fun current(drop: Call? = null): Call? {
-            val l = live?.calls.orEmpty().filter { it !== drop && it.state != Call.STATE_DISCONNECTED && it.state != Call.STATE_DISCONNECTING }
-            return l.firstOrNull { it.state == Call.STATE_RINGING } ?: l.firstOrNull()
+        fun current(drop: Call? = null): Call? = pick(live?.calls.orEmpty().filter { it !== drop && it.parent == null }) { it.state }
+
+        fun <T> pick(l: List<T>, state: (T) -> Int): T? = l.filter { rank(state(it)) >= 0 }.minByOrNull { rank(state(it)) }
+
+        fun rank(s: Int) = when (s) {
+            Call.STATE_RINGING, Call.STATE_SIMULATED_RINGING -> 0
+            Call.STATE_ACTIVE, Call.STATE_AUDIO_PROCESSING -> 1
+            Call.STATE_DISCONNECTED, Call.STATE_DISCONNECTING -> -1
+            Call.STATE_HOLDING -> 3
+            else -> 2
+        }
+
+        fun name(s: Int) = when (rank(s)) {
+            0 -> "ringing"
+            1 -> "active"
+            3 -> "held"
+            else -> "dialing"
         }
     }
 }

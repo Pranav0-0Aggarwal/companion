@@ -135,6 +135,7 @@ class ContinuityTest {
         assertTrue(SendGuard.ok("content", "unknown.provider", "app.companion", owner))
         assertFalse(SendGuard.ok("content", "app.companion.files", "app.companion", owner))
         assertFalse(SendGuard.ok("content", "0@app.companion.files", "app.companion", owner))
+        assertFalse(SendGuard.ok("content", "x@y@app.companion.files", "app.companion", owner))
         assertFalse(SendGuard.ok("file", "", "app.companion", owner))
         assertFalse(SendGuard.ok("file", null, "app.companion", owner))
         assertFalse(SendGuard.ok(null, "com.other.docs", "app.companion", owner))

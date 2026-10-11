@@ -20,7 +20,7 @@ object SafeName {
 
 object SendGuard {
     fun ok(scheme: String?, authority: String?, self: String, owner: (String) -> String?) =
-        scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfter('@')) != self
+        scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfterLast('@')) != self
 }
 
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {

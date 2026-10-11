@@ -84,7 +84,7 @@ class LinkEvents(private val c: Context, private val sl: Services, private val s
         val text = (x.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: x.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty().take(TEXT)
         if (title.isEmpty() && text.isEmpty()) return
         val name = runCatching { c.packageManager.getApplicationInfo(pkg, 0).loadLabel(c.packageManager).toString() }.getOrDefault(pkg)
-        send(Messages.msg(sbn, name, title, text))
+        Messages.msg(sbn, name, title, text)?.let(::send)
     }
 
     private fun send(o: Obj) {

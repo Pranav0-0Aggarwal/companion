@@ -90,4 +90,11 @@ class ContinuityTest {
             assertFailsWith<IllegalArgumentException>(it) { BulkAddr.check(it) }
         }
     }
+
+    @Test
+    fun `conversation key prefers shortcut then conversation title then title`() {
+        assertEquals("com.whatsapp|s1", ConvKey.of("com.whatsapp", "s1", "Team", "Riya"))
+        assertEquals("com.whatsapp|Team", ConvKey.of("com.whatsapp", null, "Team", "Riya"))
+        assertEquals("com.whatsapp|Riya", ConvKey.of("com.whatsapp", null, null, "Riya"))
+    }
 }

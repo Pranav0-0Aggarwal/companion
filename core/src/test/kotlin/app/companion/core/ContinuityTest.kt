@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ContinuityTest {
     private val v = Json.obj(checkNotNull(javaClass.getResourceAsStream("/link-vectors.json")).use { it.readBytes().decodeToString() })
@@ -111,5 +112,39 @@ class ContinuityTest {
         assertEquals("com.whatsapp|s1", ConvKey.of("com.whatsapp", "s1", "Team", "Riya"))
         assertEquals("com.whatsapp|Team", ConvKey.of("com.whatsapp", null, "Team", "Riya"))
         assertEquals("com.whatsapp|Riya", ConvKey.of("com.whatsapp", null, null, "Riya"))
+    }
+
+    @Test
+    fun `live throttle passes new keys and state changes, holds repeats for 5s`() {
+        val t = LiveThrottle()
+        assertTrue(t.pass("k", "a", 0))
+        assertFalse(t.pass("k", "a", 1_000))
+        assertTrue(t.pass("k", "b", 1_500))
+        assertFalse(t.pass("k", "b", 6_000))
+        assertTrue(t.pass("k", "b", 6_500))
+        t.forget("k")
+        assertTrue(t.pass("k", "b", 6_600))
+    }
+
+    @Test
+    fun `live throttle says how long a held update must wait`() {
+        val t = LiveThrottle()
+        assertEquals(0, t.delay("k", 0))
+        t.pass("k", "a", 1_000)
+        assertEquals(5_000, t.delay("k", 1_000))
+        assertEquals(1_500, t.delay("k", 4_500))
+        assertEquals(0, t.delay("k", 6_000))
+        t.forget("k")
+        assertEquals(0, t.delay("k", 1_100))
+    }
+
+    @Test
+    fun `live rule needs ongoing plus progress, chronometer or a live category, never calls`() {
+        assertTrue(LiveRule.ok(true, 100, false, null))
+        assertTrue(LiveRule.ok(true, 0, true, null))
+        listOf("progress", "transport", "navigation", "stopwatch").forEach { assertTrue(LiveRule.ok(true, 0, false, it)) }
+        assertFalse(LiveRule.ok(false, 100, true, "progress"))
+        assertFalse(LiveRule.ok(true, 0, false, "email"))
+        assertFalse(LiveRule.ok(true, 100, true, "call"))
     }
 }

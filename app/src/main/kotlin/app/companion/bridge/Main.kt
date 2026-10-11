@@ -42,8 +42,16 @@ object Main {
         }, gone, Context.RECEIVER_NOT_EXPORTED)
         thread {
             while (true) {
-                val c = srv.accept()
-                if (runCatching { c.peerCredentials.uid }.getOrNull() == uid) adopt(c) else c.close()
+                val c = try {
+                    srv.accept()
+                } catch (_: IOException) {
+                    exitProcess(0)
+                }
+                try {
+                    if (c.peerCredentials.uid == uid) adopt(c) else c.close()
+                } catch (_: Exception) {
+                    runCatching(c::close)
+                }
             }
         }
         Looper.loop()

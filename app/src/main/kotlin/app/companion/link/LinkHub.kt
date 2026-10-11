@@ -160,7 +160,7 @@ class LinkHub(private val app: Application, sl: Services) {
         wait?.cancel()
         events.stop()
         Bulk.closeAll()
-        powers.track(false)
+        powers.unlinked()
         LinkFeatures.all.forEach(LinkFeature::stop)
         session = null
         authed = false

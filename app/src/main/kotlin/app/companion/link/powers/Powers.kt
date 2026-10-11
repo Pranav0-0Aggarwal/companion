@@ -42,6 +42,10 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     private var obs: ContentObserver? = null
     val bridge = BridgeClient(scope)
 
+    init {
+        if (granted() && Settings.Global.getInt(app.contentResolver, ADB, 0) == 1) adbWifi(false)
+    }
+
     fun granted() = app.checkSelfPermission(PERM) == PackageManager.PERMISSION_GRANTED
 
     fun track(on: Boolean) {
@@ -55,18 +59,43 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         link = scope.launch { relink() }
     }
 
+    @Synchronized
+    fun unlinked() {
+        link?.cancel()
+        track(false)
+        if (disarm()) adbWifi(false)
+    }
+
+    @Synchronized
+    private fun pending() = timer != null
+
+    @Synchronized
+    private fun disarm(): Boolean {
+        val had = timer != null
+        timer?.cancel()
+        timer = null
+        return had
+    }
+
+    @Synchronized
+    private fun arm() {
+        timer = scope.launch {
+            delay(LAUNCH)
+            if (disarm()) {
+                adbWifi(false)
+                push(LinkMsg.bridge(false, "launch"))
+            }
+        }
+    }
+
     private suspend fun relink() {
-        if (timer?.isActive == true) return
+        if (pending()) return
         if (bridge.up.value || bridge.connect()) return push(LinkMsg.bridge(true))
         if (!granted()) return push(LinkMsg.bridge(false, "setup"))
         val ip = wifiIp() ?: return
         adbWifi(true)
         push(LinkMsg.bridgeWant(ip))
-        timer = scope.launch {
-            delay(LAUNCH)
-            adbWifi(false)
-            push(LinkMsg.bridge(false, "launch"))
-        }
+        arm()
     }
 
     private fun wifiIp(): String? {
@@ -76,7 +105,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     }
 
     suspend fun started(): Obj {
-        timer?.cancel()
+        disarm()
         val up = bridge.connect() && runCatching { bridge.cmd("caps") }.isSuccess
         adbWifi(false)
         if (up) push(LinkMsg.bridge(true)) else bridge.close()
@@ -106,7 +135,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     }
 
     private fun untrusted() {
-        timer?.cancel()
+        disarm()
         main.removeCallbacks(unwatch)
         unwatch()
         push(LinkMsg.bridge(false, "network"))

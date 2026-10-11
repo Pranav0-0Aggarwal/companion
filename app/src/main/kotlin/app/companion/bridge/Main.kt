@@ -4,34 +4,38 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.net.LocalServerSocket
-import android.net.LocalSocket
 import android.os.Build
 import android.os.Looper
 import android.os.PatternMatcher
+import app.companion.core.BridgeAuth
 import app.companion.core.BridgeWire
 import app.companion.core.Json
 import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 object Main {
-    private const val NAME = "companion.bridge"
     private const val PKG = "app.companion"
     private const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
     private lateinit var ctx: Context
-    @Volatile private var cur: LocalSocket? = null
+    @Volatile private var cur: Socket? = null
     private lateinit var pcm: CallAudio
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val key = BridgeAuth.key(args.getOrNull(0) ?: "") ?: exitProcess(0)
+        val rnd = SecureRandom()
         Looper.prepareMainLooper()
         ctx = Shell.context()
         pcm = CallAudio(ctx) { t, b -> cur?.let { s -> synchronized(s) { BridgeWire.write(s.outputStream, t, b) } } }
-        val uid = ctx.packageManager.getPackageUid(PKG, 0)
         val srv = try {
-            LocalServerSocket(NAME)
+            ServerSocket(BridgeAuth.PORT, 1, InetAddress.getLoopbackAddress())
         } catch (_: IOException) {
             exitProcess(0)
         }
@@ -50,7 +54,12 @@ object Main {
                     exitProcess(0)
                 }
                 try {
-                    if (c.peerCredentials.uid == uid) adopt(c) else c.close()
+                    c.soTimeout = 3000
+                    c.tcpNoDelay = true
+                    if (BridgeAuth.server(DataInputStream(c.inputStream), DataOutputStream(c.outputStream), key) { n -> ByteArray(n).also(rnd::nextBytes) }) {
+                        c.soTimeout = 0
+                        adopt(c)
+                    } else c.close()
                 } catch (_: Exception) {
                     runCatching(c::close)
                 }
@@ -60,7 +69,7 @@ object Main {
     }
 
     @Synchronized
-    private fun adopt(c: LocalSocket) {
+    private fun adopt(c: Socket) {
         pcm.stop()
         cur?.close()
         cur = c
@@ -68,7 +77,7 @@ object Main {
     }
 
     @Synchronized
-    private fun drop(c: LocalSocket) {
+    private fun drop(c: Socket) {
         if (cur === c) {
             cur = null
             pcm.stop()
@@ -76,7 +85,7 @@ object Main {
         c.close()
     }
 
-    private fun serve(c: LocalSocket) {
+    private fun serve(c: Socket) {
         val tx = { t: Int, b: ByteArray -> synchronized(c) { BridgeWire.write(c.outputStream, t, b) } }
         try {
             val input = DataInputStream(c.inputStream.buffered())
@@ -96,7 +105,7 @@ object Main {
         }
     }
 
-    private fun run(q: Map<String, Any?>, c: LocalSocket, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
+    private fun run(q: Map<String, Any?>, c: Socket, tx: (Int, ByteArray) -> Unit): Map<String, Any?> {
         val id = q["id"]
         return when (q["t"]) {
             "caps" -> res(id, true, "data" to caps())
@@ -108,7 +117,7 @@ object Main {
     }
 
     @Synchronized
-    private fun call(id: Any?, on: Boolean, c: LocalSocket): Map<String, Any?> {
+    private fun call(id: Any?, on: Boolean, c: Socket): Map<String, Any?> {
         if (cur !== c) return res(id, false, "err" to "busy")
         if (!on) return res(id, true).also { pcm.stop() }
         return try {

@@ -37,7 +37,7 @@ object LinkMsg {
 
     fun bridge(up: Boolean, why: String? = null) = mapOf("t" to "bridge", "up" to up) + (why?.let { mapOf("why" to it) } ?: emptyMap())
 
-    fun bridgeWant(ip: String) = mapOf("t" to "bridge_want", "ip" to ip)
+    fun bridgeWant(ip: String, k: String) = mapOf("t" to "bridge_want", "ip" to ip, "k" to k)
 
     fun call(id: String, state: String, number: String?, name: String?, photo: String?, started: Long?, ctl: String) =
         compact("t" to "call", "id" to id, "state" to state, "number" to number, "name" to name, "photo" to photo, "started" to started, "ctl" to ctl)

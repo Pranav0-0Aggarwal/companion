@@ -17,6 +17,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import app.companion.R
+import app.companion.core.BridgeAuth
 import app.companion.core.LinkMsg
 import app.companion.link.Diag
 import app.companion.link.LinkStore
@@ -24,6 +25,7 @@ import app.companion.link.Obj
 import app.companion.system.Notices
 import app.companion.ui.has
 import java.net.Inet4Address
+import java.security.SecureRandom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,6 +57,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
     val why: StateFlow<String?> = reason
 
     init {
+        bridge.key = prefs.getString(KEY, null)?.let(BridgeAuth::key)
         release()
     }
 
@@ -121,8 +124,12 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         if (g != gen) return
         log("powers: want")
         Diag.add("bridge_wants")
+        val k = ByteArray(32).also(SecureRandom()::nextBytes)
+        val hex = BridgeAuth.hex(k)
+        prefs.edit().putString(KEY, hex).apply()
+        bridge.key = k
         adbWifi(true)
-        push(LinkMsg.bridgeWant(ip))
+        push(LinkMsg.bridgeWant(ip, hex))
         arm()
     }
 
@@ -206,6 +213,7 @@ class Powers(private val app: Application, private val push: (Obj) -> Unit) {
         const val PERM = "android.permission.WRITE_SECURE_SETTINGS"
         const val ADB = "adb_wifi_enabled"
         const val ON = "wifiOn"
+        const val KEY = "bk"
         const val CHAN = "powers"
         const val ID = 0x50575253
         const val LAUNCH = 30_000L

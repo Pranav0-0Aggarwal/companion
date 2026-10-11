@@ -105,6 +105,7 @@ class ContinuityTest {
         assertTrue(SafeName.of("x".repeat(300) + ".jpg").let { it.toByteArray().size <= 120 && it.endsWith(".jpg") })
         assertTrue(SafeName.of("\u00e9".repeat(200) + ".pdf").let { it.toByteArray().size <= 120 && it.endsWith(".pdf") })
         assertTrue(SafeName.of("x".repeat(300)).toByteArray().size <= 120)
+        assertTrue(SafeName.of("e" + "\u0301".repeat(200) + ".pdf").let { !it.startsWith(".") && it.toByteArray().size <= 120 && it.endsWith(".pdf") })
     }
 
     @Test
@@ -124,6 +125,36 @@ class ContinuityTest {
         assertNull(p.take(c))
         assertNull(p.take(null))
         assertEquals(listOf("b", "c"), dropped)
+    }
+
+    @Test
+    fun `send guard accepts only foreign content providers`() {
+        val owner = { a: String -> mapOf("com.other.docs" to "com.other", "app.companion.files" to "app.companion")[a] }
+        assertTrue(SendGuard.ok("content", "com.other.docs", "app.companion", owner))
+        assertTrue(SendGuard.ok("content", "10@com.other.docs", "app.companion", owner))
+        assertTrue(SendGuard.ok("content", "unknown.provider", "app.companion", owner))
+        assertFalse(SendGuard.ok("content", "app.companion.files", "app.companion", owner))
+        assertFalse(SendGuard.ok("content", "0@app.companion.files", "app.companion", owner))
+        assertFalse(SendGuard.ok("file", "", "app.companion", owner))
+        assertFalse(SendGuard.ok("file", null, "app.companion", owner))
+        assertFalse(SendGuard.ok(null, "com.other.docs", "app.companion", owner))
+        assertFalse(SendGuard.ok("content", null, "app.companion", owner))
+        assertFalse(SendGuard.ok("android.resource", "com.other.docs", "app.companion", owner))
+    }
+
+    @Test
+    fun `expire drops a pending entry once`() {
+        val dropped = mutableListOf<String>()
+        val p = Expiring<String>(60_000, { 0L }) { dropped += it }
+        val a = p.put("a")
+        p.expire(a)
+        p.expire(a)
+        assertNull(p.take(a))
+        assertEquals(listOf("a"), dropped)
+        val b = p.put("b")
+        assertEquals("b", p.take(b))
+        p.expire(b)
+        assertEquals(listOf("a"), dropped)
     }
 
     private class Mem : FileFrames.Sink {

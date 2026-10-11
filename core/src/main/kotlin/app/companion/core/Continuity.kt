@@ -18,6 +18,11 @@ object SafeName {
     }
 }
 
+object SendGuard {
+    fun ok(scheme: String?, authority: String?, self: String, owner: (String) -> String?) =
+        scheme == "content" && !authority.isNullOrEmpty() && owner(authority.substringAfter('@')) != self
+}
+
 class Expiring<T>(private val ttl: Long, private val now: () -> Long, private val drop: (T) -> Unit = {}) {
     private val m = ConcurrentHashMap<String, Pair<Long, T>>()
 
@@ -32,6 +37,10 @@ class Expiring<T>(private val ttl: Long, private val now: () -> Long, private va
         if (until >= now()) return v
         drop(v)
         return null
+    }
+
+    fun expire(k: String) {
+        m.remove(k)?.let { drop(it.second) }
     }
 
     fun clear() {

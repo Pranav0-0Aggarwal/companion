@@ -13,6 +13,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.MediaStore
@@ -24,12 +26,15 @@ import app.companion.core.FileFrames
 import app.companion.core.LinkError
 import app.companion.core.LinkMsg
 import app.companion.core.SafeName
+import app.companion.core.SendGuard
 import app.companion.link.LinkFeature
 import app.companion.link.LinkFeatures
 import app.companion.link.Stage
 import app.companion.link.bulk.Bulk
 import app.companion.sl
 import app.companion.ui.has
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.io.OutputStream
 
@@ -37,14 +42,45 @@ object Files : LinkFeature {
     override val key = "files"
     override val cmds = emptySet<String>()
     private const val CHANNEL = "files"
-    private val pending = Expiring<List<FileFrames.Item>>(60_000, SystemClock::elapsedRealtime) { l -> l.forEach { runCatching(it::close) } }
+    private const val SPOOL = "send"
+    private const val TTL = 60_000L
+    private val pending = Expiring<List<FileFrames.Item>>(TTL, SystemClock::elapsedRealtime) { l -> l.forEach { runCatching(it::close) } }
 
     override fun stop() = pending.clear()
 
     fun register(app: Application) {
         LinkFeatures.all += this
+        app.cacheDir.listFiles { f -> f.name.startsWith(SPOOL) }?.forEach(File::delete)
         Bulk.handlers["files_in"] = { p -> notify(app, FileFrames.receive(p, Downloads(app))) }
-        Bulk.handlers["files_out"] = { p -> FileFrames.send(p, pending.take(p.ref) ?: throw LinkError("gone")) }
+        Bulk.handlers["files_out"] = { p -> FileFrames.send(p, spool(app, pending.take(p.ref) ?: throw LinkError("gone"))) }
+    }
+
+    private fun spool(c: Context, items: List<FileFrames.Item>): List<FileFrames.Item> {
+        val out = ArrayList<FileFrames.Item>()
+        try {
+            items.forEach { out += spool1(c, it) }
+        } catch (e: Throwable) {
+            (out + items).forEach { runCatching(it::close) }
+            throw e
+        }
+        return out
+    }
+
+    private fun spool1(c: Context, i: FileFrames.Item): FileFrames.Item {
+        if (i.size >= 0) return i
+        val f = File.createTempFile(SPOOL, null, c.cacheDir)
+        try {
+            i.use { s -> f.outputStream().use { s.input.copyTo(it) } }
+        } catch (e: Throwable) {
+            f.delete()
+            throw e
+        }
+        return FileFrames.Item(i.name, f.length(), i.mime, object : FileInputStream(f) {
+            override fun close() {
+                super.close()
+                f.delete()
+            }
+        })
     }
 
     fun send(c: Context, i: Intent) {
@@ -55,7 +91,10 @@ object Files : LinkFeature {
             key !in st.shares -> toast(c, "Turn on Files in Companion")
             else -> {
                 val items = uris(i).mapNotNull { open(c, it) }
-                if (items.isEmpty()) toast(c, "Nothing to send") else link.push(LinkMsg.bulkWant("files_out", pending.put(items)))
+                if (items.isEmpty()) return toast(c, "Nothing to send")
+                val ref = pending.put(items)
+                Handler(Looper.getMainLooper()).postDelayed({ pending.expire(ref) }, TTL)
+                link.push(LinkMsg.bulkWant("files_out", ref))
             }
         }
     }
@@ -64,16 +103,20 @@ object Files : LinkFeature {
         if (i.action == Intent.ACTION_SEND_MULTIPLE) i.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
         else listOfNotNull(i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
 
-    private fun open(c: Context, u: Uri): FileFrames.Item? = runCatching {
+    private fun open(c: Context, u: Uri): FileFrames.Item? {
+        if (!SendGuard.ok(u.scheme, u.authority, c.packageName) { c.packageManager.resolveContentProvider(it, 0)?.packageName }) return null
         val r = c.contentResolver
-        val pfd = r.openFileDescriptor(u, "r") ?: return null
-        val (name, col) = r.query(u, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use {
-            if (it.moveToFirst()) it.getString(0) to (if (it.isNull(1)) -1L else it.getLong(1)) else null
-        } ?: (null to -1L)
-        val size = pfd.statSize.takeIf { it >= 0 } ?: col
-        if (size < 0) return pfd.close().let { null }
-        FileFrames.Item(name ?: u.lastPathSegment ?: "file", size, r.getType(u) ?: "application/octet-stream", ParcelFileDescriptor.AutoCloseInputStream(pfd))
-    }.getOrNull()
+        val pfd = runCatching { r.openFileDescriptor(u, "r") }.getOrNull() ?: return null
+        return try {
+            val (name, col) = r.query(u, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) to (if (it.isNull(1)) -1L else it.getLong(1)) else null
+            } ?: (null to -1L)
+            FileFrames.Item(name ?: u.lastPathSegment ?: "file", pfd.statSize.takeIf { it >= 0 } ?: col, r.getType(u) ?: "application/octet-stream", ParcelFileDescriptor.AutoCloseInputStream(pfd))
+        } catch (e: Exception) {
+            runCatching(pfd::close)
+            null
+        }
+    }
 
     private fun toast(c: Context, t: String) = Toast.makeText(c.applicationContext, t, Toast.LENGTH_SHORT).show()
 

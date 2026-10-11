@@ -26,8 +26,17 @@
     "ask": true,
     "battery": true,
     "tasks": true,
-    "notifs": false
-   }
+    "notifs": false,
+    "calls": false,
+    "live": false,
+    "files": false,
+    "photos": false,
+    "clipImage": false,
+    "handoff": false,
+    "dnd": false,
+    "mirror": false
+   },
+   "proto": 2
   }
  },
  "req": {
@@ -103,6 +112,99 @@
   "ping": {
    "t": "ping",
    "id": 15
+  },
+  "bulk": {
+   "t": "bulk",
+   "id": 20,
+   "purpose": "files_in",
+   "ip": "192.168.1.20",
+   "port": 50123,
+   "token": "AAECAwQFBgcICQoLDA0ODw=="
+  },
+  "bridge_started": {
+   "t": "bridge_started",
+   "id": 21
+  },
+  "call_answer": {
+   "t": "call_answer",
+   "id": 22,
+   "where": "mac"
+  },
+  "call_end": {
+   "t": "call_end",
+   "id": 23
+  },
+  "call_reject": {
+   "t": "call_reject",
+   "id": 24,
+   "text": "Can't talk now, I'll call you back"
+  },
+  "call_dial": {
+   "t": "call_dial",
+   "id": 25,
+   "number": "+919812345678",
+   "where": "mac"
+  },
+  "call_mute": {
+   "t": "call_mute",
+   "id": 26,
+   "on": true
+  },
+  "call_hold": {
+   "t": "call_hold",
+   "id": 27,
+   "on": true
+  },
+  "call_dtmf": {
+   "t": "call_dtmf",
+   "id": 28,
+   "digit": "5"
+  },
+  "call_move": {
+   "t": "call_move",
+   "id": 29,
+   "where": "phone"
+  },
+  "notif_reply": {
+   "t": "notif_reply",
+   "id": 30,
+   "key": "0|com.whatsapp|1|null|10123",
+   "text": "Yes, see you at 8"
+  },
+  "notif_action": {
+   "t": "notif_action",
+   "id": 31,
+   "key": "0|com.whatsapp|1|null|10123",
+   "action": "0"
+  },
+  "notif_dismiss": {
+   "t": "notif_dismiss",
+   "id": 32,
+   "key": "0|com.whatsapp|1|null|10123"
+  },
+  "media_cmd": {
+   "t": "media_cmd",
+   "id": 33,
+   "cmd": "seek",
+   "pos": 90000
+  },
+  "clip_img_req": {
+   "t": "clip_img",
+   "id": 34,
+   "w": 1080,
+   "h": 720,
+   "thumb": "/9j/4AAQSkZJRg=="
+  },
+  "handoff_req": {
+   "t": "handoff",
+   "id": 35,
+   "url": "https://example.com/page",
+   "title": "Example page"
+  },
+  "dnd_req": {
+   "t": "dnd",
+   "id": 36,
+   "on": true
   }
  },
  "res": {
@@ -379,7 +481,15 @@
     "ask": true,
     "battery": true,
     "tasks": true,
-    "notifs": false
+    "notifs": false,
+    "calls": false,
+    "live": false,
+    "files": false,
+    "photos": false,
+    "clipImage": false,
+    "handoff": false,
+    "dnd": false,
+    "mirror": false
    }
   },
   "notif": {
@@ -390,6 +500,124 @@
    "title": "Riya",
    "text": "Are you free tonight?",
    "at": 1760000000000
+  },
+  "bulk_want": {
+   "t": "bulk_want",
+   "purpose": "files_out",
+   "ref": "r1"
+  },
+  "bridge": {
+   "t": "bridge",
+   "up": true
+  },
+  "bridge_want": {
+   "t": "bridge_want"
+  },
+  "call": {
+   "t": "call",
+   "id": "c1",
+   "state": "ringing",
+   "number": "+919812345678",
+   "name": "Riya",
+   "started": 1760000000000,
+   "ctl": "full"
+  },
+  "call_audio": {
+   "t": "call_audio",
+   "where": "mac"
+  },
+  "notif_v2": {
+   "t": "notif",
+   "id": "0|com.whatsapp|1|null|10123",
+   "app": "com.whatsapp",
+   "appName": "WhatsApp",
+   "title": "Riya",
+   "text": "Are you free tonight?",
+   "at": 1760000000000,
+   "key": "0|com.whatsapp|1|null|10123",
+   "conv": "com.whatsapp|riya@s.whatsapp.net",
+   "canReply": true,
+   "actions": [
+    {
+     "id": "0",
+     "title": "Mark as read"
+    }
+   ],
+   "person": {
+    "name": "Riya"
+   }
+  },
+  "live": {
+   "t": "live",
+   "key": "0|in.swiggy.android|7|null|10200",
+   "app": "in.swiggy.android",
+   "appName": "Swiggy",
+   "title": "Order on the way",
+   "text": "Arriving in 12 min",
+   "progress": 60,
+   "max": 100,
+   "eta": 1760000720000
+  },
+  "live_gone": {
+   "t": "live_gone",
+   "key": "0|in.swiggy.android|7|null|10200"
+  },
+  "media": {
+   "t": "media",
+   "pkg": "com.spotify.music",
+   "title": "Song",
+   "artist": "Artist",
+   "playing": true,
+   "pos": 61000,
+   "dur": 200000,
+   "at": 1760000000000
+  },
+  "shot": {
+   "t": "shot",
+   "id": 1760000000123,
+   "w": 1080,
+   "h": 2340,
+   "thumb": "/9j/4AAQSkZJRg=="
+  },
+  "clip_img": {
+   "t": "clip_img",
+   "id": "k1",
+   "w": 1080,
+   "h": 720,
+   "thumb": "/9j/4AAQSkZJRg=="
+  },
+  "handoff": {
+   "t": "handoff",
+   "url": "https://example.com/page",
+   "title": "Example page"
+  },
+  "dnd": {
+   "t": "dnd",
+   "on": true
+  },
+  "ok_v2": {
+   "t": "ok",
+   "name": "Galaxy Z Flip7",
+   "share": {
+    "otp": true,
+    "money": true,
+    "alerts": true,
+    "clipIn": false,
+    "clipOut": false,
+    "ask": true,
+    "battery": true,
+    "tasks": true,
+    "notifs": false,
+    "calls": true,
+    "live": true,
+    "files": true,
+    "photos": false,
+    "clipImage": false,
+    "handoff": true,
+    "dnd": true,
+    "mirror": true
+   },
+   "proto": 2
   }
  },
  "shape": {
